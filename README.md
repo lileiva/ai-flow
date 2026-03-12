@@ -31,14 +31,14 @@ Open Claude Code and run:
 ### Step 3: Initialize your project
 
 ```
-/ai-flow:flow-init
+/flow-init
 ```
 
 This detects your tech stack, bootstraps persistence, and creates `.ai-flow.json` with your preferences (including Linear sync if detected).
 
 ### Step 4: Verify
 
-Run `/help` and confirm the `ai-flow:` commands and skills appear.
+Run `/help` and confirm the `flow-` commands and skills appear.
 
 ### Updating
 
@@ -51,34 +51,34 @@ Run `/help` and confirm the `ai-flow:` commands and skills appear.
 A typical workflow looks like this:
 
 ```
-/ai-flow:flow-new add-user-auth      # Explore the problem space, then create a proposal
-                                      # → You approve or revise the proposal
+/flow-new add-user-auth      # Explore the problem space, then create a proposal
+                              # → You approve or revise the proposal
 
-/ai-flow:flow-spec                    # Write Given/When/Then scenarios
-/ai-flow:flow-design                  # Create technical design (can run in parallel with spec)
+/flow-spec                    # Write Given/When/Then scenarios
+/flow-design                  # Create technical design (can run in parallel with spec)
 
-/ai-flow:flow-plan                    # Break work into batched tasks with TDD steps
-                                      # → You approve or revise the plan
+/flow-plan                    # Break work into batched tasks with TDD steps
+                              # → You approve or revise the plan
 
-/ai-flow:flow-apply                   # Execute tasks: tracer bullet first, then batches
-                                      # → You review after tracer bullet
+/flow-apply                   # Execute tasks: tracer bullet first, then batches
+                              # → You review after tracer bullet
 
-/ai-flow:flow-verify                  # Run compliance checks and test suite
-                                      # → You approve or send back for rework
+/flow-verify                  # Run compliance checks and test suite
+                              # → You approve or send back for rework
 
-/ai-flow:flow-archive                 # Archive artifacts and close the change
+/flow-archive                 # Archive artifacts and close the change
 ```
 
 Or use the shortcuts:
 
 ```
-/ai-flow:flow-ff add-user-auth       # Fast-forward: propose → spec + design → plan
-/ai-flow:flow-continue add-user-auth  # Resume from the last completed phase
+/flow-ff add-user-auth       # Fast-forward: propose → spec + design → plan
+/flow-continue add-user-auth  # Resume from the last completed phase
 ```
 
 ## Configuration
 
-AI-Flow uses `.ai-flow.json` at the project root for per-project settings. Created automatically by `/ai-flow:flow-init`.
+AI-Flow uses `.ai-flow.json` at the project root for per-project settings. Created automatically by `/flow-init`.
 
 ```json
 {
@@ -104,9 +104,9 @@ User-invokable commands (type directly):
 
 | Command | Description |
 |---------|-------------|
-| `/ai-flow:flow-new <name>` | Start a new change — explore → propose → human gate |
-| `/ai-flow:flow-ff <name>` | Fast-forward — propose → spec + design (parallel) → plan |
-| `/ai-flow:flow-continue <name>` | Resume from last completed phase |
+| `/flow-new <name>` | Start a new change — explore → propose → human gate |
+| `/flow-ff <name>` | Fast-forward — propose → spec + design (parallel) → plan |
+| `/flow-continue <name>` | Resume from last completed phase |
 
 ## Skills
 
@@ -207,9 +207,9 @@ plugins/ai-flow/
   hooks/
     hooks.json               # Session-end Linear sync reminder
   commands/
-    flow-new.md              # /ai-flow:flow-new command
-    flow-ff.md               # /ai-flow:flow-ff command
-    flow-continue.md         # /ai-flow:flow-continue command
+    flow-new.md              # /flow-new command
+    flow-ff.md               # /flow-ff command
+    flow-continue.md         # /flow-continue command
   skills/
     flow-init/SKILL.md       # Phase 0: Project bootstrap
     flow-explore/SKILL.md    # Phase 1: Problem exploration
