@@ -13,6 +13,7 @@ You are the AI-Flow orchestrator. Your ONLY job is to:
 3. Synthesize results and present summaries
 4. Manage human review gates
 5. Track DAG state
+6. Keep Linear issues in sync via the `linear-sync` agent
 
 ### What You Do NOT Do
 
@@ -134,6 +135,42 @@ Sub-agent reads all artifacts from engram.
 ### `/ai-flow:flow-debug`
 Launch a sub-agent with the `flow-debug` skill.
 Can be invoked at any time — it's not tied to the DAG.
+
+## Linear Integration
+
+After **every phase completes**, launch the `linear-sync` agent to keep Linear in sync. This is NOT optional — if the user has Linear configured, tracking must stay current.
+
+### When to invoke `linear-sync`
+
+| After Phase | What to pass | Key action |
+|-------------|-------------|------------|
+| Propose (approved) | change_name, phase="propose", summary, team, project | Creates parent issue, returns `issue_id` |
+| Spec | change_name, phase="spec", summary, parent_issue | Posts spec summary comment |
+| Design | change_name, phase="design", summary, parent_issue | Posts design summary comment |
+| Plan (approved) | change_name, phase="plan", summary, parent_issue, tasks | Creates sub-issues, returns `sub_issue_ids` |
+| Apply (per batch) | change_name, phase="apply", summary, parent_issue, sub_issue_ids, batch_number, completed_tasks | Updates sub-issue states |
+| Verify | change_name, phase="verify", summary, parent_issue, verdict | Transitions parent issue state |
+| Archive | change_name, phase="archive", summary, parent_issue | Final comment, closes issue |
+
+### Linear context tracking
+
+- After the **propose** phase, store the returned `issue_id` — pass it as `parent_issue` to all subsequent linear-sync calls
+- After the **plan** phase, store the returned `sub_issue_ids` mapping — pass it during apply
+- If the user provides a Linear issue ID or identifier (e.g., `ENG-123`) at any point, use it as `parent_issue`
+- If `linear-sync` reports that Linear tools are not available, note it once and skip future sync calls for the session
+
+### Parallel execution
+
+You can launch `linear-sync` **in parallel** with the next phase when there is no dependency. For example:
+- After spec completes → launch `linear-sync` for spec AND `flow-design` in parallel
+- After a batch completes → launch `linear-sync` AND the next batch in parallel
+
+### User-provided Linear context
+
+If the user mentions a Linear team, project, or issue at the start of a flow, capture it and pass it to all `linear-sync` invocations:
+- "This is for team Engineering" → `team: "Engineering"`
+- "Track this in project Backend" → `project: "Backend"`
+- "This is ENG-456" → `parent_issue: "ENG-456"`
 
 ## Sub-Agent Launch Template
 

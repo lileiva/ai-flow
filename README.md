@@ -86,6 +86,43 @@ These are handled by the orchestrator agent:
            archive
 ```
 
+## Linear Integration
+
+AI-Flow automatically keeps Linear in sync as you work through phases. The `linear-sync` agent is invoked by the orchestrator after each phase completes.
+
+### What it does
+
+| Phase | Linear action |
+|-------|--------------|
+| Propose (approved) | Creates parent issue with proposal summary |
+| Spec | Posts spec summary as comment |
+| Design | Posts design summary as comment |
+| Plan (approved) | Creates sub-issues for each task, sets parent to "In Progress" |
+| Apply (per batch) | Marks completed task sub-issues as "Done" |
+| Verify | Transitions parent issue based on PASS/FAIL verdict |
+| Archive | Posts final comment, closes issue |
+
+### Usage
+
+Mention your Linear context when starting a flow:
+
+```
+/ai-flow:flow-new add-auth --team Engineering --project Backend
+```
+
+Or reference an existing issue:
+
+```
+/ai-flow:flow-new add-auth --issue ENG-456
+```
+
+The orchestrator captures this and passes it to `linear-sync` throughout the workflow.
+
+### Requirements
+
+- [Linear MCP server](https://modelcontextprotocol.io/integrations/linear) configured in Claude Code
+- If Linear is not configured, the plugin works normally — sync is skipped silently
+
 ## Human Review Gates
 
 | Gate | After | Options |
