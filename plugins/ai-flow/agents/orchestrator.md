@@ -154,9 +154,25 @@ Agent reads all artifacts from engram.
 Launch the **debugger** agent.
 Can be invoked at any time — it's not tied to the DAG.
 
-## Linear Integration
+## Linear Integration (via `.ai-flow.json`)
 
-After **every phase completes**, launch the `linear-sync` agent to keep Linear in sync. This is NOT optional — if the user has Linear configured, tracking must stay current.
+At the **start of every session**, read `.ai-flow.json` from the project root:
+
+```json
+{
+  "linearSync": true,
+  "linear": {
+    "team": "Engineering",
+    "project": "Backend"
+  }
+}
+```
+
+### Decision logic
+
+- **File missing or `linearSync: false`** → skip all `linear-sync` calls silently
+- **`linearSync: true`** → dispatch `linear-sync` after every phase completes
+- Pass `linear.team` and `linear.project` to every `linear-sync` call
 
 ### When to invoke `linear-sync`
 
@@ -170,25 +186,18 @@ After **every phase completes**, launch the `linear-sync` agent to keep Linear i
 | Verify | change_name, phase="verify", summary, parent_issue, verdict | Transitions parent issue state |
 | Archive | change_name, phase="archive", summary, parent_issue | Final comment, closes issue |
 
-### Linear context tracking
+### Context tracking
 
-- After the **propose** phase, store the returned `issue_id` — pass it as `parent_issue` to all subsequent linear-sync calls
-- After the **plan** phase, store the returned `sub_issue_ids` mapping — pass it during apply
-- If the user provides a Linear issue ID or identifier (e.g., `ENG-123`) at any point, use it as `parent_issue`
-- If `linear-sync` reports that Linear tools are not available, note it once and skip future sync calls for the session
+- After **propose**, store the returned `issue_id` — pass as `parent_issue` to all subsequent calls
+- After **plan**, store the returned `sub_issue_ids` mapping — pass during apply
+- If the user provides a Linear issue ID (e.g., `ENG-123`) at any point, use it as `parent_issue`
+- If `linear-sync` reports tools unavailable, note it once and skip future calls for the session
 
 ### Parallel execution
 
-You can launch `linear-sync` **in parallel** with the next phase when there is no dependency. For example:
-- After spec completes → launch `linear-sync` for spec AND `flow-design` in parallel
-- After a batch completes → launch `linear-sync` AND the next batch in parallel
-
-### User-provided Linear context
-
-If the user mentions a Linear team, project, or issue at the start of a flow, capture it and pass it to all `linear-sync` invocations:
-- "This is for team Engineering" → `team: "Engineering"`
-- "Track this in project Backend" → `project: "Backend"`
-- "This is ENG-456" → `parent_issue: "ENG-456"`
+Launch `linear-sync` **in parallel** with the next phase when there is no dependency:
+- After spec → `linear-sync` for spec AND `designer` in parallel
+- After a batch → `linear-sync` AND next batch in parallel
 
 ## Sub-Agent Launch Template
 

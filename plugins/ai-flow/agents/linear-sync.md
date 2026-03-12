@@ -21,9 +21,11 @@ The orchestrator provides:
 - `change_name` — the flow change identifier
 - `phase` — which phase just completed (explore, propose, spec, design, plan, apply, verify, archive)
 - `summary` — the executive summary from the phase sub-agent
-- `team` — (optional) Linear team name or ID
-- `project` — (optional) Linear project name or ID
+- `team` — Linear team name or ID (from `.ai-flow.json` → `linear.team`)
+- `project` — Linear project name or ID (from `.ai-flow.json` → `linear.project`)
 - `parent_issue` — (optional) existing Linear issue ID to update
+
+The orchestrator reads `.ai-flow.json` and only invokes you when `linearSync: true`.
 
 ## Phase → Linear Mapping
 

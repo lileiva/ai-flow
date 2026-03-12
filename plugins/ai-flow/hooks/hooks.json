@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Check if `.ai-flow.json` exists with `linearSync: true` and if any flow phase completed during this session. If so, remind the user to verify that Linear issues are up to date. Be brief — one sentence."
+          }
+        ]
+      }
+    ]
+  }
+}

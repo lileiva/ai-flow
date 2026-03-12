@@ -38,6 +38,34 @@ Look for these indicators:
 - Test location patterns and naming conventions
 - Git branch naming and commit message style
 
+## `.ai-flow.json` Configuration
+
+After detecting the stack and persistence, create `.ai-flow.json` at the project root:
+
+1. Check if Linear MCP tools are available (look for `mcp__claude_ai_Linear__*` tools)
+2. If available, ask the user: "Linear tools detected. Enable automatic Linear sync? (Y/n)"
+3. If yes, ask: "Which Linear team should issues go to?" and "Which Linear project? (optional)"
+4. Write `.ai-flow.json`:
+
+```json
+{
+  "linearSync": true,
+  "linear": {
+    "team": "Engineering",
+    "project": "Backend"
+  }
+}
+```
+
+If Linear is not available or user declines:
+```json
+{
+  "linearSync": false
+}
+```
+
+If `.ai-flow.json` already exists, ask the user if they want to update it.
+
 ## Engram Convention
 
 Save project context:

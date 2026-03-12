@@ -4,19 +4,22 @@ A unified AI-assisted development workflow plugin for [Claude Code](https://clau
 
 AI-Flow orchestrates structured development through DAG-based phases: exploration, proposal, specification, design, planning, implementation (with TDD), verification, and archival — with human review gates at critical points.
 
+For the full reference document, see [unified-ai-dev-flow.md](unified-ai-dev-flow.md).
+
 ## Installation
 
 ### Prerequisites
 
 - [Claude Code](https://claude.ai/claude-code) v1.0.33+ (`claude --version` to check)
 - [Engram MCP server](https://github.com/anthropics/engram) for artifact persistence
+- [Linear MCP server](https://modelcontextprotocol.io/integrations/linear) (optional, for issue tracking)
 
 ### Step 1: Add the marketplace
 
 Open Claude Code and run:
 
 ```
-/plugin marketplace add lileiva/ai-flow-proposal
+/plugin marketplace add lileiva/ai-flow
 ```
 
 ### Step 2: Install the plugin
@@ -25,25 +28,59 @@ Open Claude Code and run:
 /plugin install ai-flow@ai-flow
 ```
 
-### Step 3: Verify
-
-Run `/help` and confirm the `ai-flow:` skills appear. Try:
+### Step 3: Initialize your project
 
 ```
 /ai-flow:flow-init
 ```
 
-### Updating
+This detects your tech stack, bootstraps persistence, and creates `.ai-flow.json` with your preferences (including Linear sync if detected).
 
-To pull the latest version:
+### Step 4: Verify
+
+Run `/help` and confirm the `ai-flow:` commands and skills appear.
+
+### Updating
 
 ```
 /plugin update ai-flow@ai-flow
 ```
 
+## Configuration
+
+AI-Flow uses `.ai-flow.json` at the project root for per-project settings. Created automatically by `/ai-flow:flow-init`.
+
+```json
+{
+  "linearSync": true,
+  "linear": {
+    "team": "Engineering",
+    "project": "Backend"
+  }
+}
+```
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `linearSync` | boolean | `false` | Enable automatic Linear issue sync after each phase |
+| `linear.team` | string | — | Linear team for new issues |
+| `linear.project` | string | — | Linear project for new issues |
+
+If the file is missing, Linear sync is off and all other features work normally.
+
+## Commands
+
+User-invokable commands (type directly):
+
+| Command | Description |
+|---------|-------------|
+| `/ai-flow:flow-new <name>` | Start a new change — explore → propose → human gate |
+| `/ai-flow:flow-ff <name>` | Fast-forward — propose → spec + design (parallel) → plan |
+| `/ai-flow:flow-continue <name>` | Resume from last completed phase |
+
 ## Skills
 
-Once installed, all skills are namespaced under `ai-flow:`:
+Model-invoked skills (Claude uses these automatically):
 
 | Skill | Phase | Description |
 |-------|-------|-------------|
@@ -58,21 +95,13 @@ Once installed, all skills are namespaced under `ai-flow:`:
 | `/ai-flow:flow-archive` | 8 | Archive completed change |
 | `/ai-flow:flow-debug` | Any | Systematic debugging loop |
 
-### Meta-commands
-
-These are handled by the orchestrator agent:
-
-- **`/ai-flow:flow-new <name>`** — Runs explore → propose → human gate
-- **`/ai-flow:flow-ff <name>`** — Fast-forward: propose → spec + design (parallel) → plan
-- **`/ai-flow:flow-continue <name>`** — Resume from last completed phase
-
 ## Agents
 
 Each phase is executed by a specialized agent with domain expertise and scoped tool access:
 
 | Agent | Phase | Tool Access | Role |
 |-------|-------|-------------|------|
-| `initializer` | 0 | Read-only | Detects stack, conventions, bootstraps persistence |
+| `initializer` | 0 | Read-only | Detects stack, conventions, creates `.ai-flow.json` |
 | `explorer` | 1 | Read-only | Brainstorms approaches, investigates codebase |
 | `proposer` | 2 | Read-only | Writes formal proposals with risks and rollback |
 | `specifier` | 3 | Read-only | Writes Given/When/Then scenarios from requirements |
@@ -107,9 +136,7 @@ Each phase is executed by a specialized agent with domain expertise and scoped t
 
 ## Linear Integration
 
-AI-Flow automatically keeps Linear in sync as you work through phases. The `linear-sync` agent is invoked by the orchestrator after each phase completes.
-
-### What it does
+When `linearSync: true` in `.ai-flow.json`, the orchestrator automatically dispatches the `linear-sync` agent after each phase:
 
 | Phase | Linear action |
 |-------|--------------|
@@ -120,27 +147,6 @@ AI-Flow automatically keeps Linear in sync as you work through phases. The `line
 | Apply (per batch) | Marks completed task sub-issues as "Done" |
 | Verify | Transitions parent issue based on PASS/FAIL verdict |
 | Archive | Posts final comment, closes issue |
-
-### Usage
-
-Mention your Linear context when starting a flow:
-
-```
-/ai-flow:flow-new add-auth --team Engineering --project Backend
-```
-
-Or reference an existing issue:
-
-```
-/ai-flow:flow-new add-auth --issue ENG-456
-```
-
-The orchestrator captures this and passes it to `linear-sync` throughout the workflow.
-
-### Requirements
-
-- [Linear MCP server](https://modelcontextprotocol.io/integrations/linear) configured in Claude Code
-- If Linear is not configured, the plugin works normally — sync is skipped silently
 
 ## Human Review Gates
 
