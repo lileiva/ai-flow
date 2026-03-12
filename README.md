@@ -66,6 +66,25 @@ These are handled by the orchestrator agent:
 - **`/ai-flow:flow-ff <name>`** — Fast-forward: propose → spec + design (parallel) → plan
 - **`/ai-flow:flow-continue <name>`** — Resume from last completed phase
 
+## Agents
+
+Each phase is executed by a specialized agent with domain expertise and scoped tool access:
+
+| Agent | Phase | Tool Access | Role |
+|-------|-------|-------------|------|
+| `initializer` | 0 | Read-only | Detects stack, conventions, bootstraps persistence |
+| `explorer` | 1 | Read-only | Brainstorms approaches, investigates codebase |
+| `proposer` | 2 | Read-only | Writes formal proposals with risks and rollback |
+| `specifier` | 3 | Read-only | Writes Given/When/Then scenarios from requirements |
+| `designer` | 4 | Read-only | Architecture decisions, interfaces, testing strategy |
+| `planner` | 5 | Read-only | Task breakdown with TDD steps in batches |
+| `implementer` | 6 | Full | Writes tests first, then code (RED-GREEN-REFACTOR) |
+| `verifier` | 7 | Read + tests | Spec compliance matrix, quality gate |
+| `archivist` | 8 | Read + engram | Consolidates artifacts, closes change |
+| `debugger` | Any | Full | Root-cause-first investigation with TDD fix |
+| `linear-sync` | Any | Linear MCP | Syncs phase progress to Linear issues |
+| `orchestrator` | — | Delegates | Coordinates all agents, manages human gates |
+
 ## DAG
 
 ```

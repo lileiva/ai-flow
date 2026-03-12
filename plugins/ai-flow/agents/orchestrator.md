@@ -68,72 +68,90 @@ See `skills/_shared/persistence-contract.md` for the sub-agent context protocol.
 - Plan depends on BOTH Spec and Design
 - Apply → Verify → Archive are strictly sequential
 
+## Specialized Agents
+
+Each phase has a dedicated agent with domain expertise and appropriate tool restrictions:
+
+| Phase | Agent | Tool Access | Purpose |
+|-------|-------|-------------|---------|
+| 0 | `initializer` | Read-only | Bootstrap project context |
+| 1 | `explorer` | Read-only | Brainstorm and investigate |
+| 2 | `proposer` | Read-only | Formal change proposals |
+| 3 | `specifier` | Read-only | Delta specs with Given/When/Then |
+| 4 | `designer` | Read-only | Technical design and architecture |
+| 5 | `planner` | Read-only | Task breakdown with TDD steps |
+| 6 | `implementer` | **Full access** | TDD execution (RED-GREEN-REFACTOR) |
+| 7 | `verifier` | Read + run tests | Spec compliance and quality gate |
+| 8 | `archivist` | Read-only + engram | Archive and close out |
+| Any | `debugger` | **Full access** | Root-cause-first debugging |
+| Any | `linear-sync` | Linear MCP tools | Sync progress to Linear issues |
+
 ## Flow Commands
 
 ### `/ai-flow:flow-init`
-Launch a sub-agent with the `flow-init` skill.
+Launch the **initializer** agent.
 
 ### `/ai-flow:flow-explore <topic>`
-Launch a sub-agent with the `flow-explore` skill.
+Launch the **explorer** agent.
 Pass the topic and project name.
 
 ### `/ai-flow:flow-new <change-name>`
 **Meta-command (you handle this):**
-1. Launch `flow-explore` sub-agent with the change description
+1. Launch **explorer** agent with the change description
 2. Wait for result, present summary to user
-3. Launch `flow-propose` sub-agent with the exploration results
+3. Launch **proposer** agent with the exploration results
 4. Wait for result, present proposal summary to user
 5. **HUMAN GATE:** Ask user to approve the proposal
 
 ### `/ai-flow:flow-spec`
-Launch a sub-agent with the `flow-spec` skill.
+Launch the **specifier** agent.
 Pass the change name and project name.
-Sub-agent reads the proposal from engram.
+Agent reads the proposal from engram.
 
 ### `/ai-flow:flow-design`
-Launch a sub-agent with the `flow-design` skill.
+Launch the **designer** agent.
 Pass the change name and project name.
-Sub-agent reads the proposal from engram.
+Agent reads the proposal from engram.
 
-**Note:** You can launch `/ai-flow:flow-spec` and `/ai-flow:flow-design` in parallel.
+**Note:** You can launch **specifier** and **designer** in parallel.
 
 ### `/ai-flow:flow-plan`
-Launch a sub-agent with the `flow-plan` skill.
+Launch the **planner** agent.
 Pass the change name and project name.
-Sub-agent reads spec and design from engram.
+Agent reads spec and design from engram.
 **HUMAN GATE:** Present plan summary, ask user to approve before proceeding to apply.
 
 ### `/ai-flow:flow-apply`
-Launch sub-agents in batches with the `flow-apply` skill.
+Launch **implementer** agents in batches.
 - Batch 0 (tracer bullet) always runs first, alone
 - Wait for human feedback after tracer bullet
 - Then execute remaining batches
-- Each sub-agent reads plan, spec, and design from engram
+- Each agent reads plan, spec, and design from engram
 - After each batch, update the user on progress
 
 ### `/ai-flow:flow-verify`
-Launch a sub-agent with the `flow-verify` skill.
-Sub-agent reads all artifacts from engram.
+Launch the **verifier** agent.
+Agent reads all artifacts from engram.
 **HUMAN GATE:** Present verification report, ask user to approve or send back for rework.
 
 ### `/ai-flow:flow-archive`
-Launch a sub-agent with the `flow-archive` skill.
-Sub-agent reads all artifacts from engram.
+Launch the **archivist** agent.
+Agent reads all artifacts from engram.
 
 ### `/ai-flow:flow-ff <change-name>`
 **Meta-command (you handle this): Fast-forward through planning phases.**
-1. Launch `flow-propose` sub-agent → wait → present summary → **HUMAN GATE**
-2. Launch `flow-spec` and `flow-design` sub-agents **in parallel** → wait for both
-3. Launch `flow-plan` sub-agent → wait → present summary → **HUMAN GATE**
+1. Launch **proposer** agent → wait → present summary → **HUMAN GATE**
+2. Launch **specifier** and **designer** agents **in parallel** → wait for both
+3. Launch **planner** agent → wait → present summary → **HUMAN GATE**
 
 ### `/ai-flow:flow-continue [change-name]`
 **Meta-command (you handle this):**
 1. Recover state from engram: `flow/{change-name}/state`
 2. Identify the next missing artifact in the dependency chain
-3. Launch the corresponding phase
+3. Launch the corresponding agent
 
 ### `/ai-flow:flow-debug`
-Launch a sub-agent with the `flow-debug` skill.
+Launch the **debugger** agent.
 Can be invoked at any time — it's not tied to the DAG.
 
 ## Linear Integration
