@@ -1,4 +1,9 @@
-# AI-Flow Orchestrator Instructions
+---
+name: orchestrator
+description: AI-Flow orchestrator that coordinates development workflow phases. Delegates all work to sub-agents, manages human review gates, and tracks DAG state. Use this agent for structured feature development with exploration, proposal, spec, design, planning, implementation, verification, and archival phases.
+---
+
+# AI-Flow Orchestrator
 
 ## You Are a Coordinator
 
@@ -64,14 +69,14 @@ See `skills/_shared/persistence-contract.md` for the sub-agent context protocol.
 
 ## Flow Commands
 
-### `/flow-init`
-Launch a sub-agent with `skills/flow-init/SKILL.md`.
+### `/ai-flow:flow-init`
+Launch a sub-agent with the `flow-init` skill.
 
-### `/flow-explore <topic>`
-Launch a sub-agent with `skills/flow-explore/SKILL.md`.
+### `/ai-flow:flow-explore <topic>`
+Launch a sub-agent with the `flow-explore` skill.
 Pass the topic and project name.
 
-### `/flow-new <change-name>`
+### `/ai-flow:flow-new <change-name>`
 **Meta-command (you handle this):**
 1. Launch `flow-explore` sub-agent with the change description
 2. Wait for result, present summary to user
@@ -79,66 +84,66 @@ Pass the topic and project name.
 4. Wait for result, present proposal summary to user
 5. **HUMAN GATE:** Ask user to approve the proposal
 
-### `/flow-spec`
-Launch a sub-agent with `skills/flow-spec/SKILL.md`.
+### `/ai-flow:flow-spec`
+Launch a sub-agent with the `flow-spec` skill.
 Pass the change name and project name.
 Sub-agent reads the proposal from engram.
 
-### `/flow-design`
-Launch a sub-agent with `skills/flow-design/SKILL.md`.
+### `/ai-flow:flow-design`
+Launch a sub-agent with the `flow-design` skill.
 Pass the change name and project name.
 Sub-agent reads the proposal from engram.
 
-**Note:** You can launch `/flow-spec` and `/flow-design` in parallel.
+**Note:** You can launch `/ai-flow:flow-spec` and `/ai-flow:flow-design` in parallel.
 
-### `/flow-plan`
-Launch a sub-agent with `skills/flow-plan/SKILL.md`.
+### `/ai-flow:flow-plan`
+Launch a sub-agent with the `flow-plan` skill.
 Pass the change name and project name.
 Sub-agent reads spec and design from engram.
 **HUMAN GATE:** Present plan summary, ask user to approve before proceeding to apply.
 
-### `/flow-apply`
-Launch sub-agents in batches with `skills/flow-apply/SKILL.md`.
+### `/ai-flow:flow-apply`
+Launch sub-agents in batches with the `flow-apply` skill.
 - Batch 0 (tracer bullet) always runs first, alone
 - Wait for human feedback after tracer bullet
 - Then execute remaining batches
 - Each sub-agent reads plan, spec, and design from engram
 - After each batch, update the user on progress
 
-### `/flow-verify`
-Launch a sub-agent with `skills/flow-verify/SKILL.md`.
+### `/ai-flow:flow-verify`
+Launch a sub-agent with the `flow-verify` skill.
 Sub-agent reads all artifacts from engram.
 **HUMAN GATE:** Present verification report, ask user to approve or send back for rework.
 
-### `/flow-archive`
-Launch a sub-agent with `skills/flow-archive/SKILL.md`.
+### `/ai-flow:flow-archive`
+Launch a sub-agent with the `flow-archive` skill.
 Sub-agent reads all artifacts from engram.
 
-### `/flow-ff <change-name>`
+### `/ai-flow:flow-ff <change-name>`
 **Meta-command (you handle this): Fast-forward through planning phases.**
 1. Launch `flow-propose` sub-agent → wait → present summary → **HUMAN GATE**
 2. Launch `flow-spec` and `flow-design` sub-agents **in parallel** → wait for both
 3. Launch `flow-plan` sub-agent → wait → present summary → **HUMAN GATE**
 
-### `/flow-continue [change-name]`
+### `/ai-flow:flow-continue [change-name]`
 **Meta-command (you handle this):**
 1. Recover state from engram: `flow/{change-name}/state`
 2. Identify the next missing artifact in the dependency chain
 3. Launch the corresponding phase
 
-### `/flow-debug`
-Launch a sub-agent with `skills/flow-debug/SKILL.md`.
+### `/ai-flow:flow-debug`
+Launch a sub-agent with the `flow-debug` skill.
 Can be invoked at any time — it's not tied to the DAG.
 
 ## Sub-Agent Launch Template
 
 When launching any flow sub-agent, include in the prompt:
 
-1. **Skill file:** "Read and follow `skills/flow-{phase}/SKILL.md`"
+1. **Skill file:** The corresponding `flow-{phase}` skill
 2. **Project name:** For engram `project` field
 3. **Change name:** For topic key construction
 4. **Artifact references:** Which engram topic keys to read (the sub-agent does two-step recovery)
-5. **Shared protocols:** "Read `skills/_shared/tdd-protocol.md`" (for apply and debug phases)
+5. **Shared protocols:** The `_shared/tdd-protocol.md` (for apply and debug phases)
 6. **Save instructions:** "Save your output to engram with topic key `flow/{change-name}/{artifact-type}`"
 7. **Return contract:** "Return: status, executive_summary, artifacts, next_recommended, risks"
 
@@ -161,8 +166,8 @@ When the user describes a task:
 
 1. **Simple question** → Answer briefly if you already know. If not, delegate.
 2. **Small task** (single file, quick fix) → Delegate to a general sub-agent. Suggest TDD.
-3. **Bug fix** → Suggest `/flow-debug` for systematic investigation.
-4. **Medium feature** (3-10 files) → Suggest full flow: `/flow-new <change-name>`
+3. **Bug fix** → Suggest `/ai-flow:flow-debug` for systematic investigation.
+4. **Medium feature** (3-10 files) → Suggest full flow: `/ai-flow:flow-new <change-name>`
 5. **Large feature** (10+ files) → Suggest full flow with tracer bullet emphasis.
 
 ## State Recovery
@@ -173,3 +178,7 @@ If you lose context (e.g., after compaction):
 2. Two-step recover the state artifact
 3. Review which phases are complete and which artifacts exist
 4. Resume from the next pending phase
+
+## Tracer Bullets
+
+When building features, the sub agents should build a tiny, end-to-end slice of the feature first, seek feedback, then expand out from there.
