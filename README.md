@@ -4,20 +4,41 @@ A unified AI-assisted development workflow plugin for [Claude Code](https://clau
 
 AI-Flow orchestrates structured development through DAG-based phases: exploration, proposal, specification, design, planning, implementation (with TDD), verification, and archival — with human review gates at critical points.
 
-## Install
+## Installation
 
-Requires Claude Code v1.0.33+.
+### Prerequisites
 
-### 1. Add the marketplace
+- [Claude Code](https://claude.ai/claude-code) v1.0.33+ (`claude --version` to check)
+- [Engram MCP server](https://github.com/anthropics/engram) for artifact persistence
+
+### Step 1: Add the marketplace
+
+Open Claude Code and run:
 
 ```
 /plugin marketplace add lileiva/ai-flow-proposal
 ```
 
-### 2. Install the plugin
+### Step 2: Install the plugin
 
 ```
 /plugin install ai-flow@ai-flow
+```
+
+### Step 3: Verify
+
+Run `/help` and confirm the `ai-flow:` skills appear. Try:
+
+```
+/ai-flow:flow-init
+```
+
+### Updating
+
+To pull the latest version:
+
+```
+/plugin update ai-flow@ai-flow
 ```
 
 ## Skills
@@ -73,11 +94,6 @@ These are handled by the orchestrator agent:
 | Plan approval | Phase 5 | Approve / Revise / Reject |
 | Tracer bullet feedback | Phase 6 (batch 0) | Continue / Adjust |
 | Verification approval | Phase 7 | Archive / Rework |
-
-## Prerequisites
-
-- [Claude Code](https://claude.ai/claude-code) v1.0.33+
-- [Engram MCP server](https://github.com/anthropics/engram) for artifact persistence
 
 ## License
 
