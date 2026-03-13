@@ -77,6 +77,7 @@ The orchestrator reads `.ai-flow.json` and only invokes you when `linearSync: tr
 
 ## Rules
 
+- After a successful sync, run `rm -f .ai-flow-sync-needed` to clear the Stop hook's pending-sync signal
 - **Never delete** issues or comments — only create and update
 - **Always search first** before creating — avoid duplicates
 - If `team` is not provided, use `list_teams` to find the first available team

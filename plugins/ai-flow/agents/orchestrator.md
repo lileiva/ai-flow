@@ -171,7 +171,7 @@ At the **start of every session**, read `.ai-flow.json` from the project root:
 ### Decision logic
 
 - **File missing or `linearSync: false`** → skip all `linear-sync` calls silently
-- **`linearSync: true`** → dispatch `linear-sync` after every phase completes
+- **`linearSync: true`** → dispatch `linear-sync` after every phase completes. Also, after each phase completes, run `touch .ai-flow-sync-needed` to signal the Stop hook that a sync is pending
 - Pass `linear.team` and `linear.project` to every `linear-sync` call
 
 ### When to invoke `linear-sync`
