@@ -1,11 +1,3 @@
 {
-  "mcpServers": {
-    "ai-flow-engram": {
-      "command": "npx",
-      "args": ["-y", "engram-mcp"],
-      "env": {
-        "ENGRAM_PROJECT": "${CLAUDE_PLUGIN_ROOT}"
-      }
-    }
-  }
+  "mcpServers": {}
 }
