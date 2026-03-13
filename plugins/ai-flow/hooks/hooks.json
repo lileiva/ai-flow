@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "Check if `.ai-flow.json` exists with `linearSync: true` and if any flow phase completed during this session. If so, remind the user to verify that Linear issues are up to date. Be brief — one sentence."
+            "prompt": "Check if `.ai-flow.json` exists with `linearSync: true` and if any flow phase completed during this session. If so, respond with {\"ok\": false, \"reason\": \"Reminder: verify Linear issues are up to date via /flow-linear-sync.\"} — otherwise respond with {\"ok\": true}. Output only the JSON object, nothing else."
           }
         ]
       }
