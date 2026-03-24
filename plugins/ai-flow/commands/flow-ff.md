@@ -11,7 +11,7 @@ Read `.ai-flow.json` from the project root if it exists — capture `linearSync`
 
 Execute these steps in order:
 
-1. **Launch the `proposer` agent** with change name "$ARGUMENTS". Wait for result.
+1. **Launch the `proposer` agent** with change name "$ARGUMENTS". Wait for result. The proposer will use `AskUserQuestion` to interactively ask scope/priority questions.
 2. Present proposal summary. **HUMAN GATE:** Approve / Revise / Reject.
 3. If approved:
    - Launch `linear-sync` with phase="propose" if `linearSync: true` (in background)
