@@ -149,6 +149,7 @@ This phase replaces SDD's generic task breakdown with Superpowers' detailed writ
   - **Acceptance criteria:** How to know this task is done
 - Order tasks by dependency, group into execution batches
 - Identify the **tracer bullet task** — the smallest task that touches all layers end-to-end
+- Build the **Connected Pairs registry** — catalog which layer connections are already validated and prepend tracer sub-steps for tasks that introduce new connections. This ensures every layer boundary is proven before real logic is built on top of it.
 - Run a **plan review loop** with a reviewer sub-agent to catch gaps, ordering issues, or missing test coverage
 
 **Output:** Plan artifact — ordered task list with TDD steps, grouped into batches.
@@ -403,18 +404,21 @@ Is it a bug fix?
     │   └── Lightweight flow:
     │       /flow-explore → /flow-plan → /flow-apply
     │       (Skip proposal, spec, and design. Explore enough to
-    │        understand the change, plan the tasks, execute with TDD.)
+    │        understand the change, plan the tasks, execute with TDD.
+    │        Tracer sub-steps are automatic if the plan crosses layers.)
     │
     ├── Medium (3-10 files, moderate complexity)
     │   └── Full flow:
     │       /flow-new → /flow-spec → /flow-design → /flow-plan → /flow-apply → /flow-verify
-    │       (Every phase. Human gates at proposal, plan, and verify.)
+    │       (Every phase. Human gates at proposal, plan, and verify.
+    │        Tracer sub-steps are automatic for new layer connections.)
     │
     └── Large (10+ files, cross-cutting, high risk)
         └── Full flow + tracer bullet strategy:
             Same as Medium, but during /flow-apply, implement the
             tracer bullet first. Get feedback on the thin slice before
-            expanding to the full implementation.
+            expanding to the full implementation. Tracer sub-steps
+            validate each layer boundary individually.
 ```
 
 | Change Type | Phases Used | Estimated Overhead | When to Choose |
@@ -423,6 +427,8 @@ Is it a bug fix?
 | Small change | Explore → Plan → Apply | Low | 1-2 files, well-understood domain |
 | Medium feature | Full flow | Moderate | Multi-file, needs spec and design review |
 | Large feature | Full flow + tracer bullet | Higher upfront, lower overall risk | Cross-cutting, architectural impact, high uncertainty |
+
+**Note:** Tracer sub-steps are automatic at all change sizes. When the planner detects a task that introduces a new layer connection (not yet in the Connected Pairs registry), it prepends a thin connectivity proof before the behavior sub-step. This is distinct from the Batch 0 "tracer bullet" strategy for Large changes — tracer sub-steps are a mechanical rule applied during planning, not a size-based decision.
 
 ---
 

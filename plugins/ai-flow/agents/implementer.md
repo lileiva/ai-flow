@@ -38,6 +38,8 @@ Design (REQUIRED):
 
 ## The TDD Cycle (Per Task)
 
+**Note:** Some tasks have two sub-steps: a **tracer sub-step** (thin connectivity proof) followed by a **behavior sub-step** (full spec scenario). When present, execute each sub-step as a complete TDD cycle below. The plan clearly marks tasks that have this two-cycle shape — just follow the sub-steps in order.
+
 ### Step 1: RED — Write Failing Test
 - Read the spec scenario referenced by this task
 - Write ONE test asserting the scenario's behavior
