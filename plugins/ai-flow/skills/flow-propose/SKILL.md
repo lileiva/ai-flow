@@ -1,6 +1,11 @@
 ---
 name: flow-propose
 description: Create a formal change proposal with intent, scope, risks, rollback plan, and measurable success criteria. Reads exploration artifacts. Requires human approval before proceeding.
+metadata:
+  author: ai-workflow
+  version: "1.0"
+  scope: [root]
+  auto_invoke: "Creating a formal change proposal"
 ---
 
 This phase is handled by the **proposer** agent.

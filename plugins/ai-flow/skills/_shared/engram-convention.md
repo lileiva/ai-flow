@@ -8,6 +8,7 @@ All AI-Flow artifacts use deterministic topic keys for engram persistence:
 |----------|------------------|---------|
 | Project context | `flow-init/{project-name}` | `flow-init/my-app` |
 | Exploration | `flow/{change-name}/explore` | `flow/auth-system/explore` |
+| Brainstorm | `flow/{change-name}/brainstorm` | `flow/auth-system/brainstorm` |
 | Proposal | `flow/{change-name}/proposal` | `flow/auth-system/proposal` |
 | Spec | `flow/{change-name}/spec` | `flow/auth-system/spec` |
 | Design | `flow/{change-name}/design` | `flow/auth-system/design` |

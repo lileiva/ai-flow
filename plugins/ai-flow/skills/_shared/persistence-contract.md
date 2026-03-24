@@ -4,6 +4,18 @@
 
 AI-Flow uses **engram** as its persistence backend. All artifacts are stored in engram using deterministic topic keys (see `engram-convention.md`).
 
+## Fallback Mode: `none`
+
+When engram is unavailable (detected by the SessionStart hook or by failed `mem_search` calls), AI-Flow operates in a degraded inline-only mode:
+
+1. Sub-agents SKIP all `mem_save`, `mem_search`, and `mem_get_observation` calls
+2. Sub-agents include the full artifact content in their return payload under the `artifacts` key
+3. The orchestrator passes artifact content to downstream sub-agents via the launch prompt
+4. State tracking is maintained only in the orchestrator's conversation context
+5. **WARNING:** Multi-session flows are not supported in `none` mode. If the conversation ends, all artifacts are lost.
+
+This is a degraded mode -- a safety net, not a promoted workflow. The SessionStart hook warns users to install engram for full functionality. We recommend installing engram from: https://github.com/gentleman-programming/engram
+
 ## Sub-Agent Context Protocol
 
 Sub-agents start with a fresh context. The orchestrator controls what context they receive.

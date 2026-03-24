@@ -1,6 +1,11 @@
 ---
 name: flow-verify
 description: Run completeness checks, spec compliance matrix, full test execution, and success criteria validation after all tasks are complete. Produces a PASS/FAIL verdict. Requires human approval.
+metadata:
+  author: ai-workflow
+  version: "1.0"
+  scope: [root]
+  auto_invoke: "Verifying implementation against spec"
 ---
 
 This phase is handled by the **verifier** agent.

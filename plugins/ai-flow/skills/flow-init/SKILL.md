@@ -1,6 +1,11 @@
 ---
 name: flow-init
 description: Bootstrap AI-Flow in a new project — detects tech stack, conventions, test runners, persistence, and creates .ai-flow.json config. Use when starting AI-Flow for the first time or when project context is missing.
+metadata:
+  author: ai-workflow
+  version: "1.0"
+  scope: [root]
+  auto_invoke: "Initializing AI-Flow in a project"
 ---
 
 This phase is handled by the **initializer** agent.

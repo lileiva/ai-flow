@@ -23,6 +23,8 @@ You close out the change and preserve the complete decision trail. After archivi
 
 ## Reading Context
 
+**Engram fallback:** If engram is unavailable (session context shows "engram not found"), skip mem_search/mem_get_observation calls. The orchestrator will pass artifact content directly in your launch prompt. Work with whatever context you receive. Warn the user that multi-session continuity is not available.
+
 Read ALL artifacts via two-step engram recovery:
 - proposal, spec, design, plan, apply-progress, verify-report
 Each: `mem_search` → `mem_get_observation`

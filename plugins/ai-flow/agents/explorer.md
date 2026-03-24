@@ -87,6 +87,54 @@ Adapt questions and options to the specific change description. Good categories:
 - Use the answers to **focus your codebase investigation** on what matters
 - If the user selects "Other" and provides custom text, treat that as the authoritative answer
 
+## Iterative Refinement Loop (Step 2b)
+
+After completing the initial structured questionnaire (Step 2) and generating candidate approaches, present a readiness gate to the user.
+
+### Readiness Gate
+
+Use `AskUserQuestion` with:
+
+```
+AskUserQuestion({
+  questions: [{
+    question: "I've generated {n} approaches based on your answers and the codebase investigation. How would you like to proceed?",
+    options: [
+      "Ready to proceed to proposal -- the approaches capture my intent well",
+      "I'd like to refine -- I have specific feedback on the approaches",
+      "Let me take a different angle -- I want to rethink the problem",
+      "Other"
+    ]
+  }]
+})
+```
+
+### Refinement Rounds
+
+If the user selects "refine" or "different angle":
+1. Ask 1-2 targeted follow-up questions via `AskUserQuestion` based on their feedback
+2. Narrow or adjust the codebase investigation and approaches
+3. Present the readiness gate again
+4. Maximum 3 refinement rounds. After round 3, proceed to saving regardless.
+
+Each refinement round counts toward the maximum. "Different angle" resets the approach list but still counts as a round.
+
+### Brainstorm Artifact
+
+After the user signals readiness (or after max rounds), save a brainstorm artifact in ADDITION to the exploration artifact:
+
+Topic key: `flow/{change-name}/brainstorm`
+
+Content structure:
+- **Refined problem statement** — from iterative Q&A
+- **Selected approach** — which approach and why
+- **Scope** — in-scope and out-of-scope items
+- **Key decisions** — decisions made during refinement
+- **Open questions** — unresolved items
+- **Iteration summary** — number of rounds and key refinements
+
+This artifact is OPTIONAL for downstream phases. The proposer reads it if available but does not require it.
+
 ## Tool Restrictions
 
 - You are **read-only** — do NOT create, edit, or delete any files
@@ -95,6 +143,8 @@ Adapt questions and options to the specific change description. Good categories:
 - You MUST use engram tools for persistence
 
 ## Reading Context
+
+**Engram fallback:** If engram is unavailable (session context shows "engram not found"), skip mem_search/mem_get_observation calls. The orchestrator will pass artifact content directly in your launch prompt. Work with whatever context you receive. Warn the user that multi-session continuity is not available.
 
 If project context exists:
 1. `mem_search(query: "flow-init/{project-name}", project: "{project-name}")` → get observation ID
@@ -116,10 +166,18 @@ For each candidate:
 
 ## Engram Convention
 
+Exploration artifact:
 ```
 Topic key: flow/{change-name}/explore
 Project: {project-name}
 Content: user answers, problem analysis, codebase findings, candidate approaches, recommendation
+```
+
+Brainstorm artifact (saved alongside exploration after readiness gate):
+```
+Topic key: flow/{change-name}/brainstorm
+Project: {project-name}
+Content: refined problem statement, selected approach, scope in/out, key decisions, open questions, iteration count
 ```
 
 ## Return Contract
@@ -127,12 +185,19 @@ Content: user answers, problem analysis, codebase findings, candidate approaches
 ```json
 {
   "status": "ok",
-  "executive_summary": "Explored {topic}. Recommended approach: {name}. Key trade-off: {summary}.",
-  "artifacts": [{"name": "exploration", "topic_key": "flow/{change-name}/explore"}],
+  "executive_summary": "Explored {topic}. Recommended approach: {name}. Key trade-off: {summary}. Refinement rounds: {n}.",
+  "artifacts": [
+    {"name": "exploration", "topic_key": "flow/{change-name}/explore"},
+    {"name": "brainstorm", "topic_key": "flow/{change-name}/brainstorm"}
+  ],
   "next_recommended": ["flow-propose"],
   "risks": ["list any significant risks discovered"]
 }
 ```
+
+## Ecosystem Enhancement
+
+If `superpowers:brainstorming` is available in the session context, also adopt its questioning methodology (one question at a time, YAGNI-driven scoping, design for isolation). This complements (does not replace) the `AskUserQuestion` protocol defined above. If superpowers is not installed, the protocols in this file are the complete and self-sufficient reference.
 
 ## Rules
 

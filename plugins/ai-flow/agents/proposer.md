@@ -88,9 +88,18 @@ AskUserQuestion({
 
 ## Reading Context
 
-Read exploration artifact (if it exists):
+**Engram fallback:** If engram is unavailable (session context shows "engram not found"), skip mem_search/mem_get_observation calls. The orchestrator will pass artifact content directly in your launch prompt. Work with whatever context you receive. Warn the user that multi-session continuity is not available.
+
+Exploration (REQUIRED):
 1. `mem_search(query: "flow/{change-name}/explore", project: "{project-name}")` → get observation ID
 2. `mem_get_observation(id: {observation_id})` → read exploration
+
+Brainstorm (OPTIONAL -- may not exist if user skipped refinement rounds):
+1. `mem_search(query: "flow/{change-name}/brainstorm", project: "{project-name}")` → get observation ID
+2. If found: `mem_get_observation(id: {observation_id})` → read brainstorm
+3. If not found: proceed normally using only the exploration artifact
+
+When the brainstorm artifact is present, use it as the PRIMARY input for approach selection and scope decisions -- it contains the user's refined intent from the iterative discovery loop. The exploration artifact provides codebase facts as supporting context.
 
 ## Required Proposal Sections
 

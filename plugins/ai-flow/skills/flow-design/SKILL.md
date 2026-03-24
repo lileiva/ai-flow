@@ -1,6 +1,11 @@
 ---
 name: flow-design
 description: Create the technical design with architecture decisions, file change plans, interfaces, data flow, and testing strategy. Reads the proposal. Can run in parallel with flow-spec.
+metadata:
+  author: ai-workflow
+  version: "1.0"
+  scope: [root]
+  auto_invoke: "Creating technical design"
 ---
 
 This phase is handled by the **designer** agent.

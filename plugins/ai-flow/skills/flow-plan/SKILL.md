@@ -1,6 +1,11 @@
 ---
 name: flow-plan
 description: Break a designed change into bite-sized implementation tasks with TDD steps baked into each task. Identifies the tracer bullet, builds the Connected Pairs registry, and groups tasks into batches. Requires human approval.
+metadata:
+  author: ai-workflow
+  version: "1.0"
+  scope: [root]
+  auto_invoke: "Breaking design into implementation tasks"
 ---
 
 This phase is handled by the **planner** agent.

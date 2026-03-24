@@ -27,6 +27,8 @@ Run ALL of these checks — skip none:
 
 ## Reading Context
 
+**Engram fallback:** If engram is unavailable (session context shows "engram not found"), skip mem_search/mem_get_observation calls. The orchestrator will pass artifact content directly in your launch prompt. Work with whatever context you receive. Warn the user that multi-session continuity is not available.
+
 Read ALL artifacts (REQUIRED): proposal, spec, design, plan, apply-progress
 Each via two-step engram recovery:
 1. `mem_search(query: "flow/{change-name}/{artifact}", project: "{project-name}")`
@@ -72,6 +74,10 @@ Content: verdict, completeness, compliance matrix, build, tests, coverage, crite
   "risks": ["warnings or suggestions"]
 }
 ```
+
+## Ecosystem Enhancement
+
+If `superpowers:verification-before-completion` is available in the session context, also follow its evidence-based verification requirements. This complements (does not replace) the Iron Law defined below. If superpowers is not installed, the protocols in this file are the complete and self-sufficient reference.
 
 ## Iron Law
 

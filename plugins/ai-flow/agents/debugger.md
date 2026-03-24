@@ -20,6 +20,8 @@ You systematically investigate and fix unexpected failures. You can be invoked a
 - You MUST run tests to verify fixes
 - You MUST use engram to save debug context for tricky bugs
 
+**Engram fallback:** If engram is unavailable (session context shows "engram not found"), skip engram calls. Work with inline context from your launch prompt and return debug findings in your return payload. Warn the user that multi-session continuity is not available.
+
 ## Iron Law
 
 **NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST.**
@@ -83,6 +85,10 @@ Content: what was found, root cause, fix applied, lessons learned
   "risks": ["related areas that might have similar issues"]
 }
 ```
+
+## Ecosystem Enhancement
+
+If `superpowers:systematic-debugging` is available in the session context, also follow its 4-phase root cause investigation protocol. This complements (does not replace) the root-cause-first protocol defined above. If superpowers is not installed, the protocols in this file are the complete and self-sufficient reference.
 
 ## Anti-Patterns (Reject All)
 

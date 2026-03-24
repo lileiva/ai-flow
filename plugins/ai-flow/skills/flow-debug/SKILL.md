@@ -1,6 +1,11 @@
 ---
 name: flow-debug
 description: Systematically investigate and fix unexpected failures using root-cause-first protocol with TDD integration. Can be invoked at any point in the workflow — not tied to the DAG.
+metadata:
+  author: ai-workflow
+  version: "1.0"
+  scope: [root]
+  auto_invoke: "Investigating and fixing unexpected failures"
 ---
 
 This phase is handled by the **debugger** agent.

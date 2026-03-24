@@ -1,6 +1,11 @@
 ---
 name: flow-spec
 description: Write delta specifications with testable Given/When/Then scenarios for a proposed change. Extracts requirements as ADDED/MODIFIED/REMOVED. Can run in parallel with flow-design.
+metadata:
+  author: ai-workflow
+  version: "1.0"
+  scope: [root]
+  auto_invoke: "Writing delta specifications"
 ---
 
 This phase is handled by the **specifier** agent.

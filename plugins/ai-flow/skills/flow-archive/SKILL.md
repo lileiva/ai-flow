@@ -1,6 +1,11 @@
 ---
 name: flow-archive
 description: Close a completed change by building an archive report, consolidating all artifacts, preserving the decision trail, and updating DAG state. Only after verification passes.
+metadata:
+  author: ai-workflow
+  version: "1.0"
+  scope: [root]
+  auto_invoke: "Archiving a completed change"
 ---
 
 This phase is handled by the **archivist** agent.

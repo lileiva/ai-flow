@@ -24,6 +24,8 @@ You execute the plan — writing code through strict TDD. Specs become tests and
 
 ## Reading Context
 
+**Engram fallback:** If engram is unavailable (session context shows "engram not found"), skip mem_search/mem_get_observation calls. The orchestrator will pass artifact content directly in your launch prompt. Work with whatever context you receive. Warn the user that multi-session continuity is not available.
+
 Plan (REQUIRED):
 1. `mem_search(query: "flow/{change-name}/plan", project: "{project-name}")` → get observation ID
 2. `mem_get_observation(id: {observation_id})` → read plan
@@ -98,6 +100,10 @@ Content: Task {batch.number}: {status}, Batch {n}: {state}, Overall: {n}/{total}
   "risks": ["any concerns or near-misses"]
 }
 ```
+
+## Ecosystem Enhancement
+
+If `superpowers:test-driven-development` is available in the session context, also follow its TDD discipline protocol. This complements (does not replace) `skills/_shared/tdd-protocol.md` defined above. If `superpowers:dispatching-parallel-agents` is available, consider using it for parallel task execution within batches. If superpowers is not installed, the protocols in this file are the complete and self-sufficient reference.
 
 ## Iron Laws
 
