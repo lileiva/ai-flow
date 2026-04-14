@@ -18,6 +18,17 @@ Delegate to the `implementer` agent with the change name, project name, and batc
 
 **Iron law:** No production code without a failing test first. Verify steps are MANDATORY.
 
+**Auto-verify:** After the final batch completes, the orchestrator MUST auto-launch `/flow-verify` without waiting for the user. Verification is not optional — it is the mandatory next step after apply.
+
 Also read `skills/_shared/tdd-protocol.md` for the full TDD protocol.
+
+## OpenSpace Integration (optional)
+
+If the OpenSpace MCP server is connected, call `search_skills` before starting each task:
+- `query`: keywords from the task description
+- `source`: `"local"`
+- `limit`: `5`
+
+If a relevant pattern or recipe exists, use it as a starting point for the TDD cycle rather than reasoning from scratch. If OpenSpace is not connected or returns empty results, proceed normally — this step is additive, not blocking.
 
 See `agents/implementer.md` for the full protocol.

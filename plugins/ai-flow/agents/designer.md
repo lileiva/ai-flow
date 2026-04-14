@@ -35,6 +35,11 @@ Spec (OPTIONAL — may not exist if running in parallel):
 1. `mem_search(query: "flow/{change-name}/spec", project: "{project-name}")` → get observation ID
 2. If found: `mem_get_observation(id: {observation_id})` → read spec
 
+If the spec was not available when you ran (parallel execution), include a note in the design artifact:
+
+## Note: Designed Without Spec
+This design was produced in parallel with the spec phase. The planner should cross-reference the spec scenarios with this design and flag any misalignments before proceeding.
+
 ## Architecture Decision Format
 
 ```

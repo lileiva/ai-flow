@@ -13,8 +13,7 @@ This phase is handled by the **initializer** agent.
 Delegate to the `initializer` agent with the project name. The agent will:
 1. Detect technology stack, frameworks, test runners, and conventions
 2. Verify engram persistence is available
-3. Detect Linear MCP tools and ask user about Linear sync preference
-4. Create `.ai-flow.json` at the project root with the configuration
-5. Save project context to engram under `flow-init/{project-name}`
+3. Create `.ai-flow.json` at the project root with the configuration
+4. Save project context to engram under `flow-init/{project-name}`
 
 See `agents/initializer.md` for the full protocol.

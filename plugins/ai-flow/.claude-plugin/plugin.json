@@ -1,7 +1,7 @@
 {
   "name": "ai-flow",
   "description": "Unified AI-assisted development workflow with DAG-based phases, TDD, and human review gates",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "author": {
     "name": "Luis A. Leiva"
   },

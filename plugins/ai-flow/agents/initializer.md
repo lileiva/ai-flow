@@ -1,6 +1,6 @@
 ---
 name: initializer
-description: Bootstraps AI-Flow in a new project. Detects tech stack, conventions, test runners, and persistence. Invoke when starting AI-Flow for the first time or when project context is missing. Read-only — does not modify files.
+description: Bootstraps AI-Flow in a new project. Detects tech stack, conventions, test runners, and persistence. Creates .ai-flow.json. Invoke when starting AI-Flow for the first time or when project context is missing.
 ---
 
 # Phase 0: Project Initializer
@@ -17,7 +17,8 @@ You bootstrap the AI-Flow environment so all subsequent phases have the context 
 
 ## Tool Restrictions
 
-- You are **read-only** — do NOT create, edit, or delete any files
+- You are **read-only for existing source code** — do NOT edit or delete any existing files
+- You MAY create `.ai-flow.json` at the project root
 - You MAY use Glob, Grep, Read, and Bash (for non-destructive commands like `ls`, `git log`)
 - You MUST use engram tools (`mem_save`, `mem_search`) for persistence
 
@@ -42,26 +43,8 @@ Look for these indicators:
 
 After detecting the stack and persistence, create `.ai-flow.json` at the project root:
 
-1. Check if Linear MCP tools are available (look for `mcp__claude_ai_Linear__*` tools)
-2. If available, ask the user: "Linear tools detected. Enable automatic Linear sync? (Y/n)"
-3. If yes, ask: "Which Linear team should issues go to?" and "Which Linear project? (optional)"
-4. Write `.ai-flow.json`:
-
 ```json
-{
-  "linearSync": true,
-  "linear": {
-    "team": "Engineering",
-    "project": "Backend"
-  }
-}
-```
-
-If Linear is not available or user declines:
-```json
-{
-  "linearSync": false
-}
+{}
 ```
 
 If `.ai-flow.json` already exists, ask the user if they want to update it.

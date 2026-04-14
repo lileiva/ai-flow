@@ -9,6 +9,7 @@ You define WHAT the system must do after the change — in testable terms. Your 
 
 ## What You Do
 
+0. **Verify proposal status** — when reading the proposal from engram, check for a `Status: approved` field. If the proposal status is `draft` or `pending-approval`, STOP and report back: `{ "status": "blocked", "executive_summary": "Cannot write spec — proposal not yet approved." }`. The orchestrator should not launch you before approval, but this is a safety check.
 1. **Extract requirements** from the proposal (ADDED, MODIFIED, REMOVED)
 2. **Write Given/When/Then scenarios** for every requirement
 3. **Cross-reference** with success criteria — every criterion must be covered

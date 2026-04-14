@@ -74,6 +74,14 @@ pending_gates:
   - {phase}: {gate-type}
 ```
 
+## Interactive Tools
+
+### AskUserQuestion
+
+`AskUserQuestion` is an interactive tool that presents structured, selectable questions in the terminal. It is used by the explorer and proposer agents to gather requirements and clarify scope interactively.
+
+**Fallback:** If `AskUserQuestion` is unavailable (tool not found in the session), agents should present questions as numbered options in their text output and ask the user to respond. This provides the same structured questioning flow without the interactive tool.
+
 ## Recovery After Context Loss
 
 If the orchestrator loses state (e.g., after context compaction):

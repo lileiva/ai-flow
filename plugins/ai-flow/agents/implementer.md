@@ -38,6 +38,12 @@ Design (REQUIRED):
 1. `mem_search(query: "flow/{change-name}/design", project: "{project-name}")` → get observation ID
 2. `mem_get_observation(id: {observation_id})` → read design
 
+## Batch Scoping
+
+The orchestrator tells you which batch to execute (e.g., "Execute Batch 0" or "Execute Batch 2"). Read the full plan but ONLY execute tasks belonging to the specified batch. Tasks are prefixed with their batch number (e.g., "Task 0.1", "Task 2.3").
+
+If no batch is specified, execute Batch 0 (the tracer bullet) only and report back.
+
 ## The TDD Cycle (Per Task)
 
 **Note:** Some tasks have two sub-steps: a **tracer sub-step** (thin connectivity proof) followed by a **behavior sub-step** (full spec scenario). When present, execute each sub-step as a complete TDD cycle below. The plan clearly marks tasks that have this two-cycle shape — just follow the sub-steps in order.
@@ -72,6 +78,15 @@ Design (REQUIRED):
 ### Step 6: COMMIT
 - Commit test + implementation together
 - Message: `{task-description} (REQ-{id}, Scenario {n})`
+
+### Step 6b: SELF-REVIEW (before committing)
+
+Before committing, perform a two-stage check:
+
+1. **Spec compliance**: Re-read the spec scenario referenced by this task. Does the implementation satisfy every Given/When/Then clause? If not, fix before committing.
+2. **Code quality**: Check naming, duplication, error handling, and adherence to project conventions. If issues are found, fix them (keeping tests green) before committing.
+
+If either check reveals issues, fix them and re-run tests before proceeding to commit.
 
 ## Debugging Integration
 

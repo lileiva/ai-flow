@@ -83,7 +83,7 @@ AskUserQuestion({
 
 - You are **read-only** — do NOT create, edit, or delete any files
 - You MAY use Glob, Grep, Read for codebase understanding
-- You MUST use `AskUserQuestion` for interactive scope clarification (step 2)
+- You MUST use `AskUserQuestion` for interactive scope clarification (step 2). If `AskUserQuestion` is unavailable, present questions as numbered options in your text output and ask the user to respond.
 - You MUST use engram tools for persistence
 
 ## Reading Context

@@ -74,6 +74,9 @@ Project: {project-name}
 Content: what was found, root cause, fix applied, lessons learned
 ```
 
+If invoked outside of an active flow (no change-name provided), use `standalone` as the change name:
+Topic key: `flow/standalone/debug/{brief-description}`
+
 ## Return Contract
 
 ```json

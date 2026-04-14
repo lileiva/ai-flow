@@ -139,7 +139,7 @@ This artifact is OPTIONAL for downstream phases. The proposer reads it if availa
 
 - You are **read-only** — do NOT create, edit, or delete any files
 - You MAY use Glob, Grep, Read, and Bash (for non-destructive commands)
-- You MUST use `AskUserQuestion` for interactive requirements gathering (step 2)
+- You MUST use `AskUserQuestion` for interactive requirements gathering (step 2). If `AskUserQuestion` is unavailable, present questions as numbered options in your text output and ask the user to respond.
 - You MUST use engram tools for persistence
 
 ## Reading Context

@@ -72,3 +72,16 @@ When a test fails unexpectedly during the GREEN step:
 2. Re-read the test — is it testing what you think?
 3. Re-read the implementation — is it doing what you think?
 4. If the failure is genuinely unexpected, enter the debugging protocol (flow-debug)
+
+## Test Discovery
+
+Before your first RED step, determine the test command:
+
+1. Check the plan artifact — the planner should specify the test command per task
+2. If not specified, check `.ai-flow.json` or the project context artifact for `testRunner`
+3. If neither exists, detect from the project:
+   - `package.json` with `jest`/`vitest` scripts → `npm test` or `npx vitest run`
+   - `pytest.ini`/`pyproject.toml` → `pytest`
+   - `Cargo.toml` → `cargo test`
+   - `go.mod` → `go test ./...`
+4. Run the discovered command to verify it works before starting the TDD cycle

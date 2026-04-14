@@ -156,7 +156,7 @@ This phase replaces SDD's generic task breakdown with Superpowers' detailed writ
 
 **Gate:** Human reviews and approves the plan before execution begins.
 
-**Who does it:** Planner sub-agent (writes), Reviewer sub-agent (reviews).
+**Who does it:** Planner sub-agent. The planner validates coverage of all scenarios and file changes as a built-in step.
 
 ---
 

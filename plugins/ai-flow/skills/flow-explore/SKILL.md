@@ -25,4 +25,13 @@ Delegate to the `explorer` agent with the topic and project name. The agent will
 
 **Outputs:** Two artifacts -- `explore` (codebase investigation) and `brainstorm` (refined problem and approach from user interaction). The brainstorm artifact is optional input for the proposer.
 
+## OpenSpace Integration (optional)
+
+If the OpenSpace MCP server is connected, call `search_skills` before investigating the codebase:
+- `query`: keywords from the topic being explored
+- `source`: `"local"`
+- `limit`: `10`
+
+If relevant skills are returned, factor them into your candidate approaches. If OpenSpace is not connected or returns empty results, proceed normally — this step is additive, not blocking.
+
 See `agents/explorer.md` for the full protocol.

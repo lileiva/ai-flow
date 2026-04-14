@@ -12,7 +12,6 @@ For the full reference document, see [unified-ai-dev-flow.md](unified-ai-dev-flo
 
 - [Claude Code](https://claude.ai/claude-code) v1.0.33+
 - [Engram MCP server](https://github.com/anthropics/engram) for artifact persistence (bundled via `.mcp.json`)
-- [Linear MCP server](https://modelcontextprotocol.io/integrations/linear) (optional, for issue tracking)
 
 ### Step 1: Add the marketplace
 
@@ -34,7 +33,7 @@ Open Claude Code and run:
 /flow-init
 ```
 
-This detects your tech stack, bootstraps persistence, and creates `.ai-flow.json` with your preferences (including Linear sync if detected).
+This detects your tech stack, bootstraps persistence, and creates `.ai-flow.json` with your preferences.
 
 ### Step 4: Verify
 
@@ -81,22 +80,8 @@ Or use the shortcuts:
 AI-Flow uses `.ai-flow.json` at the project root for per-project settings. Created automatically by `/flow-init`.
 
 ```json
-{
-  "linearSync": true,
-  "linear": {
-    "team": "Engineering",
-    "project": "Backend"
-  }
-}
+{}
 ```
-
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `linearSync` | boolean | `false` | Enable automatic Linear issue sync after each phase |
-| `linear.team` | string | — | Linear team for new issues |
-| `linear.project` | string | — | Linear project for new issues |
-
-If the file is missing, Linear sync is off and all other features work normally.
 
 ## Commands
 
@@ -141,7 +126,6 @@ Each phase is executed by a specialized agent with domain expertise and scoped t
 | `verifier` | 7 | Read + tests | Spec compliance matrix, quality gate |
 | `archivist` | 8 | Read + engram | Consolidates artifacts, closes change |
 | `debugger` | Any | Full | Root-cause-first investigation with TDD fix |
-| `linear-sync` | Any | Linear MCP | Syncs phase progress to Linear issues |
 | `orchestrator` | — | Delegates | Coordinates all agents, manages human gates |
 
 ## DAG
@@ -166,27 +150,11 @@ Each phase is executed by a specialized agent with domain expertise and scoped t
 
 ## Hooks
 
-AI-Flow includes a session-end hook that runs when you stop Claude Code. If `.ai-flow.json` has `linearSync: true` and a flow phase completed during the session, it reminds you to verify that Linear issues are up to date.
-
 Defined in `plugins/ai-flow/hooks/hooks.json`.
 
 ## MCP Servers
 
 The plugin bundles an engram MCP server configuration in `.mcp.json`. This ensures artifact persistence is available without manual setup. The server uses `npx engram-mcp` and scopes the project to the plugin root.
-
-## Linear Integration
-
-When `linearSync: true` in `.ai-flow.json`, the orchestrator automatically dispatches the `linear-sync` agent after each phase:
-
-| Phase | Linear action |
-|-------|--------------|
-| Propose (approved) | Creates parent issue with proposal summary |
-| Spec | Posts spec summary as comment |
-| Design | Posts design summary as comment |
-| Plan (approved) | Creates sub-issues for each task, sets parent to "In Progress" |
-| Apply (per batch) | Marks completed task sub-issues as "Done" |
-| Verify | Transitions parent issue based on PASS/FAIL verdict |
-| Archive | Posts final comment, closes issue |
 
 ## Human Review Gates
 
@@ -205,7 +173,7 @@ plugins/ai-flow/
     plugin.json              # Plugin metadata (name, version, author)
   .mcp.json                  # Bundled engram MCP server config
   hooks/
-    hooks.json               # Session-end Linear sync reminder
+    hooks.json               # Session hooks
   commands/
     flow-new.md              # /flow-new command
     flow-ff.md               # /flow-ff command
@@ -237,7 +205,6 @@ plugins/ai-flow/
     verifier.md              # Phase 7 agent
     archivist.md             # Phase 8 agent
     debugger.md              # Debug agent
-    linear-sync.md           # Linear integration agent
 ```
 
 ## License

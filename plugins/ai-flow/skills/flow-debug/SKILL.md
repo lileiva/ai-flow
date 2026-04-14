@@ -21,4 +21,13 @@ Delegate to the `debugger` agent with the change name, project name, and descrip
 
 Also read `skills/_shared/tdd-protocol.md` for the TDD protocol.
 
+## OpenSpace Integration (optional)
+
+If the OpenSpace MCP server is connected, call `search_skills` before investigating:
+- `query`: the error message or failure signature
+- `source`: `"local"`
+- `limit`: `5`
+
+If a FIX-mode skill matches the failure pattern, try it before conducting a full root-cause investigation. If OpenSpace is not connected or returns empty results, proceed normally — this step is additive, not blocking.
+
 See `agents/debugger.md` for the full protocol.

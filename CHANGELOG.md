@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.4.0] - 2026-04-14
+
+### Added
+- **Auto-verify enforcement** — orchestrator auto-launches `/flow-verify` after final apply batch; verification is no longer skippable
+- **DAG state updates** — orchestrator saves state to engram after every phase transition, enabling reliable `flow-continue` recovery
+- **Batch scoping** in implementer agent — agents now execute only the specified batch instead of the full plan
+- **Proposal approval guard** in specifier — blocks spec creation if proposal is still draft/pending
+- **Self-review step** in implementer — two-stage spec compliance + code quality check before each commit
+- **Rework protocol** in orchestrator — concrete steps for handling verification failures at the rework gate
+- **Test discovery** in TDD protocol — agents auto-detect test runner from project config before first RED step
+- **AskUserQuestion fallback** — explorer and proposer degrade to text-based Q&A when superpowers unavailable
+- **"No state found" handling** in `flow-continue` — reconstructs state from individual artifacts or suggests `/flow-new`
+- **Standalone debugger fallback** — uses `flow/standalone/debug/` topic key when invoked outside an active flow
+- **Exploration check in `flow-ff`** — auto-launches explorer if exploration artifact is missing before proposing
+- **Spec-missing flag** in designer — marks design as "produced without spec" during parallel execution so planner can cross-validate
+- **OpenSpace MCP integration** (optional) — `search_skills` guidance added to flow-explore, flow-apply, and flow-debug skill files
+
+### Changed
+- Initializer agent description corrected — no longer claims "read-only" (it creates `.ai-flow.json`)
+- `unified-ai-dev-flow.md` — removed phantom "Reviewer sub-agent" reference from plan phase
+- Version bumped to 3.4.0
+
+### Removed
+- **Linear sync integration** — removed `linear-sync` agent, all Linear references from orchestrator, commands, initializer, README, and CHANGELOG. Linear was optional (default off) and unused.
+
 ## [3.3.0] - 2026-03-24
 
 ### Added
@@ -28,16 +53,12 @@
 
 ### Added
 - User-invokable commands: `flow-new`, `flow-ff`, `flow-continue` in `commands/`
-- `.ai-flow.json` project config for Linear sync settings (team, project, linearSync toggle)
-- `hooks/hooks.json` with session-end Linear sync reminder
 - `.mcp.json` bundling engram MCP server config
 - `CHANGELOG.md`
 
 ### Changed
 - Skills thinned to delegation wrappers — agents are now the source of truth for phase protocols
 - `initializer` agent now creates `.ai-flow.json` during project bootstrap
-- `orchestrator` reads `.ai-flow.json` to decide Linear sync behavior (replaces hardcoded sync)
-- `linear-sync` reads team/project from `.ai-flow.json` context
 - All URLs updated from `lileiva/ai-flow-proposal` to `lileiva/ai-flow`
 - Version bumped to 3.0.0
 
@@ -48,7 +69,6 @@
 
 ### Added
 - 10 specialized agents: initializer, explorer, proposer, specifier, designer, planner, implementer, verifier, archivist, debugger
-- `linear-sync` agent for Linear issue tracking
 - Orchestrator dispatches by agent name with scoped tool access
 
 ## [1.0.0] - 2026-03-12
