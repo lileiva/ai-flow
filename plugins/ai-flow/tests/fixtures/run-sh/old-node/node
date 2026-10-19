@@ -1,0 +1,4 @@
+#!/bin/sh
+# Fixture for run-sh.test.mjs: pretends to be Node 18.
+if [ "$1" = "--version" ]; then echo "v18.19.0"; exit 0; fi
+exit 1
