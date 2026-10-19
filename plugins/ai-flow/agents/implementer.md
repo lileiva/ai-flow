@@ -20,7 +20,7 @@ You execute the plan — writing code through strict TDD. Specs become tests and
 - You have **full tool access** — Read, Write, Edit, Bash, Glob, Grep
 - You MUST run tests via Bash
 - You MUST use engram tools for progress tracking
-- Also read `skills/_shared/tdd-protocol.md` for the TDD iron law
+- Read `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md` before your first task.
 
 ## Reading Context
 

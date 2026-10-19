@@ -33,3 +33,23 @@ function readdirSafe(rel) {
   const abs = path.join(PLUGIN_ROOT, rel);
   return fs.existsSync(abs) ? fs.readdirSync(abs) : [];
 }
+
+const READ_REF_RE = /\$\{CLAUDE_PLUGIN_ROOT\}\/([A-Za-z0-9_./-]*[A-Za-z0-9_-])/g;
+
+/**
+ * `${CLAUDE_PLUGIN_ROOT}/<path>` references in markdown text.
+ * @returns {{line: number, path: string}[]} 1-based line numbers, paths relative to the plugin root
+ */
+export function extractReadRefs(text) {
+  return text.split('\n').flatMap((l, i) => [...l.matchAll(READ_REF_RE)].map((m) => ({ line: i + 1, path: m[1] })));
+}
+
+/**
+ * READ_REFs in `file` whose target does not exist under PLUGIN_ROOT.
+ * @returns {{file: string, line: number, target: string}[]}
+ */
+export function checkReadRefs(file) {
+  return extractReadRefs(fs.readFileSync(file, 'utf8'))
+    .filter((r) => !fs.existsSync(path.join(PLUGIN_ROOT, r.path)))
+    .map((r) => ({ file, line: r.line, target: r.path }));
+}
