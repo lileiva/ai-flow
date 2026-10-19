@@ -46,3 +46,78 @@ test('run-hook.cmd session-start executes directly and prints SessionStart JSON'
   assert.equal(out.hookSpecificOutput.hookEventName, 'SessionStart');
   assert.ok(out.hookSpecificOutput.additionalContext.length > 0);
 });
+
+// ---- Behavior (REQ-017): warnings render real line breaks ----
+
+const WARNINGS = ['superpowers plugin not found', 'engram not found'];
+const BACKSLASH_N = '\\' + 'n';
+
+/** Violations of the warning-line contract in decoded hook context. */
+function warningLineViolations(text, expected = WARNINGS) {
+  const v = [];
+  if (text.includes(BACKSLASH_N)) v.push('literal backslash-n sequence in context');
+  for (const w of expected) {
+    if (!text.includes(w)) v.push(`missing warning: ${w}`);
+    else if (!new RegExp(`\\n- \\*\\*${w}\\*\\*`).test(text)) v.push(`warning not on its own line: ${w}`);
+  }
+  return v;
+}
+
+function contextOf(res) {
+  assert.equal(res.status, 0, `exit ${res.status}: ${res.stderr}`);
+  const out = JSON.parse(res.stdout);
+  return out.hookSpecificOutput?.additionalContext ?? out.additional_context;
+}
+
+/** HOME with a fake superpowers cache dir and a PATH with a fake `engram`. */
+function depsPresentEnv() {
+  const home = tmp('aiflow-home-deps-');
+  fs.mkdirSync(path.join(home, '.claude/plugins/cache/claude-plugins-official/superpowers'), { recursive: true });
+  const bin = tmp('aiflow-bin-');
+  fs.writeFileSync(path.join(bin, 'engram'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  return { HOME: home, PATH: `${bin}:/usr/bin:/bin` };
+}
+
+test('deps missing: both warnings each start a real line, no literal backslash-n', () => {
+  const ctx = contextOf(runHook());
+  assert.deepEqual(warningLineViolations(ctx), []);
+});
+
+test('superpowers warning does not claim TDD comes from superpowers', () => {
+  const ctx = contextOf(runHook());
+  const line = ctx.split('\n').find((l) => l.includes('superpowers plugin not found'));
+  assert.ok(line, 'superpowers warning line present');
+  assert.doesNotMatch(line, /TDD/);
+});
+
+test('deps present: no dependency warnings', () => {
+  const ctx = contextOf(runHook({ env: depsPresentEnv() }));
+  for (const w of WARNINGS) assert.ok(!ctx.includes(w), `unexpected warning: ${w}`);
+  assert.ok(!ctx.includes(BACKSLASH_N));
+});
+
+test('CLAUDE_PLUGIN_ROOT unset: additional_context shape with the same newline guarantees', () => {
+  const res = runHook({ env: { CLAUDE_PLUGIN_ROOT: undefined } });
+  const out = JSON.parse(res.stdout);
+  assert.equal(out.hookSpecificOutput, undefined);
+  assert.equal(typeof out.additional_context, 'string');
+  assert.deepEqual(warningLineViolations(out.additional_context), []);
+});
+
+test('hooks.json registers run-hook.cmd session-start for startup|resume|clear|compact', () => {
+  const cfg = JSON.parse(fs.readFileSync(path.join(PLUGIN_ROOT, 'hooks', 'hooks.json'), 'utf8'));
+  const [entry] = cfg.hooks.SessionStart;
+  assert.equal(entry.matcher, 'startup|resume|clear|compact');
+  assert.ok(entry.hooks[0].command.includes('run-hook.cmd" session-start'), entry.hooks[0].command);
+});
+
+test('negative: the old backslash-n concatenation is reported as a violation', () => {
+  const root = pluginCopy();
+  const file = path.join(root, 'hooks', 'session-start');
+  const src = fs.readFileSync(file, 'utf8');
+  const old = src.replaceAll(`warnings+=$'\\n'"`, 'warnings="${warnings}\\n');
+  assert.notEqual(old, src, 'fixture rewrite applied');
+  fs.writeFileSync(file, old);
+  const v = warningLineViolations(contextOf(runHook({ root })));
+  assert.ok(v.some((m) => m.includes('literal backslash-n')), JSON.stringify(v));
+});

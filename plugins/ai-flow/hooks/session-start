@@ -23,12 +23,12 @@ if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -d "$(dirname "${CLAUDE_PLUGIN_ROOT}")/
   superpowers_found=true
 fi
 if [ "$superpowers_found" = false ]; then
-  warnings="${warnings}\n-- **superpowers plugin not found** -- TDD, systematic-debugging, brainstorming, and verification skills will be unavailable. Install with: \`claude plugin add superpowers\`"
+  warnings+=$'\n'"- **superpowers plugin not found** -- systematic-debugging, brainstorming, and verification skills will be unavailable. Install with: \`claude plugin add superpowers\`"
 fi
 
 # Check engram
 if ! command -v engram &>/dev/null 2>&1; then
-  warnings="${warnings}\n-- **engram not found** -- AI-Flow artifact persistence will use inline-only mode. Install from: https://github.com/gentleman-programming/engram"
+  warnings+=$'\n'"- **engram not found** -- AI-Flow artifact persistence will use inline-only mode. Install from: https://github.com/gentleman-programming/engram"
 fi
 
 # Escape string for JSON embedding using bash parameter substitution
