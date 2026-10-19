@@ -1,0 +1,399 @@
+{
+  "$comment": "Per-run metrics written by run.mjs to <out>/runs/<case>-<i>.json (REQ-015 S1, design section 3). Validated by lib/schema.mjs (subset). per_phase may be null only with a per_phase_reason (REQ-011 S3).",
+  "type": "object",
+  "required": [
+    "case",
+    "run_index",
+    "harness_error",
+    "failure_reason",
+    "cli",
+    "tokens",
+    "per_phase",
+    "tdd",
+    "outcome"
+  ],
+  "properties": {
+    "case": {
+      "type": "string"
+    },
+    "run_index": {
+      "type": "integer"
+    },
+    "harness_error": {
+      "type": "boolean"
+    },
+    "failure_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "error_raw": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "cli": {
+      "type": "object",
+      "properties": {
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "passed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "turns": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "costUsd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "judgeCostUsd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "durationSeconds": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "graders": {
+          "type": "array"
+        }
+      }
+    },
+    "tokens": {
+      "type": "object",
+      "required": [
+        "total",
+        "source"
+      ],
+      "properties": {
+        "input": {
+          "type": "number"
+        },
+        "output": {
+          "type": "number"
+        },
+        "cache_read": {
+          "type": "number"
+        },
+        "cache_creation": {
+          "type": "number"
+        },
+        "total": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "source": {
+          "enum": [
+            "result.modelUsage",
+            "trace",
+            "unavailable"
+          ]
+        },
+        "trace_total": {
+          "type": "number"
+        },
+        "trace_coverage": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "per_phase": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "tokens_total"
+        ],
+        "properties": {
+          "instances": {
+            "type": "integer"
+          },
+          "tokens_total": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "tokens_notification": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "tokens_trace": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "tool_uses": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "duration_ms": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "per_phase_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tdd": {
+      "type": "object",
+      "required": [
+        "applicable",
+        "pass",
+        "ratio"
+      ],
+      "properties": {
+        "applicable": {
+          "type": "boolean"
+        },
+        "pass": {
+          "enum": [
+            true,
+            false,
+            null
+          ]
+        },
+        "ratio": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "impl_changes": {
+          "type": "array"
+        },
+        "env_errors": {
+          "type": "integer"
+        }
+      }
+    },
+    "outcome": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "pass"
+      ],
+      "properties": {
+        "pass": {
+          "type": "boolean"
+        }
+      }
+    },
+    "per_phase_source": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "per_phase_coverage": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "parse_errors": {
+      "type": "integer"
+    },
+    "phases": {
+      "type": "object",
+      "required": [
+        "launched",
+        "gates",
+        "order_ok",
+        "order_violations",
+        "main_thread_phase_work"
+      ],
+      "properties": {
+        "order_ok": {
+          "type": "boolean"
+        },
+        "order_violations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "main_thread_phase_work": {
+          "type": "array"
+        },
+        "apply_only_ok": {
+          "type": "boolean"
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "required": [
+        "applicable",
+        "score",
+        "missing"
+      ],
+      "properties": {
+        "applicable": {
+          "type": "boolean"
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tool_use": {
+      "type": "object",
+      "required": [
+        "subagent_ask",
+        "readonly_writes",
+        "unknown_attribution"
+      ],
+      "properties": {
+        "subagent_ask": {
+          "type": "object",
+          "required": [
+            "total",
+            "by_agent"
+          ],
+          "properties": {
+            "total": {
+              "type": "integer"
+            },
+            "by_agent": {
+              "type": "object"
+            }
+          }
+        },
+        "readonly_writes": {
+          "type": "object",
+          "required": [
+            "total",
+            "by_agent"
+          ],
+          "properties": {
+            "total": {
+              "type": "integer"
+            },
+            "by_agent": {
+              "type": "object"
+            }
+          }
+        },
+        "unknown_attribution": {
+          "type": "integer"
+        }
+      }
+    },
+    "session_start": {
+      "type": "object",
+      "required": [
+        "hook_outcome",
+        "exit_code",
+        "injected_tokens_est"
+      ],
+      "properties": {
+        "exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "injected_tokens_est": {
+          "type": "number"
+        }
+      }
+    },
+    "env": {
+      "type": "object",
+      "required": [
+        "plugins",
+        "mcp_servers",
+        "contamination",
+        "acceptance_peek"
+      ],
+      "properties": {
+        "contamination": {
+          "type": "boolean"
+        },
+        "acceptance_peek": {
+          "type": "boolean"
+        }
+      }
+    },
+    "retried": {
+      "type": "integer"
+    }
+  },
+  "if": {
+    "required": [
+      "per_phase"
+    ],
+    "properties": {
+      "per_phase": {
+        "type": "null"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "per_phase_reason"
+    ],
+    "properties": {
+      "per_phase_reason": {
+        "type": "string"
+      }
+    }
+  }
+}

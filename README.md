@@ -207,6 +207,51 @@ plugins/ai-flow/
     debugger.md              # Debug agent
 ```
 
+## Evals
+
+AI-Flow ships an offline-graded eval suite under `plugins/ai-flow/evals/` (since 4.0.0-alpha.1). It runs 5 cases through `claude plugin eval`, grades every run from its trace and workspace, and compares the result with a recorded baseline. The suite measures outcomes (hidden acceptance tests), TDD adherence, phase order, artifact completeness, tokens per phase, cost and wall time. Full details are in [`plugins/ai-flow/evals/README.md`](plugins/ai-flow/evals/README.md).
+
+### Prerequisites
+
+- Claude Code >= 2.1.301 and git >= 2.31.
+- Node 26 from nvm: `nvm install 26 && nvm use 26`. The runner puts the nvm Node 26 `bin/` dir and its npm package dir on the eval child's `PATH` (strategy R1), so agents can run `npm test` inside the eval sandbox. No other Node install is used.
+- A one-time cache build (needs network): `node plugins/ai-flow/evals/tooling/prepare.mjs`.
+- Check everything with `node plugins/ai-flow/evals/tooling/preflight.mjs` (exit 3 with guidance when something is missing).
+
+### Running
+
+```bash
+# Full suite: 5 cases x 3 runs on sonnet
+bash plugins/ai-flow/evals/run.sh
+
+# Subsets while iterating (1 run each by default)
+bash plugins/ai-flow/evals/run.sh --case a --case d
+bash plugins/ai-flow/evals/run.sh --tag smoke
+
+# Alpha gate: full suite, 3 runs, compared with baselines/v3.4.0-<model>.json
+bash plugins/ai-flow/evals/run.sh --gate
+
+# Record a baseline at the v3.4.0 tag (also measures the SessionStart cost)
+bash plugins/ai-flow/evals/run.sh --plugin-ref v3.4.0 --promote v3.4.0
+```
+
+There is no cost cap by default: evals run on a Claude Code subscription, so cost, tokens and duration are recorded as metrics, never used as gates. Pass `--max-cost-usd X` to forward the native CLI ceiling (the run is then marked incomplete if the ceiling is reached). The real constraint is the subscription rate limit: a rate-limited run is a harness error that stops the runner (exit 5, not retried); after the window resets, `--resume <results-dir>` re-runs only the missing slots. Preflight warns when recent utilization is high. Use `--model opus` (or `AIFLOW_EVAL_MODEL`) to switch models and `--dry-run` to print the plan without spawning anything.
+
+### Comparing with a baseline
+
+```bash
+node plugins/ai-flow/evals/tooling/compare.mjs --baseline plugins/ai-flow/evals/baselines/v3.4.0-sonnet.json --candidate plugins/ai-flow/evals/baselines/v3.4.0-sonnet.json
+```
+
+Replace `--candidate` with a run's `summary.json`. A metric regresses when it is worse than the baseline mean by more than 1 baseline stdev; for rate metrics (pass rates, TDD score, phase order, artifact completeness) the threshold is at least 0.34, so a single flipped run out of 3 is not flagged. Any regression exits 1. Baselines are per model: `baselines/v3.4.0-sonnet.json` is the reference for iteration and alpha gates, and `baselines/v3.4.0-opus.json` is the reference for the final 4.0.0 gate. Comparing across models or Claude Code major versions is refused (exit 6) unless `--allow-env-mismatch` is passed.
+
+### Known gaps
+
+- Human gates are auto-approved by an unattended policy appended to the system prompt, which is not how gates behave in real use.
+- Engram is mocked (`plugin_engram_engram`), so artifacts are graded from `mem_save` payloads, not from a real store.
+- Subagents launched by another subagent (for example when the flow is delegated to the `ai-flow:orchestrator` agent) are not in the trace, so their TDD, artifact and tool-use grades are recorded as n/a.
+- As shipped, v3.4.0's SessionStart hook never runs on Unix (`run-hook.cmd` is not executable, exit 126), so its injection is 0 tokens. The baseline records both this as-shipped value and the intended cost measured on temp plugin copies (about 2.8k hook tokens on sonnet).
+
 ## License
 
 MIT

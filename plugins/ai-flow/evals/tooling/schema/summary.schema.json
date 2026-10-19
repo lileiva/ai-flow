@@ -1,0 +1,225 @@
+{
+  "$comment": "Summary written by run.mjs to <out>/summary.json (REQ-015). Validated by lib/schema.mjs (subset). Supports type, required, properties, additionalProperties, items, enum, oneOf and local $ref. A stat is null when a case has no non-harness-error runs (n=0).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "meta",
+    "cases"
+  ],
+  "properties": {
+    "schema_version": {
+      "enum": [
+        1
+      ]
+    },
+    "meta": {
+      "type": "object",
+      "required": [
+        "plugin_version",
+        "plugin_ref",
+        "plugin_sha",
+        "claude_version",
+        "model",
+        "date",
+        "runs_per_case",
+        "cap_usd",
+        "cases_run",
+        "complete",
+        "incomplete_reason",
+        "total_cost_usd"
+      ],
+      "properties": {
+        "plugin_version": {
+          "type": "string"
+        },
+        "plugin_ref": {
+          "type": "string"
+        },
+        "plugin_sha": {
+          "type": "string"
+        },
+        "evals_sha": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "behavior_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "claude_version": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "judge_model": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "runs_per_case": {
+          "type": "integer"
+        },
+        "cap_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cases_run": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "incomplete_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "total_cost_usd": {
+          "type": "number"
+        }
+      }
+    },
+    "cases": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "n",
+          "harness_errors",
+          "outcome_pass_rate",
+          "tokens_total",
+          "cost_usd",
+          "wall_time_s",
+          "tdd_score",
+          "tdd_ratio",
+          "phase_order",
+          "artifact_completeness",
+          "subagent_ask",
+          "readonly_writes",
+          "per_phase_tokens"
+        ],
+        "properties": {
+          "n": {
+            "type": "integer"
+          },
+          "harness_errors": {
+            "type": "integer"
+          },
+          "outcome_pass_rate": {
+            "$ref": "#/definitions/stat_or_null"
+          },
+          "tokens_total": {
+            "$ref": "#/definitions/stat_or_null"
+          },
+          "cost_usd": {
+            "$ref": "#/definitions/stat_or_null"
+          },
+          "wall_time_s": {
+            "$ref": "#/definitions/stat_or_null"
+          },
+          "tdd_score": {
+            "$ref": "#/definitions/stat_or_na"
+          },
+          "tdd_ratio": {
+            "$ref": "#/definitions/stat_or_na"
+          },
+          "phase_order": {
+            "$ref": "#/definitions/stat_or_na"
+          },
+          "artifact_completeness": {
+            "$ref": "#/definitions/stat_or_na"
+          },
+          "subagent_ask": {
+            "$ref": "#/definitions/stat_or_na"
+          },
+          "readonly_writes": {
+            "$ref": "#/definitions/stat_or_na"
+          },
+          "per_phase_tokens": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "$ref": "#/definitions/stat"
+            }
+          },
+          "no_data_reason": {
+            "type": "string"
+          },
+          "harness_errors_retried": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "session_start": {
+      "type": "object",
+      "properties": {
+        "as_shipped": {
+          "type": "object"
+        },
+        "intended": {
+          "type": "object"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "stat": {
+      "type": "object",
+      "required": [
+        "mean",
+        "stdev"
+      ],
+      "properties": {
+        "mean": {
+          "type": "number"
+        },
+        "stdev": {
+          "type": "number"
+        },
+        "n_lt_2": {
+          "type": "boolean"
+        }
+      }
+    },
+    "stat_or_na": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/stat"
+        },
+        {
+          "enum": [
+            "n/a"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stat_or_null": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/stat"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

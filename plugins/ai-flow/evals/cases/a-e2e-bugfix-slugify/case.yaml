@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: a-e2e-bugfix-slugify
+context:
+  scaffold_script: scaffold.sh

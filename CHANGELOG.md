@@ -1,5 +1,41 @@
 # Changelog
 
+## [4.0.0-alpha.1] - unreleased
+
+First pre-release of the 4.0.0 line. It adds an eval suite only: no changes to agents, skills, commands or hooks, so the plugin behaves exactly like 3.4.0.
+
+### Added
+- **Eval suite** (`plugins/ai-flow/evals/`): 5 cases (3 end-to-end, 2 per-phase with seeded artifacts) run through `claude plugin eval` and graded offline from traces and workspaces: hidden acceptance tests, TDD adherence, phase order and gates, artifact completeness, subagent questions, read-only agent writes, tokens per phase, cost and wall time.
+- **Runner** `plugins/ai-flow/evals/run.sh` with subsets (`--case`, `--tag smoke`), `--gate`, `--compare`, `--promote`, `--dry-run`, harness-error retries and a full preflight. No cost cap by default; `--max-cost-usd` is an optional pass-through. Rate-limited runs stop the runner.
+- **compare** (regression = worse than 1 baseline stdev, at least 0.34 for rate metrics) and **promote** (per-model baselines `v3.4.0-sonnet.json` / `v3.4.0-opus.json`; refuses incomplete data with exit 7).
+- **SessionStart measurement** (`measure-session-start.mjs`): as-shipped vs intended hook cost on temp plugin copies.
+- Offline self-tests: `bash plugins/ai-flow/tests/test_evals_tooling.sh`.
+
+### Found
+- **The 3.x SessionStart hook never runs on Unix.** `hooks/run-hook.cmd` is committed as mode 0644, so Claude Code gets exit 126 (Permission denied) and the bootstrap injection is 0 tokens (intended cost measured on sonnet: about 2.8k hook tokens, 2,777 and 2,865 in two measurements; always-on plugin cost about 1.9k). The evals record this as-shipped value next to the intended cost. The fix is deferred to a later 4.0.0 sub-change so the baseline measures 3.4.0 as shipped.
+- **Delegated orchestration on Claude Code 2.1.302.** In 4 of 9 end-to-end baseline runs the main thread handed the whole flow to the `ai-flow:orchestrator` agent, which launched the phase agents as nested subagents. Nested subagents are not in the trace, so TDD, artifact and tool-use grades for those runs are recorded as n/a (not observable), and phase order is graded on the orchestrator's own launches.
+- **No end-to-end run passes the phase/gate check.** Runs that keep the orchestrator on the main thread never print the tracer gate, and delegated runs print no gate markers before launching the next phase (phase order 0/9 on cases a-c; 6/6 on the per-phase cases d and e).
+- Agents often edit files with Bash (heredocs, `sed -i`, scripts) rather than Write/Edit; the TDD grader counts those writes.
+
+### Baseline
+`plugins/ai-flow/evals/baselines/v3.4.0-sonnet.json` (plugin files of tag v3.4.0, sonnet, Claude Code 2.1.302, 2026-10-18): 15/15 runs without harness errors, n=3 per case, outcome pass rate 1.0 on every case, notional cost $15.61 for the suite (subscription; no cost cap). Mean ± sd per case:
+
+| Case | Tokens | Cost (USD) | Wall time (s) | TDD pass (applicable runs) | Phase order | Artifacts |
+|---|---|---|---|---|---|---|
+| a bugfix | 1.96M ± 0.27M | 1.35 ± 0.12 | 478 ± 41 | 1.0 (2/3) | 0 | 1.0 (2/3) |
+| b small feature | 2.03M ± 0.36M | 1.39 ± 0.23 | 467 ± 56 | 1.0 (1/3) | 0 | 1.0 (1/3) |
+| c medium feature | 2.26M ± 0.39M | 1.71 ± 0.25 | 686 ± 84 | 0.5, ratio 0.875 (2/3) | 0 | 1.0 (2/3) |
+| d apply (seeded) | 0.31M ± 0.04M | 0.17 ± 0.01 | 40 ± 3 | 1.0 | 1.0 | n/a |
+| e propose+plan (seeded) | 0.69M ± 0.06M | 0.58 ± 0.02 | 186 ± 14 | n/a | 1.0 | 1.0 |
+
+Subagent AskUserQuestion attempts and read-only-agent writes were 0 in every observable run. Seven-day subscription utilization went from 0.89 to 0.93 over the suite.
+
+### Requirements (evals only)
+- Node 26 from nvm (`nvm install 26`), Claude Code >= 2.1.301, git >= 2.31, and a one-time `node plugins/ai-flow/evals/tooling/prepare.mjs`.
+
+### Notes
+- `plugin.json` and the marketplace entry are both 4.0.0-alpha.1 on the `v4/*` branch. Alphas live on that branch and are not merged; `main` stays on 3.4.0 until 4.0.0. (A marketplace entry that disagrees with plugin.json is ignored at install time, and `claude plugin tag` refuses it, so the versions are kept in sync.)
+
 ## [3.4.0] - 2026-04-14
 
 ### Added

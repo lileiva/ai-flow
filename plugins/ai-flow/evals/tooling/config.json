@@ -1,0 +1,123 @@
+{
+  "node": {
+    "strategy": "R1",
+    "note": "R1 (P0.5, 2026-10-16): the eval CLI grants sandbox read access to each PATH entry, so the child PATH is prefixed with <nvm v26>/bin and <nvm v26>/lib/node_modules/npm. Live probe: node v26.5.0, npm 11.17.0, vitest 'Tests 3 passed' inside the sandbox."
+  },
+  "readOnlyAgents": [
+    "explorer",
+    "proposer",
+    "specifier",
+    "designer",
+    "planner",
+    "archivist"
+  ],
+  "noWriteAgents": [
+    "explorer",
+    "proposer",
+    "specifier",
+    "designer",
+    "planner",
+    "archivist",
+    "verifier"
+  ],
+  "writeTools": [
+    "Write",
+    "Edit",
+    "NotebookEdit",
+    "MultiEdit"
+  ],
+  "phaseMap": {
+    "explorer": "explore",
+    "proposer": "propose",
+    "specifier": "spec",
+    "designer": "design",
+    "planner": "plan",
+    "implementer": "apply",
+    "verifier": "verify",
+    "archivist": "archive",
+    "orchestrator": null,
+    "initializer": null,
+    "debugger": null
+  },
+  "dagEdges": [
+    [
+      "explore",
+      "propose"
+    ],
+    [
+      "propose",
+      "spec"
+    ],
+    [
+      "propose",
+      "design"
+    ],
+    [
+      "spec",
+      "plan"
+    ],
+    [
+      "design",
+      "plan"
+    ],
+    [
+      "plan",
+      "apply"
+    ],
+    [
+      "apply",
+      "verify"
+    ],
+    [
+      "verify",
+      "archive"
+    ]
+  ],
+  "gates": [
+    "proposal",
+    "plan",
+    "tracer",
+    "verify"
+  ],
+  "metrics": {
+    "outcome_pass_rate": {
+      "better": "higher",
+      "rate": true
+    },
+    "tdd_score": {
+      "better": "higher",
+      "rate": true
+    },
+    "tdd_ratio": {
+      "better": "higher",
+      "rate": true
+    },
+    "phase_order": {
+      "better": "higher",
+      "rate": true
+    },
+    "artifact_completeness": {
+      "better": "higher",
+      "rate": true
+    },
+    "tokens_total": {
+      "better": "lower"
+    },
+    "cost_usd": {
+      "better": "lower"
+    },
+    "wall_time_s": {
+      "better": "lower"
+    },
+    "subagent_ask": {
+      "better": "lower"
+    },
+    "readonly_writes": {
+      "better": "lower"
+    },
+    "per_phase_tokens": {
+      "better": "lower"
+    }
+  },
+  "rateTolerance": 0.34
+}

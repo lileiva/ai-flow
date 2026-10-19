@@ -1,0 +1,46 @@
+{
+  "$comment": "Baseline written by promote.mjs to evals/baselines/<version>-<model>.json (REQ-016). A summary (summary.schema.json) that is complete and carries session_start as_shipped + intended (REQ-012, amended).",
+  "allOf": [
+    { "$ref": "summary.schema.json" },
+    {
+      "type": "object",
+      "required": ["meta", "session_start"],
+      "properties": {
+        "meta": {
+          "type": "object",
+          "required": ["model", "complete", "plugin_version"],
+          "properties": {
+            "model": { "type": "string" },
+            "complete": { "enum": [true] },
+            "incomplete_reason": { "type": "null" }
+          }
+        },
+        "session_start": {
+          "type": "object",
+          "required": ["as_shipped", "intended"],
+          "properties": {
+            "as_shipped": {
+              "type": "object",
+              "required": ["hook_outcome", "exit_code", "injected_tokens"],
+              "properties": {
+                "hook_outcome": { "type": ["string", "null"] },
+                "exit_code": { "type": ["integer", "null"] },
+                "injected_tokens": { "type": "number" }
+              }
+            },
+            "intended": {
+              "type": "object",
+              "required": ["hook_tokens", "hook_chars", "always_on_tokens", "method"],
+              "properties": {
+                "hook_tokens": { "type": "number" },
+                "hook_chars": { "type": "number" },
+                "always_on_tokens": { "type": "number" },
+                "method": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

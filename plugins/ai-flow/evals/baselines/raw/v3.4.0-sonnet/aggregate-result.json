@@ -1,0 +1,1775 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.302",
+  "startedAt": "2026-10-18T17:18:34.696Z",
+  "durationSeconds": 5573,
+  "costUsd": 15.6051057,
+  "partial": false,
+  "suite": {
+    "root": "/tmp/aiflow-eval-ff28e711ff44-7EwzB6/plugins/ai-flow",
+    "ablation": "none",
+    "modelOverride": "sonnet",
+    "judgeModel": "haiku",
+    "threshold": 0,
+    "concurrency": 1,
+    "plugins": [
+      {
+        "name": "ai-flow",
+        "version": "3.4.0",
+        "path": "/tmp/aiflow-eval-ff28e711ff44-7EwzB6/plugins/ai-flow"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "a-e2e-bugfix-slugify",
+      "dir": "evals/cases/a-e2e-bugfix-slugify",
+      "source": "mixed",
+      "promptMarkdown": "Using the AI-Flow workflow, take change `fix-slugify-diacritics` from exploration through archive.\n\nThe repository in the current directory is `textkit`, a small Node library tested with vitest (`npm test`). Bug report: `slugify` keeps accented letters instead of transliterating them to plain ASCII. For example `slugify('Crème Brûlée')` returns `crème-brûlée`, but it should return `creme-brulee`. Fix the bug without changing the existing behaviour for plain ASCII input.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 1800,
+      "maxTurns": 200,
+      "graders": [
+        {
+          "name": "completed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "EVAL-RUN-COMPLETE|STOPPED AT GATE",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "delegated",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "min": 1
+          }
+        },
+        {
+          "name": "no-subagent-ask",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "name\\W{1,4}AskUserQuestion",
+            "flags": "",
+            "match": "count:0"
+          }
+        },
+        {
+          "name": "order-plan-before-apply",
+          "type": "tool_order",
+          "weight": 1,
+          "config": {
+            "before": {
+              "tool": "Agent",
+              "input_match": "ai-flow:planner"
+            },
+            "after": {
+              "tool": "Agent",
+              "input_match": "ai-flow:implementer"
+            }
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 1.4886382,
+            "judgeCostUsd": 0,
+            "durationSeconds": 509,
+            "startedAt": "2026-10-18T17:18:34.767Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 41 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-DejJf2/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 3,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.1456896,
+                "replay": {
+                  "hits": 0,
+                  "misses": 44
+                }
+              }
+            },
+            "graders": []
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 1.2588390999999999,
+            "judgeCostUsd": 0,
+            "durationSeconds": 432,
+            "startedAt": "2026-10-18T17:27:03.682Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-HWw0WJ/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 36,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.09390220000000005,
+                "replay": {
+                  "hits": 0,
+                  "misses": 36
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "delegated",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 8x (expected 1..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "order-plan-before-apply",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent@38 precedes Agent@49",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 11,
+            "costUsd": 1.3074040999999996,
+            "judgeCostUsd": 0,
+            "durationSeconds": 494,
+            "startedAt": "2026-10-18T17:34:15.908Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-Xw6Qv5/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 40,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.13340719999999992,
+                "replay": {
+                  "hits": 0,
+                  "misses": 40
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "delegated",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 8x (expected 1..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "order-plan-before-apply",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent@38 precedes Agent@51",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.6666666666666666,
+        "passRate": 0.6666666666666666
+      }
+    },
+    {
+      "name": "b-e2e-feature-truncate-words",
+      "dir": "evals/cases/b-e2e-feature-truncate-words",
+      "source": "mixed",
+      "promptMarkdown": "Using the AI-Flow workflow, take change `add-truncate-words` from exploration through archive.\n\nThe repository in the current directory is `textkit`, a small Node library tested with vitest (`npm test`). Feature request: add a `truncateWords(str, n, options)` function, exported from `src/index.js` next to the existing `truncate`.\n\n- It keeps at most the first `n` words of `str`. Words are separated by runs of whitespace; leading and trailing whitespace is ignored.\n- If `str` has `n` words or fewer, it returns `str` unchanged.\n- Otherwise it returns the first `n` words joined by single spaces, followed by the ellipsis. The ellipsis defaults to `…` and can be changed with `options.ellipsis` (for example `{ ellipsis: '...' }`).\n- `truncateWords('the quick brown fox', 2)` returns `'the quick…'`.\n\nKeep the existing functions and their tests unchanged.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 2700,
+      "maxTurns": 200,
+      "graders": [
+        {
+          "name": "completed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "EVAL-RUN-COMPLETE|STOPPED AT GATE",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "delegated",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "min": 1
+          }
+        },
+        {
+          "name": "no-subagent-ask",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "name\\W{1,4}AskUserQuestion",
+            "flags": "",
+            "match": "count:0"
+          }
+        },
+        {
+          "name": "order-plan-before-apply",
+          "type": "tool_order",
+          "weight": 1,
+          "config": {
+            "before": {
+              "tool": "Agent",
+              "input_match": "ai-flow:planner"
+            },
+            "after": {
+              "tool": "Agent",
+              "input_match": "ai-flow:implementer"
+            }
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 25,
+            "costUsd": 1.1765964999999998,
+            "judgeCostUsd": 0,
+            "durationSeconds": 403,
+            "startedAt": "2026-10-18T17:42:30.243Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-lqFug9/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 29,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.08321129999999988,
+                "replay": {
+                  "hits": 0,
+                  "misses": 29
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "delegated",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 8x (expected 1..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "order-plan-before-apply",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent@36 precedes Agent@48",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 1.3717576,
+            "judgeCostUsd": 0,
+            "durationSeconds": 489,
+            "startedAt": "2026-10-18T17:49:13.530Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 44 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-cdtBee/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 0,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.1363156000000002,
+                "replay": {
+                  "hits": 0,
+                  "misses": 44
+                }
+              }
+            },
+            "graders": []
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 9,
+            "costUsd": 1.6284982000000015,
+            "judgeCostUsd": 0,
+            "durationSeconds": 508,
+            "startedAt": "2026-10-18T17:57:22.521Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 47 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-XV4aTb/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 8,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.16232510000000044,
+                "replay": {
+                  "hits": 0,
+                  "misses": 55
+                }
+              }
+            },
+            "graders": []
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.3333333333333333,
+        "passRate": 0.3333333333333333
+      }
+    },
+    {
+      "name": "c-e2e-feature-csv",
+      "dir": "evals/cases/c-e2e-feature-csv",
+      "source": "mixed",
+      "promptMarkdown": "Using the AI-Flow workflow, take change `add-csv` from exploration through archive.\n\nThe repository in the current directory is `textkit`, a small Node library tested with vitest (`npm test`). Feature request: add CSV support in a new `src/csv/` module (`src/csv/format.js` and `src/csv/parse.js`), with `toCSV` and `parseCSV` exported from `src/index.js`.\n\n`toCSV(rows, options)`:\n- `rows` is an array of plain objects. The first line is a header row. `options.columns` (array of keys) sets which columns appear and in what order; by default the keys of the first row, in order.\n- Lines are joined with `\\n`, with no trailing newline. `options.delimiter` defaults to `,`.\n- Fields follow RFC 4180: a field containing the delimiter, a double quote, `\\r` or `\\n` is wrapped in double quotes, and each double quote inside it is doubled. `null` and `undefined` become empty fields; other values are converted with `String()`.\n\n`parseCSV(text, options)`:\n- Uses the first record as the header and returns an array of objects whose values are strings.\n- Handles quoted fields, including doubled quotes, embedded delimiters and embedded newlines. Accepts `\\n` and `\\r\\n` line endings and ignores one trailing line ending. `options.delimiter` defaults to `,`.\n- Round trip: `parseCSV(toCSV(rows))` deep-equals `rows` whenever every value is a string.\n\nKeep the existing functions and their tests unchanged.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 3600,
+      "maxTurns": 200,
+      "graders": [
+        {
+          "name": "completed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "EVAL-RUN-COMPLETE|STOPPED AT GATE",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "delegated",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "min": 1
+          }
+        },
+        {
+          "name": "no-subagent-ask",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "name\\W{1,4}AskUserQuestion",
+            "flags": "",
+            "match": "count:0"
+          }
+        },
+        {
+          "name": "order-plan-before-apply",
+          "type": "tool_order",
+          "weight": 1,
+          "config": {
+            "before": {
+              "tool": "Agent",
+              "input_match": "ai-flow:planner"
+            },
+            "after": {
+              "tool": "Agent",
+              "input_match": "ai-flow:implementer"
+            }
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 15,
+            "costUsd": 1.6925705999999998,
+            "judgeCostUsd": 0,
+            "durationSeconds": 636,
+            "startedAt": "2026-10-18T18:05:50.529Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-FNEthk/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 34,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.1536578999999999,
+                "replay": {
+                  "hits": 0,
+                  "misses": 34
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "delegated",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 8x (expected 1..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "order-plan-before-apply",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent@42 precedes Agent@50",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 18,
+            "costUsd": 1.4651285999999994,
+            "judgeCostUsd": 0,
+            "durationSeconds": 639,
+            "startedAt": "2026-10-18T18:16:26.394Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-ryqZuC/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 41,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.1582382999999996,
+                "replay": {
+                  "hits": 0,
+                  "misses": 41
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "delegated",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 8x (expected 1..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "order-plan-before-apply",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent@40 precedes Agent@48",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 1.9627081999999998,
+            "judgeCostUsd": 0,
+            "durationSeconds": 783,
+            "startedAt": "2026-10-18T18:27:05.673Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 52 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-QAALBZ/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 0,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.2636514999999999,
+                "replay": {
+                  "hits": 0,
+                  "misses": 52
+                }
+              }
+            },
+            "graders": []
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.6666666666666666,
+        "passRate": 0.6666666666666666
+      }
+    },
+    {
+      "name": "d-phase-apply-seeded",
+      "dir": "evals/cases/d-phase-apply-seeded",
+      "source": "mixed",
+      "promptMarkdown": "Run only the AI-Flow apply phase (all batches) for change `add-reading-time` in engram project `textkit`.\n\nThe proposal, spec, design and plan for this change are already saved in engram (topic keys `flow/add-reading-time/proposal`, `flow/add-reading-time/spec`, `flow/add-reading-time/design` and `flow/add-reading-time/plan`), and the user has already approved the plan. Do not explore, propose, spec, design or plan again.\n\nThe repository in the current directory is `textkit`, a small Node library tested with vitest (`npm test`). Execute every batch of the plan, then stop after apply. Do not run verify or archive.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 1800,
+      "maxTurns": 200,
+      "graders": [
+        {
+          "name": "completed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "EVAL-RUN-COMPLETE|STOPPED AT GATE",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "delegated-implementer",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "input_match": "ai-flow:implementer",
+            "min": 1
+          }
+        },
+        {
+          "name": "no-planner",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "input_match": "ai-flow:planner",
+            "min": 0,
+            "max": 0
+          }
+        },
+        {
+          "name": "no-subagent-ask",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "name\\W{1,4}AskUserQuestion",
+            "flags": "",
+            "match": "count:0"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.16646149999999998,
+            "judgeCostUsd": 0,
+            "durationSeconds": 38,
+            "startedAt": "2026-10-18T18:40:08.934Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-uYB0Pa/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [
+                "mocks: plugin_engram_engram/_server.md will not see mem_search — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_search.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_get_observation — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_get_observation.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_save — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_save.md, so its abort_when does not cover that tool"
+              ],
+              "calls": {
+                "total": 7,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0,
+                "replay": {
+                  "hits": 0,
+                  "misses": 0
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "delegated-implementer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 1x (expected 1..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-planner",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.17830909999999997,
+            "judgeCostUsd": 0,
+            "durationSeconds": 43,
+            "startedAt": "2026-10-18T18:40:47.399Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-XPo2pZ/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [
+                "mocks: plugin_engram_engram/_server.md will not see mem_search — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_search.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_get_observation — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_get_observation.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_save — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_save.md, so its abort_when does not cover that tool"
+              ],
+              "calls": {
+                "total": 8,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0,
+                "replay": {
+                  "hits": 0,
+                  "misses": 0
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "delegated-implementer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 1x (expected 1..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-planner",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.17825300000000002,
+            "judgeCostUsd": 0,
+            "durationSeconds": 40,
+            "startedAt": "2026-10-18T18:41:30.158Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-2Kk4hg/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [
+                "mocks: plugin_engram_engram/_server.md will not see mem_search — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_search.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_get_observation — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_get_observation.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_save — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_save.md, so its abort_when does not cover that tool"
+              ],
+              "calls": {
+                "total": 8,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0,
+                "replay": {
+                  "hits": 0,
+                  "misses": 0
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "delegated-implementer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 1x (expected 1..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-planner",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1
+      }
+    },
+    {
+      "name": "e-phase-propose-plan-seeded",
+      "dir": "evals/cases/e-phase-propose-plan-seeded",
+      "source": "mixed",
+      "promptMarkdown": "Using the AI-Flow workflow, continue change `capitalize-options` in engram project `textkit` from its existing exploration (engram topic key `flow/capitalize-options/explore`; do not explore again).\n\nRun propose, then spec and design, then plan. The proposal gate is approved. STOP at the plan gate: print `STOPPED AT GATE: plan` and end the run without implementing anything.\n\nThe repository in the current directory is `textkit`, a small Node library tested with vitest (`npm test`).",
+      "runsPerCase": 3,
+      "timeoutSeconds": 1800,
+      "maxTurns": 200,
+      "graders": [
+        {
+          "name": "completed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "EVAL-RUN-COMPLETE|STOPPED AT GATE",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "no-subagent-ask",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "name\\W{1,4}AskUserQuestion",
+            "flags": "",
+            "match": "count:0"
+          }
+        },
+        {
+          "name": "no-writes",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Write",
+            "min": 0,
+            "max": 0
+          }
+        },
+        {
+          "name": "stops-before-apply",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "input_match": "ai-flow:implementer",
+            "min": 0,
+            "max": 0
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 8,
+            "costUsd": 0.5847947999999994,
+            "judgeCostUsd": 0,
+            "durationSeconds": 191,
+            "startedAt": "2026-10-18T18:42:10.178Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-UwedJh/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 17,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.027796699999999452,
+                "replay": {
+                  "hits": 0,
+                  "misses": 17
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-writes",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "stops-before-apply",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 11,
+            "costUsd": 0.5892516999999997,
+            "judgeCostUsd": 0,
+            "durationSeconds": 197,
+            "startedAt": "2026-10-18T18:45:21.440Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-AJqRRD/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 18,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.027291399999999744,
+                "replay": {
+                  "hits": 0,
+                  "misses": 18
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-writes",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "stops-before-apply",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 2,
+            "costUsd": 0.5558945000000001,
+            "judgeCostUsd": 0,
+            "durationSeconds": 170,
+            "startedAt": "2026-10-18T18:48:38.499Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-SAlCHa/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 13,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.016193000000000124,
+                "replay": {
+                  "hits": 0,
+                  "misses": 13
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-writes",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "stops-before-apply",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 5,
+    "casesPassed": 5,
+    "overallScore": 0.7333333333333333,
+    "overallPassRate": 0.7333333333333333
+  }
+}
