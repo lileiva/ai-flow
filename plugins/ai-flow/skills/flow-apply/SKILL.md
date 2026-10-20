@@ -18,7 +18,7 @@ Delegate to the `implementer` agent with the change name, project name, and batc
 
 **Iron law:** No production code without a failing test first. Verify steps are MANDATORY.
 
-**Auto-verify:** After the final batch completes, the orchestrator MUST auto-launch `/flow-verify` without waiting for the user. Verification is not optional — it is the mandatory next step after apply.
+**Auto-verify:** After the final batch completes, the orchestrator MUST auto-launch `/ai-flow:flow-verify` without waiting for the user. Verification is not optional — it is the mandatory next step after apply.
 
 Also read `skills/_shared/tdd-protocol.md` for the full TDD protocol.
 

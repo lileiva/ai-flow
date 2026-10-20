@@ -13,7 +13,7 @@ Execute these steps:
    If no state is found in engram:
    a. Search for individual artifacts: `flow/$ARGUMENTS/proposal`, `flow/$ARGUMENTS/spec`, etc.
    b. Reconstruct state from whichever artifacts exist
-   c. If NO artifacts exist at all, inform the user: "No state found for change '$ARGUMENTS'. Use `/flow-new $ARGUMENTS` to start a new change."
+   c. If NO artifacts exist at all, inform the user: "No state found for change '$ARGUMENTS'. Use `/ai-flow:flow-new $ARGUMENTS` to start a new change."
 2. Identify which phases are complete and which artifacts exist.
 3. Determine the **next pending phase** in the dependency chain:
    - No proposal → launch `proposer`

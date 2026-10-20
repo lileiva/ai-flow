@@ -109,3 +109,15 @@ test('scan() applies relative-path and bare-prefix rules together', () => {
   assert.deepEqual(scan('bare.md', fixture('bare.md')).map((v) => v.rule), ['bare-prefix']);
   assert.deepEqual(scan('relative.md', fixture('relative.md')).map((v) => v.rule), ['relative-path']);
 });
+
+// ---- runtime tree: canonical /ai-flow:flow-* commands, qualified refs resolve (REQ-006 S1, REQ-018 S1) ----
+
+for (const rel of listRuntimeMd()) {
+  test(`no bare /flow- command: ${rel}`, () => {
+    assert.deepEqual(findBarePrefixes(fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8')), []);
+  });
+  test(`ai-flow:<name> refs resolve: ${rel}`, () => {
+    const refs = extractQualifiedRefs(fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8'));
+    assert.deepEqual(refs.filter((r) => !resolveQualifiedRef(r.name)), []);
+  });
+}
