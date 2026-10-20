@@ -1,8 +1,8 @@
 # Changelog
 
-## [4.0.0-alpha.2] - unreleased (draft)
+## [4.0.0-alpha.2] - unreleased
 
-Second pre-release of the 4.0.0 line: hygiene. References resolve, the SessionStart hook runs, TDD and engram-fallback guidance each live in one file, and the docs match the shipped plugin. This entry is a draft until the alpha.2 gate.
+Second pre-release of the 4.0.0 line: hygiene. References resolve, the SessionStart hook runs, TDD and engram-fallback guidance each live in one file, and the docs match the shipped plugin.
 
 ### Changed
 - **SessionStart hook now runs on Unix.** `hooks/run-hook.cmd` is executable (it failed with exit 126 through 4.0.0-alpha.1), so each session start injects the `using-ai-flow` skill: about 2.8k tokens, where 3.x shipped 0 tokens. Warnings print on real new lines.
@@ -18,6 +18,10 @@ Second pre-release of the 4.0.0 line: hygiene. References resolve, the SessionSt
 
 ### Found
 - `plugin.json` `dependencies` is supported by Claude Code, but it means "must be enabled". Both engram and superpowers are optional, so neither is declared; the hook keeps detecting them.
+
+### Notes
+- `plugin.json` and both marketplace version fields are 4.0.0-alpha.2. The alpha stays on the `v4/*` branch; `main` stays on 3.4.0 until 4.0.0.
+- A user-level `~/.claude/CLAUDE.md` that still says "Read and follow `skills/flow-x/SKILL.md`" predates the `${CLAUDE_PLUGIN_ROOT}` references; it is outside the plugin and is not changed here.
 
 ### Eval comparison
 To be filled after the alpha.2 gate.

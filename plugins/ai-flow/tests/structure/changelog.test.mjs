@@ -78,3 +78,25 @@ test('3.4.0: corrections for the initializer label, the unified-doc reviewer ref
 test('negative: a 3.4.0 entry without correction blockquotes is flagged', () => {
   assert.deepEqual(missing340Corrections('## [3.4.0]\n- Initializer label corrected\n'), ['initializer label', 'unified-doc reviewer reference', 'AskUserQuestion/superpowers attribution']);
 });
+
+// ---- 4.0.0-alpha.2 entry (REQ-021 S4 except the eval summary, REQ-016 S3, REQ-012 S3) ----
+
+/** Required topics an alpha.2 entry body lacks. */
+function missingAlpha2Topics(body) {
+  return [
+    ['skill-sync removal', /skill-sync/],
+    ['SessionStart exit 126', /exit 126/],
+    ['SessionStart 0 tokens in 3.x', /0 tokens/],
+    ['SessionStart ~2.8k tokens', /2\.8k/],
+    ['dependencies finding', /`?dependencies`?[\s\S]*optional/i],
+    ['Eval comparison subsection', /^### Eval comparison$/m],
+  ].filter(([, re]) => !re.test(body)).map(([n]) => n);
+}
+
+test('4.0.0-alpha.2 entry covers skill-sync removal, the SessionStart change, the dependencies finding and an Eval comparison subsection', () => {
+  assert.deepEqual(missingAlpha2Topics(entry(log(), '4.0.0-alpha.2')), []);
+});
+
+test('negative: an alpha.2 entry without the SessionStart and dependencies notes is flagged', () => {
+  assert.deepEqual(missingAlpha2Topics('## [4.0.0-alpha.2]\n- Removed skill-sync\n### Eval comparison\n'), ['SessionStart exit 126', 'SessionStart 0 tokens in 3.x', 'SessionStart ~2.8k tokens', 'dependencies finding']);
+});

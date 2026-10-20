@@ -202,3 +202,55 @@ for (const [label, read] of [['README.md Evals', () => mdSection(readRepo('READM
 test('README Hooks section describes the SessionStart hook', () => {
   assert.match(mdSection(readRepo('README.md'), 'Hooks'), /SessionStart[\s\S]*using-ai-flow/);
 });
+
+// ---- Release 4.0.0-alpha.2: versions agree, dependencies decision (REQ-007 S1-S2, REQ-012 S2-S3, REQ-016 S3) ----
+
+const RELEASE = '4.0.0-alpha.2';
+const readJsonRepo = (rel) => JSON.parse(readRepo(rel));
+const topChangelogHeading = (text) => /^## \[([^\]]+)\][^\n]*$/m.exec(text)?.[0] ?? '';
+
+/** Problems with the release versions: plugin.json, marketplace (metadata + ai-flow entry) and the CHANGELOG top heading. */
+function releaseVersionProblems(plugin, market, changelog, expected) {
+  const problems = [];
+  const entry = market.plugins?.find((p) => p.name === 'ai-flow');
+  const versions = [['plugin.json version', plugin.version], ['marketplace metadata.version', market.metadata?.version], ['marketplace plugins[ai-flow].version', entry?.version]];
+  for (const [what, v] of versions) if (v !== expected) problems.push(`${what} is '${v}', expected '${expected}'`);
+  const top = topChangelogHeading(changelog);
+  if (!top.startsWith(`## [${plugin.version}]`)) problems.push(`CHANGELOG top heading '${top}' is not plugin.json '${plugin.version}'`);
+  if (/draft/i.test(top)) problems.push(`CHANGELOG top heading '${top}' is still a draft`);
+  return problems;
+}
+
+test('plugin.json, marketplace and the CHANGELOG top heading are all 4.0.0-alpha.2 (not a draft)', () => {
+  const plugin = readJsonRepo('plugins/ai-flow/.claude-plugin/plugin.json');
+  const market = readJsonRepo('.claude-plugin/marketplace.json');
+  assert.deepEqual(releaseVersionProblems(plugin, market, readRepo('CHANGELOG.md'), RELEASE), []);
+});
+
+test('negative: a marketplace still on 4.0.0-alpha.1 is flagged naming both values', () => {
+  const problems = releaseVersionProblems({ version: RELEASE }, { metadata: { version: '4.0.0-alpha.1' }, plugins: [{ name: 'ai-flow', version: RELEASE }] }, `## [${RELEASE}] - x\n`, RELEASE);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /4\.0\.0-alpha\.1/);
+  assert.match(problems[0], /4\.0\.0-alpha\.2/);
+});
+
+test('negative: a draft CHANGELOG top heading is flagged', () => {
+  const problems = releaseVersionProblems({ version: RELEASE }, { metadata: { version: RELEASE }, plugins: [{ name: 'ai-flow', version: RELEASE }] }, `## [${RELEASE}] - unreleased (draft)\n`, RELEASE);
+  assert.deepEqual(problems, [`CHANGELOG top heading '## [${RELEASE}] - unreleased (draft)' is still a draft`]);
+});
+
+/** Decision D-3: no `dependencies`, or a complete declaration of both optional companions. */
+function dependencyProblems(plugin) {
+  if (!('dependencies' in plugin)) return [];
+  const names = JSON.stringify(plugin.dependencies);
+  return ['engram', 'superpowers'].filter((n) => !names.includes(n)).map((n) => `dependencies declared without ${n}`);
+}
+
+test('plugin.json declares no dependencies (engram and superpowers are optional; the hook detects them)', () => {
+  assert.deepEqual(dependencyProblems(readJsonRepo('plugins/ai-flow/.claude-plugin/plugin.json')), []);
+  assert.ok(!('dependencies' in readJsonRepo('plugins/ai-flow/.claude-plugin/plugin.json')), 'decision D-3: none declared');
+});
+
+test('negative: a plugin.json declaring only superpowers is flagged', () => {
+  assert.deepEqual(dependencyProblems({ dependencies: ['superpowers@claude-plugins-official'] }), ['dependencies declared without engram']);
+});
