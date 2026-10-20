@@ -38,6 +38,8 @@ Design (REQUIRED):
 
 Bake TDD steps per §12 of the TDD guide at `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md`.
 
+Docs-only, config-only (no logic), prompt-only and mechanical tasks get no TDD steps (guide §10). Mark them `TDD n/a: <reason>; verified by <command>` in place of the TDD Steps block.
+
 ### Standard Task (single layer or already-connected layers)
 
 ```markdown
@@ -169,7 +171,7 @@ Content: ordered task list with TDD steps, grouped by batch
 
 ## Rules
 
-- Every task MUST have TDD steps — no exceptions
+- Every behaviour-changing task MUST have TDD steps; other tasks carry `TDD n/a: <reason>; verified by <command>` per guide §10
 - Tasks should be 2-5 minutes each — if longer, split them
 - Tracer bullet is ALWAYS Batch 0 and executes first
 - If a task introduces a layer connection not in the Connected Pairs registry, prepend a tracer sub-step — no exceptions

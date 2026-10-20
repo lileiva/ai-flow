@@ -700,3 +700,30 @@ test('implementer keeps its role mechanics: batch scoping, tracer sub-steps, com
   assert.deepEqual(missingHeadings(impl, [/Batch Scoping/, /Self-Review/i, /Progress Tracking/]), []);
   assert.deepEqual(missingMentions(impl, [/tracer sub-step/i, /\(REQ-\{id\}, Scenario \{n\}\)/, /Batch 0[^.\n]*first|first[^.\n]*Batch 0/i]), []);
 });
+
+// ---- planner TDD rule agrees with guide §10/§12 (TDD n/a for docs/config/prompt-only/mechanical tasks) ----
+
+/** Problems with how a planner text states its TDD rule, relative to guide §10 and §12. */
+function plannerTddRuleProblems(text) {
+  const problems = [];
+  const absolute = text.split('\n').filter((l) => /TDD steps/i.test(l) && l.toLowerCase().includes(COERCION_PHRASES[1].toLowerCase()));
+  if (absolute.length) problems.push('TDD steps rule is absolute (contradicts guide §10)');
+  if (!/§10/.test(text)) problems.push('no reference to guide §10');
+  if (!/TDD n\/a: <reason>; verified by <command>/.test(text)) problems.push('no "TDD n/a: <reason>; verified by <command>" marker');
+  if (!/behaviou?r-changing/i.test(text)) problems.push('does not say behaviour-changing tasks get TDD steps');
+  return problems;
+}
+
+test('planner bakes TDD steps into behaviour-changing tasks and marks the rest TDD n/a per guide §10', () => {
+  assert.deepEqual(plannerTddRuleProblems(read('agents/planner.md')), []);
+});
+
+test('negative: a planner with the old absolute TDD-steps rule is flagged', () => {
+  const old = `## Rules\n\n- Every task MUST have TDD steps — ${COERCION_PHRASES[1].toLowerCase()}\n`;
+  assert.deepEqual(plannerTddRuleProblems(old), [
+    'TDD steps rule is absolute (contradicts guide §10)',
+    'no reference to guide §10',
+    'no "TDD n/a: <reason>; verified by <command>" marker',
+    'does not say behaviour-changing tasks get TDD steps',
+  ]);
+});
