@@ -1,87 +1,97 @@
-# TDD Protocol for AI-Flow
+# TDD Guide
 
-## The Iron Law
+## 0. Purpose and how to read it
 
-**NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST.**
+This is ai-flow's single guide to test-driven development. The implementer uses all of it, the debugger mostly §1-§2, §9 and §11, and the planner §3, §4, §7, §10 and §12. Read §1-§4 before your first task and look up the rest when a situation calls for it. Each practice comes with the reason behind it, so that you can use judgment when a case does not fit the rule.
 
-If you write code before the test: delete it. No exceptions. Cannot keep as reference, cannot adapt it. Delete means delete.
+The short version: for every behaviour change, write the test before the code, run it and watch it fail for the expected reason, make it pass with the smallest change, then clean up while green.
 
-## The RED-GREEN-REFACTOR Cycle
+## 1. Why test-first
 
-### 1. RED — Write Failing Test
-- One minimal test showing desired behavior
-- Clear name describing the behavior being tested
-- Real code preferred (mocks only if unavoidable)
-- One behavior per test
-- Reference the spec scenario this test derives from
+- **A test you never saw fail proves nothing.** A test written after the code usually passes on its first run, and it would often also pass if the code were wrong or missing (it asserts on a stub, or imports the wrong module). Seeing it fail while the behaviour is absent, then pass once it exists, is what makes it evidence.
+- **It makes you specify behaviour from the caller's side.** Writing the test first forces you to choose names, inputs, outputs and errors as a user of the code sees them, before an implementation biases the interface.
+- **Small steps localize mistakes.** When you are always minutes away from the last green, a surprise failure is in the few lines you just wrote. Large steps turn every failure into a debugging session.
+- **The suite becomes the regression net and the executable spec.** Each scenario you encode keeps guarding the behaviour after you move on, and a later change that breaks it shows up at once.
+- **In ai-flow, the red-to-green trail is the evidence.** The verifier and the evals check that a failing test came before the code.
 
-### 2. Verify RED (MANDATORY — never skip)
-- Run the test suite
-- Confirm the test FAILS (not errors — fails)
-- The failure message should be meaningful
-- If the test passes: investigate. Either the test is wrong or the feature already exists.
+The honest cost: each step feels slower, while the feature usually lands sooner and with fewer regressions. §10 covers the changes where the trade does not pay.
 
-### 3. GREEN — Write Minimal Code
-- Write the simplest code that makes the test pass
-- Do NOT add features, refactor other code, or "improve"
-- YAGNI strictly enforced — only what the test demands
+## 2. The loop: red, green, refactor
 
-### 4. Verify GREEN (MANDATORY — never skip)
-- Run the test suite
-- The new test MUST pass
-- ALL existing tests MUST still pass
-- If the new test fails: fix the implementation, not the test
-- If an existing test breaks: you introduced a regression — fix before proceeding
+### RED: specify the next behaviour
 
-### 5. REFACTOR
-- Only after green
-- Remove duplication, improve names, extract helpers
-- Keep ALL tests green throughout
-- Run tests after each refactor step
-- Do NOT add behavior during refactoring
+Write one test for the next behaviour on your list (§3). Before running it, predict how it will fail. Then run it.
 
-### 6. COMMIT
-- Commit the test + implementation together
-- Commit message references the spec scenario
+It should fail on the assertion that names the missing behaviour, e.g. `expected 'EUR 10.00', got undefined`. An import error, a syntax error or `X is not defined` means you are not red yet: the test never got as far as asking its question. Add the minimal scaffold (an empty function, an export that returns nothing) until the assertion is what fails.
 
-## Verification Steps 2 and 4 Are Non-Negotiable
+Why: the failure message is your proof that the test checks what you think it checks. Without the run, you do not know whether the test can fail at all.
 
-These steps exist to catch:
-- Tests that pass for the wrong reason
-- Tests that test nothing
-- Tests that are tautological
-- Implementations that break existing behavior
+If it passes unexpectedly, find out which case you are in: the behaviour already exists (note it and pick the next test), the test is wrong (it asserts on a stub, a tautology or the wrong object), or it is not running (wrong file, filtered out). To prove a test can fail, break the code temporarily and watch it go red.
 
-Skipping verification is a protocol violation.
+### GREEN: the smallest change that passes
 
-## Anti-Patterns
+Make the test pass with the least code. Three strategies:
+- **Fake it:** return the constant the test expects. Useful when the general shape is not clear yet.
+- **Obvious implementation:** when the right code is clear and small, write it.
+- **Triangulate:** add a second example that a constant cannot satisfy (`format(10)` and then `format(2.5)`), which forces the general solution.
 
-| Anti-Pattern | Why It's Wrong | What to Do Instead |
-|---|---|---|
-| Write code first, test after | Tests become confirmation bias | Delete the code, write the test first |
-| Mock everything | Tests pass but production breaks | Use real dependencies where possible |
-| Test the mock, not the behavior | Green tests, broken features | Test observable behavior |
-| Skip verify-RED | Test might pass for wrong reason | Always run and verify failure |
-| Add "just one more thing" in GREEN | Feature creep, untested code | One test, one behavior, one commit |
-| Refactor before green | Changing too many things at once | Get green first, then clean up |
+Then run the whole relevant suite, not only the new test, because the change can break its neighbours.
 
-## Debugging Integration
+Why minimal: anything beyond what the test demands is code that no test has seen fail. That is where untested branches and speculative features hide.
 
-When a test fails unexpectedly during the GREEN step:
-1. Do NOT immediately add more code
-2. Re-read the test — is it testing what you think?
-3. Re-read the implementation — is it doing what you think?
-4. If the failure is genuinely unexpected, enter the debugging protocol (flow-debug)
+### REFACTOR: improve the design while green
 
-## Test Discovery
+With every test green, remove duplication (especially between the test and the code, which is where faked constants turn into logic), improve names and simplify structure. Make one change at a time and re-run the tests after each. New behaviour is not refactoring: it needs its own RED.
 
-Before your first RED step, determine the test command:
+Why on green: you can only restructure safely while the tests confirm that behaviour is unchanged. Refactoring on red mixes two kinds of change and hides which one broke things.
 
-1. Check the plan artifact — the planner should specify the test command per task
-2. If not specified, check `.ai-flow.json` or the project context artifact for `testRunner`
-3. If neither exists, detect from the project:
-   - `package.json` with `jest`/`vitest` scripts → `npm test` or `npx vitest run`
-   - `pytest.ini`/`pyproject.toml` → `pytest`
-   - `Cargo.toml` → `cargo test`
-   - `go.mod` → `go test ./...`
-4. Run the discovered command to verify it works before starting the TDD cycle
+### Commit and record
+
+Commit at green with the test and the code together; a separate refactor commit is fine. Record the evidence in apply-progress: the RED command with its failing assertion line, then the GREEN result, e.g. `RED: node --test cart.test.mjs -> "expected 3, got 0"; GREEN: 41/41 pass`.
+
+## 3. The test list and choosing the next test
+
+Before coding, turn the task's spec scenarios (Given/When/Then) and the edge cases you can already see into a short test list. Add to it whenever you discover a case, and cross items off as they go green. The list keeps you from holding everything in your head and from implementing ahead of your tests.
+
+Pick the next test that teaches the most for the least code. ZOMBIES is a good default order:
+- **Z**ero: empty input, no items, first use.
+- **O**ne: a single item.
+- **M**any: several items, collections, repetition.
+- **B**oundaries: limits, off-by-one, maximum sizes.
+- **I**nterface: settle the call shape while the cases are still simple.
+- **E**xceptions: errors, invalid input, failing collaborators.
+- **S**imple scenarios and simple solutions throughout.
+
+Example, a cart total: `empty cart totals 0`, then `one item totals its price`, `two items are summed`, `quantity multiplies the price`, `a discount never makes the total negative`, `an unknown SKU raises NotFound`.
+
+If the next test needs a big jump (many new lines, a new collaborator), it is too big. Pick a smaller test that moves toward it, or split it.
+
+## 4. Granularity
+
+A cycle should take minutes. If GREEN takes more than about ten minutes or touches many files, revert to the last green and choose a smaller test. You have learned the step was too big, which is cheaper than pushing through.
+
+- One behaviour per test. Several assertions are fine when they describe one behaviour, e.g. the status and the body of one response.
+- Test through the public interface at the unit of behaviour (a module, an endpoint, a command), not every method or private helper. Tests coupled to internals break on every refactor and still miss bugs.
+- Name the behaviour, not the method: `rejects an empty email with ValidationError`, not `test_validate_2`. A failing test's name should tell the reader what broke.
+- Follow the project's conventions for test file locations and names.
+
+## 5. Test doubles: fakes, stubs and mocks
+
+Vocabulary: a **dummy** fills a parameter; a **stub** returns canned answers to queries; a **fake** is a working lightweight implementation, such as an in-memory repository; a **spy** records calls; a **mock** is set up to verify an expected interaction.
+
+Defaults, in order of preference:
+1. Real objects for in-process code. They catch real integration mistakes.
+2. Fakes for slow or nondeterministic boundaries: network, database, clock, randomness, and the filesystem when it matters.
+3. Stubs for queries, e.g. "what is today's exchange rate?".
+4. Mocks only for outgoing commands whose effect is the behaviour, e.g. "an email is sent" or "an event is published".
+
+Do not mock what you do not own. Wrap a third-party API in a small adapter, double the adapter in your tests, and cover the adapter itself with a few integration tests against the real service. Inject the clock and the random source instead of reading them globally.
+
+Signs of over-mocking: the test breaks on a refactor that changed no behaviour; the test restates the implementation line by line; the setup is longer than the assertion; the test checks that a stub returned what you told it to return.
+
+## 6. Outside-in and inside-out
+
+- **Inside-out (classic):** start with the core units and their real collaborators, then compose upward. Best when the domain logic is clear and the integration shape is simple.
+- **Outside-in (London school):** start from an outer test at the entry point and discover the collaborators' interfaces with doubles as you go. Best when the integration shape is the open question.
+
+The ai-flow default is a double loop: one outer failing acceptance or tracer test through the real entry point (§7), then inside-out inner cycles until it passes, with doubles only at true boundaries (§5). Example: for `POST /orders`, the outer test posts an order and expects 201 plus a stored row in a fake repository; inner tests cover price calculation and validation directly.

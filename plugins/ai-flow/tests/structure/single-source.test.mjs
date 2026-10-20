@@ -493,3 +493,92 @@ test('negative: a test that greps for a coercion phrase is flagged', () => {
   const COERCION_FIXTURE = 'if grep -q "Iron Law" verifier.md; then pass; fi\nassert.match(t, /no exceptions/i);\n# Iron Law in a comment\n';
   assert.deepEqual(coercionAssertions('x.sh', COERCION_FIXTURE), ['x.sh:1', 'x.sh:2']);
 });
+
+// ---- TDD guide: one de-coerced, budgeted guide (REQ-014, D4) ----
+
+const TDD_GUIDE = 'skills/_shared/tdd-protocol.md';
+const TDD_BUDGET = { words: 2600, chars: 18000 };
+
+// Numbered sections "## N. Title" so that agents can point at "§N" (D4 outline §0-§13).
+const TDD_SECTIONS = [
+  [0, /purpose|how to (read|use)/i],
+  [1, /why test.first/i],
+  [2, /loop|red.*green.*refactor/i],
+  [3, /test list|next test/i],
+  [4, /granularity|step size/i],
+  [5, /test doubles|fakes.*mocks/i],
+  [6, /outside-in.*inside-out|inside-out.*outside-in/i],
+  [7, /acceptance|tracer/i, 'Task 4.2'],
+  [8, /refactor(ing)? discipline/i, 'Task 4.2'],
+  [9, /legacy|characteri[sz]ation/i, 'Task 4.2'],
+  [10, /when tdd does not apply/i, 'Task 4.2'],
+  [11, /failure modes/i, 'Task 4.2'],
+  [12, /in ai-flow/i, 'Task 4.2'],
+  [13, /test discovery/i, 'Task 4.2'],
+];
+
+/** Body of guide section §n (the "## n. ..." heading up to the next h2), or '' when absent. */
+const tddSection = (text, n) => section(text, new RegExp(`^##\\s+${n}\\.\\s`));
+
+/** Banned coercion phrases found in `text` (case-insensitive). */
+function coercionHits(text) {
+  return COERCION_PHRASES.filter((p) => text.toLowerCase().includes(p.toLowerCase()));
+}
+
+/** Budget overruns of `text` against TDD_BUDGET. */
+function budgetProblems(text) {
+  const words = text.split(/\s+/).filter(Boolean).length;
+  const p = [];
+  if (words > TDD_BUDGET.words) p.push(`words ${words} > ${TDD_BUDGET.words}`);
+  if (text.length > TDD_BUDGET.chars) p.push(`chars ${text.length} > ${TDD_BUDGET.chars}`);
+  return p;
+}
+
+const guide = () => read(TDD_GUIDE);
+
+for (const [n, topic, todo] of TDD_SECTIONS) {
+  test(`TDD guide §${n} heading: ${topic}`, todo ? { todo } : {}, () => {
+    const heading = headings(guide()).find((h) => new RegExp(`^${n}\\.\\s`).test(h));
+    assert.ok(heading, `no "## ${n}. ..." heading`);
+    assert.match(heading, topic);
+  });
+}
+
+test('TDD guide carries no coercion phrases (REQ-014 S2)', () => {
+  assert.deepEqual(coercionHits(guide()), []);
+});
+
+test(`TDD guide stays within ${TDD_BUDGET.words} words / ${TDD_BUDGET.chars} chars (REQ-014 S7, D4)`, () => {
+  assert.deepEqual(budgetProblems(guide()), []);
+});
+
+test('TDD guide directs test-before-code and watching it fail for the expected reason (REQ-014 S4)', () => {
+  assert.deepEqual(missingMentions(guide(), [
+    /write the test (first|before)[^.\n]*(code|implementation)|test before (the )?(code|implementation)/i,
+    /fail[^.\n]*for the (expected|right) reason/i,
+  ]), []);
+});
+
+test('TDD guide §1 gives the reason behind each core practice (REQ-014 S2)', () => {
+  assert.deepEqual(missingMentions(tddSection(guide(), 1), [/never (saw|seen)[^.\n]*fail/i, /caller/i, /small steps/i, /regression/i]), []);
+});
+
+test('TDD guide §2: RED, GREEN and REFACTOR each say why (REQ-014 S2)', () => {
+  const loop = tddSection(guide(), 2);
+  for (const step of ['RED', 'GREEN', 'REFACTOR']) {
+    assert.match(section(loop, new RegExp(`^###\\s+${step}\\b`)), /\bwhy\b|because|so that/i, `${step} has no rationale`);
+  }
+});
+
+for (const n of [3, 4, 5, 6]) {
+  test(`TDD guide §${n} is concrete: it has an example or decision heuristic (REQ-014 S5)`, () => {
+    assert.match(tddSection(guide(), n), /e\.g\.|\bexample\b|```/i);
+  });
+}
+
+test('negative: a guide with a coercion phrase or over budget is flagged; a section without an example is not concrete', () => {
+  const COERCION_FIXTURE = `# Guide\n\n## 2. The loop\n\n${COERCION_PHRASES[0]}: write tests.\n`;
+  assert.deepEqual(coercionHits(COERCION_FIXTURE), [COERCION_PHRASES[0]]);
+  assert.deepEqual(budgetProblems('word '.repeat(2700)), ['words 2700 > 2600']);
+  assert.doesNotMatch(tddSection('## 3. Next test\nPick a good one.\n## 4. Granularity\nE.g. tiny.\n', 3), /e\.g\.|\bexample\b|```/i);
+});
