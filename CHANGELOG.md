@@ -1,5 +1,27 @@
 # Changelog
 
+## [4.0.0-alpha.2] - unreleased (draft)
+
+Second pre-release of the 4.0.0 line: hygiene. References resolve, the SessionStart hook runs, TDD and engram-fallback guidance each live in one file, and the docs match the shipped plugin. This entry is a draft until the alpha.2 gate.
+
+### Changed
+- **SessionStart hook now runs on Unix.** `hooks/run-hook.cmd` is executable (it failed with exit 126 through 4.0.0-alpha.1), so each session start injects the `using-ai-flow` skill: about 2.8k tokens, where 3.x shipped 0 tokens. Warnings print on real new lines.
+- **TDD guide is the single TDD source** (`skills/_shared/tdd-protocol.md`): rationale, the loop, test lists, doubles, legacy code, when TDD does not apply and what replaces it, failure modes. The implementer, debugger, planner, flow-apply and flow-debug point to it; the superpowers TDD complement is no longer referenced.
+- **Engram fallback in one file** (`skills/_shared/engram-fallback.md`), referenced by all 11 agents.
+- References to shared files use `${CLAUDE_PLUGIN_ROOT}/...`; agents, skills and commands are named `ai-flow:<name>` and `/ai-flow:flow-*`.
+- Phase skills carry a self-guard so a phase agent does not re-delegate to itself.
+- The initializer writes `testRunner` to `.ai-flow.json`.
+- Docs: README fixes (engram is a separate plugin, initializer label, project tree, `.ai-flow.json` schema); `unified-ai-dev-flow.md` moved to `docs/archive/` as v3 history; CHANGELOG backfilled for 3.0.1-3.2.0 with marked corrections.
+
+### Removed
+- **skill-sync** (`skills/skill-sync/`, `scripts/sync.sh`) and the grep-only `tests/test_batch*.sh` scripts, replaced by `plugins/ai-flow/tests/run.sh` (validate + node:test structure suite + evals tooling).
+
+### Found
+- `plugin.json` `dependencies` is supported by Claude Code, but it means "must be enabled". Both engram and superpowers are optional, so neither is declared; the hook keeps detecting them.
+
+### Eval comparison
+To be filled after the alpha.2 gate.
+
 ## [4.0.0-alpha.1] - unreleased
 
 First pre-release of the 4.0.0 line. It adds an eval suite only: no changes to agents, skills, commands or hooks, so the plugin behaves exactly like 3.4.0.
@@ -47,6 +69,8 @@ Subagent AskUserQuestion attempts and read-only-agent writes were 0 in every obs
 - **Rework protocol** in orchestrator — concrete steps for handling verification failures at the rework gate
 - **Test discovery** in TDD protocol — agents auto-detect test runner from project config before first RED step
 - **AskUserQuestion fallback** — explorer and proposer degrade to text-based Q&A when superpowers unavailable
+
+> Correction (4.0.0-alpha.2): the fallback triggers when the `AskUserQuestion` tool is unavailable. It has nothing to do with superpowers, which does not provide that tool.
 - **"No state found" handling** in `flow-continue` — reconstructs state from individual artifacts or suggests `/flow-new`
 - **Standalone debugger fallback** — uses `flow/standalone/debug/` topic key when invoked outside an active flow
 - **Exploration check in `flow-ff`** — auto-launches explorer if exploration artifact is missing before proposing
@@ -58,10 +82,18 @@ Subagent AskUserQuestion attempts and read-only-agent writes were 0 in every obs
 - `unified-ai-dev-flow.md` — removed phantom "Reviewer sub-agent" reference from plan phase
 - Version bumped to 3.4.0
 
+> Correction (4.0.0-alpha.2): only the initializer's frontmatter description was fixed. The README agents table and the orchestrator's agents table still labelled the initializer "Read-only" until 4.0.0-alpha.2.
+
+> Correction (4.0.0-alpha.2): the reviewer sub-agent references were not removed. `unified-ai-dev-flow.md` still described a plan "review loop with a reviewer sub-agent" and "Reviewer sub-agents" in the apply phase; both were fixed when the document was archived in 4.0.0-alpha.2.
+
+> Correction (4.0.0-alpha.2): the marketplace entry (`.claude-plugin/marketplace.json`) still said 3.3.0 at the v3.4.0 tag; only `plugin.json` was bumped.
+
 ### Removed
 - **Linear sync integration** — removed `linear-sync` agent, all Linear references from orchestrator, commands, initializer, README, and CHANGELOG. Linear was optional (default off) and unused.
 
 ## [3.3.0] - 2026-03-24
+
+No git tag exists for this release (commit b9c5697).
 
 ### Added
 - **SessionStart hook** with bootstrapper injection and peer dependency detection (engram, superpowers)
@@ -82,14 +114,68 @@ Subagent AskUserQuestion attempts and read-only-agent writes were 0 in every obs
 - Proposer agent reads brainstorm artifact as optional enrichment input
 - Orchestrator tracks brainstorm in artifact table and passes it to proposer
 - All 9 agent files include engram fallback notes for graceful degradation
+
+> Correction (4.0.0-alpha.2): 10 of the 12 agents at the time carried the note; the initializer and linear-sync did not. All 11 current agents point to `skills/_shared/engram-fallback.md` since 4.0.0-alpha.2.
 - Engram convention updated with brainstorm artifact type
 - Version bumped to 3.3.0
+
+## [3.2.0] - 2026-03-23
+
+### Added
+- **Connected Pairs registry** in the planner: tasks that introduce a new layer connection get a tracer sub-step (a thin connectivity proof) before the behaviour sub-step.
+- The implementer runs each sub-step as its own TDD cycle; `flow-plan` and `unified-ai-dev-flow.md` describe the registry.
+
+### Notes
+- `plugin.json` only; the marketplace entry stayed at 3.0.3.
+
+## [3.1.0] - 2026-03-23
+
+### Added
+- **Interactive `AskUserQuestion`** in the explorer and proposer: structured, selectable questions to gather requirements and validate scope before working. `flow-explore`, `flow-propose`, `flow-new` and `flow-ff` updated to match.
+
+### Notes
+- `plugin.json` only; the marketplace entry stayed at 3.0.3.
+
+## [3.0.4] - 2026-03-13
+
+### Removed
+- The Linear-sync `Stop` hook (`hooks/hooks.json` is now empty).
+
+### Notes
+- No git tag. `plugin.json` only; the marketplace entry stayed at 3.0.3.
+
+## [3.0.3] - 2026-03-12
+
+### Changed
+- The Linear-sync `Stop` hook became a command hook: exit 2 blocks with the message on stderr, `stop_hook_active` prevents loops, and a `.ai-flow-sync-needed` sentinel (set by the orchestrator, cleared by linear-sync) tracks pending syncs.
+
+### Notes
+- No git tag.
+
+## [3.0.2] - 2026-03-12
+
+### Changed
+- The `Stop` prompt hook uses natural language instead of explicit JSON (works around anthropics/claude-code#11947) and pins the hook model to sonnet.
+
+### Removed
+- The bundled engram MCP server: `.mcp.json` is empty and persistence comes from the separate engram plugin (`plugin:engram:engram`).
+
+### Notes
+- No git tag.
+
+## [3.0.1] - 2026-03-12
+
+### Fixed
+- The `Stop` prompt hook returns `{ok, reason}` as the hooks spec requires, instead of `{message}`.
+
+### Notes
+- No git tag.
 
 ## [3.0.0] - 2026-03-12
 
 ### Added
 - User-invokable commands: `flow-new`, `flow-ff`, `flow-continue` in `commands/`
-- `.mcp.json` bundling engram MCP server config
+- `.mcp.json` bundling engram MCP server config (removed in 3.0.2)
 - `CHANGELOG.md`
 
 ### Changed
