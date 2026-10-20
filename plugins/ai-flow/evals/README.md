@@ -93,7 +93,7 @@ Offline and free: the CLI is replaced by `tooling/test/fixtures/stub-claude.mjs`
 
 - Gates are auto-approved by the unattended policy, which differs from real use.
 - Engram is mocked; artifacts are graded from `mem_save` payloads in the trace.
-- v3.4.0's SessionStart hook fails with exit 126 on Unix (`run-hook.cmd` is mode 0644), so the as-shipped injection is 0 tokens. The intended cost is measured separately. The fix belongs to a later sub-change, so the measured plugin behaviour is unchanged here.
+- v3.4.0's SessionStart hook fails with exit 126 on Unix (`run-hook.cmd` is mode 0644), so the as-shipped injection is 0 tokens. The intended cost is measured separately. This is fixed in 4.0.0-alpha.2 (the hook is executable), so alpha.2 runs carry about 2.8k injected tokens that the v3.4.0 baseline lacks.
 - Timeouts count as case failures (a property of the plugin), not harness errors.
 - Nested subagents are not in the trace (Claude Code 2.1.302 keeps only their `task_*` events). When the main thread delegates the flow to the `ai-flow:orchestrator` agent, phase order is graded on the orchestrator's launches and gates, while TDD, artifact and tool-use grades are n/a ("not observable"). Tokens and cost stay complete (`result.modelUsage`, `task_notification`).
 - File writes made through Bash (`>`/`>>`, `tee`, `sed -i`, `cp`/`mv`, scripts calling `writeFileSync`/`open(..., 'w')`) are detected heuristically for the TDD grader; writes through a separate script file are missed. The read-only-write metric still counts Write/Edit/NotebookEdit only.

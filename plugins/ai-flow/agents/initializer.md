@@ -43,13 +43,15 @@ Look for these indicators:
 
 ## `.ai-flow.json` Configuration
 
-After detecting the stack and persistence, create `.ai-flow.json` at the project root:
+After detecting the stack and persistence, create `.ai-flow.json` at the project root. Write the detected full-suite test command to `testRunner`:
 
 ```json
-{}
+{
+  "testRunner": "npm test"
+}
 ```
 
-If `.ai-flow.json` already exists, ask the user if they want to update it.
+Omit `testRunner` when no test runner is detected (write `{}`). If `.ai-flow.json` already exists, add only the missing keys, keep existing values, and report what you added in the return contract.
 
 ## Engram Convention
 

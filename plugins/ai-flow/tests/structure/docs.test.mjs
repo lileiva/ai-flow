@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { PLUGIN_ROOT, REPO_ROOT, extractHookEngramUrl, findBarePrefixes } from '../lib/plugin-files.mjs';
+import { PLUGIN_ROOT, REPO_ROOT, extractHookEngramUrl, findBarePrefixes, listRuntimeMd } from '../lib/plugin-files.mjs';
 
 const readRepo = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
 const readPlugin = (rel) => fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8');
@@ -80,4 +80,125 @@ test('negative: an initializer row labelled Read-only is flagged', () => {
 
 test('README has no bare /flow- command', () => {
   assert.deepEqual(findBarePrefixes(readRepo('README.md')), []);
+});
+
+// ---- README Project Structure tree matches the shipped plugin (REQ-011 S3, REQ-020 S1) ----
+
+/** The text of a markdown section, from its `## ` heading to the next `## ` heading. */
+function mdSection(text, heading) {
+  const start = text.indexOf(`\n## ${heading}\n`);
+  if (start < 0) return '';
+  const next = text.indexOf('\n## ', start + 1);
+  return text.slice(start, next < 0 ? undefined : next);
+}
+
+const firstFence = (text, lang = '') => new RegExp('```' + lang + '\\n([\\s\\S]*?)```').exec(text)?.[1] ?? '';
+
+/** Repo-relative paths of a 2-space-indented tree ("dir/" entries nest, "# ..." comments ignored). */
+function parseTree(tree) {
+  const stack = [];
+  const paths = [];
+  for (const line of tree.split('\n')) {
+    const m = /^( *)([^\s#][^\s]*)/.exec(line);
+    if (!m) continue;
+    const depth = m[1].length / 2;
+    stack.length = depth;
+    const full = [...stack, m[2]].join('').replace(/\/$/, '');
+    paths.push(full);
+    if (m[2].endsWith('/')) stack.push(m[2]);
+  }
+  return paths;
+}
+
+const TREE_REQUIRED_EXTRA = ['plugins/ai-flow/tests/run.sh', 'plugins/ai-flow/tests/structure', 'plugins/ai-flow/evals', 'plugins/ai-flow/.mcp.json', 'plugins/ai-flow/.claude-plugin/plugin.json'];
+const TREE_FORBIDDEN = /skill-sync|(^|\/)scripts(\/|$)|sync\.sh/;
+
+/** Problems with a README tree, given the files that must be shown and a path-exists predicate. */
+function treeProblems(tree, required, exists) {
+  const paths = parseTree(tree);
+  return [
+    ...paths.filter((p) => !exists(p)).map((p) => `listed but missing: ${p}`),
+    ...paths.filter((p) => TREE_FORBIDDEN.test(p)).map((p) => `retired path listed: ${p}`),
+    ...required.filter((r) => !paths.includes(r)).map((r) => `not listed: ${r}`),
+  ];
+}
+
+const shippedRuntime = () => [
+  ...listRuntimeMd(),
+  'hooks/hooks.json', 'hooks/run-hook.cmd', 'hooks/session-start',
+].map((f) => `plugins/ai-flow/${f}`);
+const existsInRepo = (p) => fs.existsSync(path.join(REPO_ROOT, p));
+const readmeTree = () => firstFence(mdSection(readRepo('README.md'), 'Project Structure'));
+
+test('README Project Structure tree lists every shipped runtime file, tests and evals, and nothing retired or missing', () => {
+  assert.deepEqual(treeProblems(readmeTree(), [...shippedRuntime(), ...TREE_REQUIRED_EXTRA], existsInRepo), []);
+});
+
+test('negative: a tree listing skill-sync/ is flagged', () => {
+  const tree = 'plugins/ai-flow/\n  skills/\n    skill-sync/SKILL.md   # retired\n';
+  assert.deepEqual(treeProblems(tree, [], () => true), ['retired path listed: plugins/ai-flow/skills/skill-sync/SKILL.md']);
+});
+
+// ---- README relative links resolve (REQ-004 S1) ----
+
+const relativeLinks = (text) => [...text.matchAll(/\]\(([^)\s]+)\)/g)].map((m) => m[1])
+  .filter((u) => !/^(https?:|mailto:|#)/.test(u)).map((u) => u.replace(/#.*$/, ''));
+
+test('every relative markdown link in README resolves to a repo file', () => {
+  assert.deepEqual(relativeLinks(readRepo('README.md')).filter((u) => !existsInRepo(u)), []);
+});
+
+// ---- .ai-flow.json schema: documented, written by the initializer, read by the guide (REQ-025, REQ-014 S6) ----
+
+/** Backticked keys that runtime md says it reads from `.ai-flow.json` (same line; table rows name agents, not keys). */
+function aiFlowJsonKeysRead(files, readFile) {
+  const keys = new Set();
+  for (const f of files) {
+    for (const line of readFile(f).split('\n').filter((l) => l.includes('`.ai-flow.json`') && !/^\s*\|/.test(l))) {
+      for (const [, k] of line.matchAll(/`([A-Za-z][A-Za-z0-9_]*)`/g)) keys.add(k);
+    }
+  }
+  return [...keys].sort();
+}
+
+const readmeConfigExample = () => JSON.parse(firstFence(mdSection(readRepo('README.md'), 'Configuration'), 'json'));
+const initializerExample = () => JSON.parse(firstFence(mdSection(readPlugin('agents/initializer.md'), '`.ai-flow.json` Configuration'), 'json'));
+
+test('runtime md reads at least testRunner from .ai-flow.json', () => {
+  assert.ok(aiFlowJsonKeysRead(listRuntimeMd(), readPlugin).includes('testRunner'));
+});
+
+test('README and initializer.md show the same .ai-flow.json example', () => {
+  assert.deepEqual(readmeConfigExample(), initializerExample());
+});
+
+/** Keys read by runtime md that the documented example omits. */
+const undocumentedKeys = (example, keysRead) => keysRead.filter((k) => !(k in example));
+
+test('every key runtime md reads from .ai-flow.json is in the README example', () => {
+  assert.deepEqual(undocumentedKeys(readmeConfigExample(), aiFlowJsonKeysRead(listRuntimeMd(), readPlugin)), []);
+});
+
+test('negative: an example without testRunner is flagged', () => {
+  assert.deepEqual(undocumentedKeys({}, ['testRunner']), ['testRunner']);
+});
+
+test('initializer writes the detected test command to testRunner and omits it when none is detected', () => {
+  const t = readPlugin('agents/initializer.md');
+  assert.match(t, /`testRunner`/);
+  assert.match(t, /omit[^.\n]*`?testRunner`?[^.\n]*(no|nothing)[^.\n]*detected|(no|nothing)[^.\n]*detected[^.\n]*omit/i);
+  assert.match(t, /already exists[^.\n]*(add|adds) only (the )?missing keys/i);
+});
+
+// ---- SessionStart gap is documented as fixed (REQ-020 S2) ----
+
+for (const [label, read] of [['README.md Evals', () => mdSection(readRepo('README.md'), 'Evals')], ['evals/README.md', () => readPlugin('evals/README.md')]]) {
+  test(`${label} known gaps say the exit-126 hook gap is fixed in 4.0.0-alpha.2`, () => {
+    const gap = read().split('\n').find((l) => /126/.test(l)) ?? '';
+    assert.match(gap, /fixed in 4\.0\.0-alpha\.2/);
+  });
+}
+
+test('README Hooks section describes the SessionStart hook', () => {
+  assert.match(mdSection(readRepo('README.md'), 'Hooks'), /SessionStart[\s\S]*using-ai-flow/);
 });

@@ -80,8 +80,14 @@ Or use the shortcuts:
 AI-Flow uses `.ai-flow.json` at the project root for per-project settings. Created automatically by `/ai-flow:flow-init`.
 
 ```json
-{}
+{
+  "testRunner": "npm test"
+}
 ```
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `testRunner` | string, optional | The command that runs the full test suite. The initializer writes the detected command and omits the key when it detects none. The TDD guide uses it when the plan names no test command. |
 
 ## Commands
 
@@ -150,7 +156,7 @@ Each phase is executed by a specialized agent with domain expertise and scoped t
 
 ## Hooks
 
-Defined in `plugins/ai-flow/hooks/hooks.json`.
+Defined in `plugins/ai-flow/hooks/hooks.json`. One hook runs on `SessionStart`: `hooks/run-hook.cmd session-start` injects the `using-ai-flow` skill (commands, agent mapping, auto-invoke rules) into the main thread and warns when engram or superpowers is not installed. The injection costs about 2.8k tokens per session start. Before 4.0.0-alpha.2 the hook never ran on Unix (`run-hook.cmd` was not executable).
 
 ## MCP Servers
 
@@ -173,12 +179,15 @@ plugins/ai-flow/
     plugin.json              # Plugin metadata (name, version, author)
   .mcp.json                  # Intentionally empty (no MCP servers)
   hooks/
-    hooks.json               # Session hooks
+    hooks.json               # SessionStart hook registration
+    run-hook.cmd             # Cross-platform hook launcher
+    session-start            # Injects using-ai-flow, warns about missing plugins
   commands/
     flow-new.md              # /ai-flow:flow-new command
     flow-ff.md               # /ai-flow:flow-ff command
     flow-continue.md         # /ai-flow:flow-continue command
   skills/
+    using-ai-flow/SKILL.md   # Session entry point (injected by the hook)
     flow-init/SKILL.md       # Phase 0: Project bootstrap
     flow-explore/SKILL.md    # Phase 1: Problem exploration
     flow-propose/SKILL.md    # Phase 2: Change proposal
@@ -191,8 +200,9 @@ plugins/ai-flow/
     flow-debug/SKILL.md      # Ad-hoc debugging
     _shared/
       engram-convention.md   # Engram topic key naming convention
+      engram-fallback.md     # What to do when engram is unavailable
       persistence-contract.md # Sub-agent context protocol
-      tdd-protocol.md        # RED-GREEN-REFACTOR protocol
+      tdd-protocol.md        # TDD guide (single TDD source)
   agents/
     orchestrator.md          # Coordinator agent
     initializer.md           # Phase 0 agent
@@ -205,6 +215,10 @@ plugins/ai-flow/
     verifier.md              # Phase 7 agent
     archivist.md             # Phase 8 agent
     debugger.md              # Debug agent
+  tests/
+    run.sh                   # Single test entrypoint (validate + structure + evals tooling)
+    structure/               # node:test structural and behavioural checks
+  evals/                     # Offline-graded eval suite (see Evals)
 ```
 
 ## Evals
@@ -250,7 +264,7 @@ Replace `--candidate` with a run's `summary.json`. A metric regresses when it is
 - Human gates are auto-approved by an unattended policy appended to the system prompt, which is not how gates behave in real use.
 - Engram is mocked (`plugin_engram_engram`), so artifacts are graded from `mem_save` payloads, not from a real store.
 - Subagents launched by another subagent (for example when the flow is delegated to the `ai-flow:orchestrator` agent) are not in the trace, so their TDD, artifact and tool-use grades are recorded as n/a.
-- As shipped, v3.4.0's SessionStart hook never runs on Unix (`run-hook.cmd` is not executable, exit 126), so its injection is 0 tokens. The baseline records both this as-shipped value and the intended cost measured on temp plugin copies (about 2.8k hook tokens on sonnet).
+- As shipped, v3.4.0's SessionStart hook never runs on Unix (`run-hook.cmd` is not executable, exit 126), so its injection is 0 tokens. The baseline records both this as-shipped value and the intended cost measured on temp plugin copies (about 2.8k hook tokens on sonnet). This is fixed in 4.0.0-alpha.2 (the hook now runs), so candidate runs carry the injection and the baseline does not.
 
 ## License
 
