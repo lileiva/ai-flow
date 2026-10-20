@@ -121,3 +121,15 @@ for (const rel of listRuntimeMd()) {
     assert.deepEqual(refs.filter((r) => !resolveQualifiedRef(r.name)), []);
   });
 }
+
+// ---- runtime tree: no relative agents/ or skills/ paths (REQ-005 S1). Scope widens per task: 2.3 skills, 2.4 agents, 2.5 all. ----
+
+const RELATIVE_PATH_SCOPE = (rel) => rel.startsWith('skills/flow-');
+const RELATIVE_PATH_ALLOWLIST = []; // {file, linePattern, reason}; intentionally empty for runtime markdown.
+
+for (const rel of listRuntimeMd().filter(RELATIVE_PATH_SCOPE)) {
+  test(`no relative agents/ or skills/ path: ${rel}`, () => {
+    const text = fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8');
+    assert.deepEqual(scan(rel, text, RELATIVE_PATH_ALLOWLIST), []);
+  });
+}

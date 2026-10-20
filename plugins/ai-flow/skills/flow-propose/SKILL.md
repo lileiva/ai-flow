@@ -8,6 +8,8 @@ metadata:
   auto_invoke: "Creating a formal change proposal"
 ---
 
+If you are the `ai-flow:proposer` agent, ignore this skill: your agent definition is the protocol. Do not launch another agent for this phase.
+
 This phase is handled by the **proposer** agent.
 
 Delegate to the `proposer` agent with the change name and project name. The agent will:
@@ -21,4 +23,4 @@ Delegate to the `proposer` agent with the change name and project name. The agen
 
 **Human gate:** The orchestrator presents the proposal for approval before proceeding to spec and design.
 
-See `agents/proposer.md` for the full protocol.
+The protocol lives in the `ai-flow:proposer` agent definition; launch it with the Agent tool (subagent_type `ai-flow:proposer`).

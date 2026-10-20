@@ -8,6 +8,8 @@ metadata:
   auto_invoke: "Exploring ideas before committing to a change"
 ---
 
+If you are the `ai-flow:explorer` agent, ignore this skill: your agent definition is the protocol. Do not launch another agent for this phase.
+
 This phase is handled by the **explorer** agent.
 
 Delegate to the `explorer` agent with the topic and project name. The agent will:
@@ -34,4 +36,4 @@ If the OpenSpace MCP server is connected, call `search_skills` before investigat
 
 If relevant skills are returned, factor them into your candidate approaches. If OpenSpace is not connected or returns empty results, proceed normally — this step is additive, not blocking.
 
-See `agents/explorer.md` for the full protocol.
+The protocol lives in the `ai-flow:explorer` agent definition; launch it with the Agent tool (subagent_type `ai-flow:explorer`).

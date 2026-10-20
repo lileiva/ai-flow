@@ -8,6 +8,8 @@ metadata:
   auto_invoke: "Verifying implementation against spec"
 ---
 
+If you are the `ai-flow:verifier` agent, ignore this skill: your agent definition is the protocol. Do not launch another agent for this phase.
+
 This phase is handled by the **verifier** agent.
 
 Delegate to the `verifier` agent with the change name and project name. The agent will:
@@ -21,4 +23,4 @@ Delegate to the `verifier` agent with the change name and project name. The agen
 
 **Human gate:** The orchestrator presents the verdict for approval before archiving.
 
-See `agents/verifier.md` for the full protocol.
+The protocol lives in the `ai-flow:verifier` agent definition; launch it with the Agent tool (subagent_type `ai-flow:verifier`).

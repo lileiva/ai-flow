@@ -8,6 +8,8 @@ metadata:
   auto_invoke: "Implementing planned tasks with TDD"
 ---
 
+If you are the `ai-flow:implementer` agent, ignore this skill: your agent definition is the protocol. Do not launch another agent for this phase.
+
 This phase is handled by the **implementer** agent.
 
 Delegate to the `implementer` agent with the change name, project name, and batch to execute. The agent will:
@@ -20,7 +22,7 @@ Delegate to the `implementer` agent with the change name, project name, and batc
 
 **Auto-verify:** After the final batch completes, the orchestrator MUST auto-launch `/ai-flow:flow-verify` without waiting for the user. Verification is not optional — it is the mandatory next step after apply.
 
-Also read `skills/_shared/tdd-protocol.md` for the full TDD protocol.
+Also read `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md` for the full TDD protocol.
 
 ## OpenSpace Integration (optional)
 
@@ -31,4 +33,4 @@ If the OpenSpace MCP server is connected, call `search_skills` before starting e
 
 If a relevant pattern or recipe exists, use it as a starting point for the TDD cycle rather than reasoning from scratch. If OpenSpace is not connected or returns empty results, proceed normally — this step is additive, not blocking.
 
-See `agents/implementer.md` for the full protocol.
+The protocol lives in the `ai-flow:implementer` agent definition; launch it with the Agent tool (subagent_type `ai-flow:implementer`).

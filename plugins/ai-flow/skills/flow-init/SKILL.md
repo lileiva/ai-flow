@@ -8,6 +8,8 @@ metadata:
   auto_invoke: "Initializing AI-Flow in a project"
 ---
 
+If you are the `ai-flow:initializer` agent, ignore this skill: your agent definition is the protocol. Do not launch another agent for this phase.
+
 This phase is handled by the **initializer** agent.
 
 Delegate to the `initializer` agent with the project name. The agent will:
@@ -16,4 +18,4 @@ Delegate to the `initializer` agent with the project name. The agent will:
 3. Create `.ai-flow.json` at the project root with the configuration
 4. Save project context to engram under `flow-init/{project-name}`
 
-See `agents/initializer.md` for the full protocol.
+The protocol lives in the `ai-flow:initializer` agent definition; launch it with the Agent tool (subagent_type `ai-flow:initializer`).

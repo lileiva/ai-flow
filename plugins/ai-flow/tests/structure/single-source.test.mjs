@@ -162,19 +162,42 @@ test('phase map loads: 10 flow-* skills, each mapped to an existing agent', () =
   for (const [skill, agent] of Object.entries(map)) assert.ok(fs.existsSync(path.join(PLUGIN_ROOT, 'agents', `${agent}.md`)), `${skill} -> ${agent}`);
 });
 
-const SKILL_AGENT = {
-  'flow-apply': 'implementer', 'flow-archive': 'archivist', 'flow-debug': 'debugger', 'flow-design': 'designer',
-  'flow-explore': 'explorer', 'flow-init': 'initializer', 'flow-plan': 'planner', 'flow-propose': 'proposer',
-  'flow-spec': 'specifier', 'flow-verify': 'verifier',
-};
+const SKILL_AGENT = loadPhaseMap();
 
 test('every flow-* skill has a mapped agent', () => {
   assert.deepEqual(phaseSkills.filter((s) => !SKILL_AGENT[s]), []);
 });
 
+/** null when the skill body opens with the self-guard for `agent` (REQ-019 S1, D2a), else the reason. */
+function guardViolation(skillText, agent) {
+  const body = skillText.replace(/^---\n[\s\S]*?\n---\n/, '');
+  const first = body.split('\n').find((l) => l.trim()) ?? '';
+  if (!first.includes(`If you are the \`ai-flow:${agent}\` agent`)) return `first body line is not the ai-flow:${agent} guard: '${first}'`;
+  if (!/do not launch another/i.test(first)) return 'guard does not forbid launching another agent for this phase';
+  return null;
+}
+
 for (const skill of phaseSkills) {
-  test(`phase skill names its agent: ${skill}`, () => {
-    assert.match(read(`skills/${skill}/SKILL.md`), new RegExp(`\\b${SKILL_AGENT[skill]}\\b`));
+  const agent = SKILL_AGENT[skill];
+  test(`phase skill opens with a self-delegation guard: ${skill} (ai-flow:${agent})`, () => {
+    assert.equal(guardViolation(read(`skills/${skill}/SKILL.md`), agent), null);
+  });
+  test(`phase skill names its agent: ${skill} -> ai-flow:${agent}`, () => {
+    assert.match(read(`skills/${skill}/SKILL.md`), new RegExp(`launch[^\n]*\\(subagent_type \`ai-flow:${agent}\`\\)|subagent_type \`ai-flow:${agent}\``));
+  });
+}
+
+test('negative: a phase skill without the guard (or with a guard for another agent) is flagged', () => {
+  assert.match(guardViolation('---\nname: flow-x\n---\n\nThis phase is handled by the **x** agent.\n', 'x'), /not the ai-flow:x guard/);
+  assert.match(guardViolation('---\nname: flow-x\n---\nIf you are the `ai-flow:y` agent, ignore this skill. Do not launch another agent.\n', 'x'), /not the ai-flow:x guard/);
+  assert.match(guardViolation('---\nname: flow-x\n---\nIf you are the `ai-flow:x` agent, ignore this skill.\n', 'x'), /does not forbid/);
+});
+
+for (const skill of ['flow-apply', 'flow-debug']) {
+  test(`TDD guide references are READ_REFs: ${skill}`, () => {
+    const lines = read(`skills/${skill}/SKILL.md`).split('\n').filter((l) => l.includes('tdd-protocol.md'));
+    assert.ok(lines.length > 0, 'mentions the TDD guide');
+    assert.deepEqual(lines.filter((l) => !l.includes('${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md')), []);
   });
 }
 

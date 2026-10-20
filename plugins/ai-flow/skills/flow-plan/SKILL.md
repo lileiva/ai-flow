@@ -8,6 +8,8 @@ metadata:
   auto_invoke: "Breaking design into implementation tasks"
 ---
 
+If you are the `ai-flow:planner` agent, ignore this skill: your agent definition is the protocol. Do not launch another agent for this phase.
+
 This phase is handled by the **planner** agent.
 
 Delegate to the `planner` agent with the change name and project name. The agent will:
@@ -22,4 +24,4 @@ Delegate to the `planner` agent with the change name and project name. The agent
 
 **Human gate:** The orchestrator presents the plan for approval before execution.
 
-See `agents/planner.md` for the full protocol.
+The protocol lives in the `ai-flow:planner` agent definition; launch it with the Agent tool (subagent_type `ai-flow:planner`).
