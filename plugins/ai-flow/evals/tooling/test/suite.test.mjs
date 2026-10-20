@@ -262,23 +262,55 @@ function workingFiles(dir) {
   return out.split('\n').filter(Boolean).filter((f) => fs.existsSync(path.join(REPO_ROOT, f))).sort();
 }
 
-for (const dir of RUNTIME_DIRS) {
-  test(`evals/ adds no runtime components: ${dir}/ lists exactly the v3.4.0 files`, () => {
-    const tagged = execFileSync('git', ['ls-tree', '-r', '--name-only', 'v3.4.0', `plugins/ai-flow/${dir}`], { cwd: REPO_ROOT, encoding: 'utf8' }).split('\n').filter(Boolean).sort();
-    assert.deepEqual(workingFiles(dir), tagged);
-  });
+
+// B2 D7: evals/ stays isolated from the runtime: no runtime file (agents/skills/commands/hooks, plugin.json,
+// hooks.json) references evals/. Replaces the v3.4.0 file-snapshot guard, which blocked every intentional runtime change.
+const RUNTIME_ISOLATION_FILES = () => [
+  ...RUNTIME_DIRS.flatMap((d) => workingFiles(d)),
+  'plugins/ai-flow/.claude-plugin/plugin.json',
+];
+
+/** Lines of `text` that reference evals/ (as a path segment), as {file, line}. */
+function evalsReferences(file, text) {
+  return text.split('\n').flatMap((l, i) => (/(^|[^A-Za-z0-9_-])evals\//.test(l) ? [{ file, line: i + 1 }] : []));
 }
 
-// Task 4.5 (REQ-M02, user decision 2026-10-18): plugin.json and the marketplace entry are both 4.0.0-alpha.1 on
-// the v4 branch (alphas live there, unmerged; main stays 3.4.0 until 4.0.0). U5's "marketplace stays 3.4.0" is dropped.
-test('plugin.json is 4.0.0-alpha.1', () => {
-  assert.equal(JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, '.claude-plugin', 'plugin.json'), 'utf8')).version, '4.0.0-alpha.1');
+test('evals/ adds no runtime coupling: no runtime file references evals/', () => {
+  const hits = RUNTIME_ISOLATION_FILES().flatMap((f) => evalsReferences(f, fs.readFileSync(path.join(REPO_ROOT, f), 'utf8')));
+  assert.deepEqual(hits, []);
 });
 
-test('marketplace.json metadata.version and plugins[0].version match plugin.json (4.0.0-alpha.1)', () => {
-  const m = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude-plugin', 'marketplace.json'), 'utf8'));
-  assert.equal(m.metadata.version, '4.0.0-alpha.1');
-  assert.equal(m.plugins[0].version, '4.0.0-alpha.1');
+test('negative: the evals-reference checker flags a runtime file that points at evals/', () => {
+  const hits = evalsReferences('agents/fake.md', '# Fake\n\nFor details see evals/README.md.\n');
+  assert.deepEqual(hits, [{ file: 'agents/fake.md', line: 3 }]);
+  assert.deepEqual(evalsReferences('agents/ok.md', 'No reference to my-evals/ or evalsx/ here.\n'), []);
+});
+
+// Task 4.5 (REQ-M02, user decision 2026-10-18): alphas live on the v4 branch, unmerged; main stays 3.4.0 until 4.0.0.
+// B2 D7: the literal '4.0.0-alpha.1' pin became a shape check so every alpha bump does not break this suite.
+const V4_VERSION_RE = /^4\.0\.0(-alpha\.\d+)?$/;
+
+/** Version problems between plugin.json and marketplace.json: shape, metadata.version, plugins[0].version. */
+function versionMismatches(plugin, market) {
+  const v = [];
+  if (!V4_VERSION_RE.test(plugin.version ?? '')) v.push(`plugin.json version '${plugin.version}' is not 4.0.0[-alpha.N]`);
+  if (market.metadata?.version !== plugin.version) v.push(`marketplace metadata.version '${market.metadata?.version}' != plugin.json '${plugin.version}'`);
+  if (market.plugins?.[0]?.version !== plugin.version) v.push(`marketplace plugins[0].version '${market.plugins?.[0]?.version}' != plugin.json '${plugin.version}'`);
+  return v;
+}
+
+const readJson = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
+
+test('plugin.json version is 4.0.0[-alpha.N] and marketplace metadata.version == plugins[0].version == plugin.json', () => {
+  const plugin = readJson(path.join(PLUGIN_DIR, '.claude-plugin', 'plugin.json'));
+  const market = readJson(path.join(REPO_ROOT, '.claude-plugin', 'marketplace.json'));
+  assert.deepEqual(versionMismatches(plugin, market), []);
+});
+
+test('negative: version checker flags a non-v4 version and a stale marketplace entry', () => {
+  assert.equal(versionMismatches({ version: '3.4.0' }, { metadata: { version: '3.4.0' }, plugins: [{ version: '3.4.0' }] }).length, 1);
+  const stale = versionMismatches({ version: '4.0.0-alpha.2' }, { metadata: { version: '4.0.0-alpha.1' }, plugins: [{ version: '4.0.0-alpha.2' }] });
+  assert.deepEqual(stale, ["marketplace metadata.version '4.0.0-alpha.1' != plugin.json '4.0.0-alpha.2'"]);
 });
 
 test('`claude plugin validate .` reports no version warning and `claude plugin tag --dry-run` accepts the versions', { skip: hasClaude ? false : 'claude CLI not installed' }, () => {
