@@ -313,6 +313,39 @@ test('run-hook.cmd session-start output equals running session-start directly', 
   assert.equal(viaWrapper.stdout, direct.stdout);
 });
 
+// ---- engram fallback: one shared file (REQ-009 S1, D3) ----
+
+const ENGRAM_FALLBACK = 'skills/_shared/engram-fallback.md';
+const exists = (rel) => fs.existsSync(path.join(PLUGIN_ROOT, rel));
+
+/** The engram install URL the SessionStart hook prints. */
+function hookEngramUrl() {
+  return /https:\/\/github\.com\/[^\s"']*engram/.exec(read('hooks/session-start'))?.[0];
+}
+
+/** Content problems of an engram-fallback document. */
+function engramFallbackProblems(text, url) {
+  const p = missingHeadings(text, [/When it applies/i, /Sub-agents/i, /Orchestrator/i, /Limitations/i]).map((h) => `heading ${h}`);
+  const applies = section(text, /When it applies/i);
+  const sub = section(text, /Sub-agents/i);
+  const orch = section(text, /Orchestrator/i);
+  p.push(...missingMentions(applies, [/engram not found/, /mem_\* tools[^.\n]*(absent|missing|not available)/i, /mem_\*[^.\n]*(errors?|fails?)/i]).map((m) => `detection ${m}`));
+  p.push(...missingMentions(sub, [/skip[^.\n]*mem_search/i, /mem_get_observation/, /mem_save/, /inline[^.\n]*launch prompt|launch prompt[^.\n]*inline/i, /artifacts\[\]\.content/, /multi-session continuity/i]).map((m) => `sub-agents ${m}`));
+  p.push(...missingMentions(orch, [/inline/i, /every launch/i]).map((m) => `orchestrator ${m}`));
+  if (!url || !text.includes(url)) p.push(`install URL ${url} missing`);
+  return p;
+}
+
+test('engram-fallback.md: detection, sub-agent and orchestrator actions, limitations, hook install URL', () => {
+  assert.ok(exists(ENGRAM_FALLBACK), `${ENGRAM_FALLBACK} exists`);
+  assert.deepEqual(engramFallbackProblems(read(ENGRAM_FALLBACK), hookEngramUrl()), []);
+});
+
+test('negative: an engram-fallback doc without the orchestrator section or the hook URL is flagged', () => {
+  const bad = '# Engram fallback\n## When it applies\n"engram not found"; mem_* tools are absent; a mem_* call errors.\n## Sub-agents\nSkip mem_search, mem_get_observation and mem_save. Use the artifacts passed inline in the launch prompt. Return artifacts[].content. Warn: no multi-session continuity.\n## Limitations\nLost on compaction.\n';
+  assert.deepEqual(engramFallbackProblems(bad, 'https://github.com/x/engram'), ['heading /Orchestrator/i', 'orchestrator /inline/i', 'orchestrator /every launch/i', 'install URL https://github.com/x/engram missing']);
+});
+
 // ---- topic-key consistency (replaces the per-file brainstorm greps) ----
 
 /** Rows `| Artifact | `flow/{change-name}/<type>` | ... |` of a markdown table, as {artifact, type, rest}. */
