@@ -204,3 +204,8 @@ export function loadPhaseMap() {
   const pairs = Object.entries(phaseMap).filter(([, phase]) => phase).map(([agent, phase]) => [phase, agent]);
   return Object.fromEntries([...pairs, ...Object.entries(EXTRA_PHASES)].map(([phase, agent]) => [`flow-${phase}`, agent]));
 }
+
+/** The engram install URL named by the SessionStart hook's warning. */
+export function extractHookEngramUrl(hookText) {
+  return /https:\/\/github\.com\/[^\s"]+engram/.exec(hookText)?.[0] ?? '';
+}
