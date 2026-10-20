@@ -92,7 +92,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { PLUGIN_ROOT } from '../lib/plugin-files.mjs';
+import { PLUGIN_ROOT, loadPhaseMap } from '../lib/plugin-files.mjs';
 
 const read = (rel) => fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8');
 const agentFiles = fs.readdirSync(path.join(PLUGIN_ROOT, 'agents')).filter((n) => n.endsWith('.md'));
@@ -152,6 +152,15 @@ test('negative: a missing heading is reported, and a mention in prose does not c
 });
 
 // ---- phase skills name their agent (tightened to ai-flow:<agent> in Task 2.3) ----
+
+test('phase map loads: 10 flow-* skills, each mapped to an existing agent', () => {
+  const map = loadPhaseMap();
+  assert.equal(Object.keys(map).length, 10);
+  assert.equal(map['flow-explore'], 'explorer');
+  assert.equal(map['flow-init'], 'initializer');
+  assert.equal(map['flow-debug'], 'debugger');
+  for (const [skill, agent] of Object.entries(map)) assert.ok(fs.existsSync(path.join(PLUGIN_ROOT, 'agents', `${agent}.md`)), `${skill} -> ${agent}`);
+});
 
 const SKILL_AGENT = {
   'flow-apply': 'implementer', 'flow-archive': 'archivist', 'flow-debug': 'debugger', 'flow-design': 'designer',

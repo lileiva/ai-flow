@@ -191,3 +191,16 @@ export function scan(file, text, allowlist = []) {
   ];
   return applyAllowlist(v, allowlist, text);
 }
+
+// Phases the evals config does not attribute (agent phase null) but which still have a flow-* skill.
+const EXTRA_PHASES = { init: 'initializer', debug: 'debugger' };
+
+/**
+ * flow-<phase> skill -> agent name, from evals/tooling/config.json phaseMap (agent -> phase) plus init and debug.
+ * @returns {Record<string, string>}
+ */
+export function loadPhaseMap() {
+  const { phaseMap } = JSON.parse(fs.readFileSync(path.join(PLUGIN_ROOT, 'evals/tooling/config.json'), 'utf8'));
+  const pairs = Object.entries(phaseMap).filter(([, phase]) => phase).map(([agent, phase]) => [phase, agent]);
+  return Object.fromEntries([...pairs, ...Object.entries(EXTRA_PHASES)].map(([phase, agent]) => [`flow-${phase}`, agent]));
+}
