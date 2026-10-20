@@ -77,7 +77,7 @@ for (const file of commands) {
 
 // ---- runtime shape (D7) ----
 
-test('runtime shape: only allowed file kinds under the plugin root; no untracked files outside evals/', { todo: 'green in Task 1.4' }, () => {
+test('runtime shape: only allowed file kinds under the plugin root; no untracked files outside evals/', () => {
   assert.deepEqual(checkShape(PLUGIN_ROOT), []);
   assert.deepEqual(untrackedOutsideEvals(), []);
 });

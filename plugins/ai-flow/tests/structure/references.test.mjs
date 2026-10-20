@@ -35,3 +35,35 @@ test('negative: a dangling READ_REF is reported with file, line and missing targ
   assert.equal(v[0].line, 4);
   assert.equal(v[0].target, 'skills/_shared/does-not-exist.md');
 });
+
+// ---- skill-sync is retired (REQ-027 S1, S2) ----
+
+const SKILL_SYNC_RE = /skill-sync|scripts\/sync\.sh|\.claude\/rules/;
+
+/** Lines of `text` that mention skill-sync, scripts/sync.sh or .claude/rules, as `file:line`. */
+function skillSyncMentions(file, text) {
+  return text.split('\n').flatMap((l, i) => (SKILL_SYNC_RE.test(l) ? [`${file}:${i + 1}`] : []));
+}
+
+/** Every file under the plugin root, relative, excluding tests/ (which names the retired paths) and raw eval traces. */
+function pluginFiles(rel = '') {
+  return fs.readdirSync(path.join(PLUGIN_ROOT, rel)).flatMap((n) => {
+    const child = rel ? `${rel}/${n}` : n;
+    if (child === 'tests' || child === 'evals/baselines/raw' || child === 'evals/results' || n === '.DS_Store') return [];
+    return fs.statSync(path.join(PLUGIN_ROOT, child)).isDirectory() ? pluginFiles(child) : [child];
+  });
+}
+
+test('no plugin file references skill-sync, scripts/sync.sh or .claude/rules', () => {
+  const hits = pluginFiles().flatMap((f) => skillSyncMentions(f, fs.readFileSync(path.join(PLUGIN_ROOT, f), 'utf8')));
+  assert.deepEqual(hits, []);
+});
+
+test('skill-sync paths are gone', () => {
+  const left = ['skills/skill-sync', 'scripts', 'tests/test_batch3_skill_sync.sh', '.claude'].filter((p) => fs.existsSync(path.join(PLUGIN_ROOT, p)));
+  assert.deepEqual(left, []);
+});
+
+test('negative: the skill-sync checker flags a line that runs scripts/sync.sh', () => {
+  assert.deepEqual(skillSyncMentions('README.md', 'Setup\nrun scripts/sync.sh\n'), ['README.md:2']);
+});
