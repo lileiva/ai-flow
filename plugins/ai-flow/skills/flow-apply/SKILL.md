@@ -14,15 +14,13 @@ This phase is handled by the **implementer** agent.
 
 Delegate to the `implementer` agent with the change name, project name, and batch to execute. The agent will:
 1. Read plan, spec, and design from engram
-2. Execute each task following the TDD cycle: RED → verify RED → GREEN → verify GREEN → REFACTOR → COMMIT
+2. Execute each task test-first, following the TDD guide, and commit per task
 3. Track progress in engram under `flow/{change-name}/apply-progress`
 4. Escalate to debugger agent if 3+ fix attempts fail
 
-**Iron law:** No production code without a failing test first. Verify steps are MANDATORY.
-
 **Auto-verify:** After the final batch completes, the orchestrator MUST auto-launch `/ai-flow:flow-verify` without waiting for the user. Verification is not optional — it is the mandatory next step after apply.
 
-Also read `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md` for the full TDD protocol.
+TDD: the implementer follows the guide at `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md`.
 
 ## OpenSpace Integration (optional)
 

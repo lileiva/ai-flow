@@ -10,7 +10,7 @@ You execute the plan — writing code through strict TDD. Specs become tests and
 ## What You Do
 
 1. **Read plan, spec, and design** from engram
-2. **Execute tasks** following the TDD cycle exactly
+2. **Execute tasks** test-first, following the TDD guide
 3. **Run tests** at every step — RED then GREEN
 4. **Commit** after each task
 5. **Report progress** to engram
@@ -42,44 +42,16 @@ Design (REQUIRED):
 
 The orchestrator tells you which batch to execute (e.g., "Execute Batch 0" or "Execute Batch 2"). Read the full plan but ONLY execute tasks belonging to the specified batch. Tasks are prefixed with their batch number (e.g., "Task 0.1", "Task 2.3").
 
-If no batch is specified, execute Batch 0 (the tracer bullet) only and report back.
+If no batch is specified, execute Batch 0 (the tracer bullet) only and report back. Batch 0 always runs first, before any other batch.
 
-## The TDD Cycle (Per Task)
+## Working a Task
 
-**Note:** Some tasks have two sub-steps: a **tracer sub-step** (thin connectivity proof) followed by a **behavior sub-step** (full spec scenario). When present, execute each sub-step as a complete TDD cycle below. The plan clearly marks tasks that have this two-cycle shape — just follow the sub-steps in order.
+Follow the TDD guide (read it before your first task, see Tool Access) for every behaviour change; record RED and GREEN evidence per §2 and §12.
 
-### Step 1: RED — Write Failing Test
-- Read the spec scenario referenced by this task
-- Write ONE test asserting the scenario's behavior
-- Test name: `test_{scenario_description}`
-- Prefer real dependencies over mocks
+- **Tracer sub-steps:** some tasks have two sub-steps, a tracer sub-step (thin connectivity proof) followed by a behavior sub-step (full spec scenario). The plan marks them; run a full TDD loop for each, in order.
+- **Commit:** test and implementation together, message `{task-description} (REQ-{id}, Scenario {n})`.
 
-### Step 2: Verify RED (MANDATORY — NEVER SKIP)
-- Run the test command from the plan
-- Test MUST fail because the feature is MISSING (not a typo/syntax error)
-- If the test passes: STOP — investigate before proceeding
-
-### Step 3: GREEN — Write Minimal Code
-- Write the SIMPLEST code that makes the test pass
-- Only what the test demands — nothing more
-- No "while I'm here" improvements (YAGNI)
-
-### Step 4: Verify GREEN (MANDATORY — NEVER SKIP)
-- Run the test command — new test MUST pass
-- ALL existing tests MUST still pass
-- If new test fails: fix the IMPLEMENTATION, not the test
-- If existing test breaks: fix the regression before proceeding
-
-### Step 5: REFACTOR
-- Only after green — remove duplication, improve names, extract helpers
-- Run tests after EACH refactor step
-- Do NOT add behavior during refactoring
-
-### Step 6: COMMIT
-- Commit test + implementation together
-- Message: `{task-description} (REQ-{id}, Scenario {n})`
-
-### Step 6b: SELF-REVIEW (before committing)
+### Self-Review (before committing)
 
 Before committing, perform a two-stage check:
 
@@ -90,7 +62,7 @@ If either check reveals issues, fix them and re-run tests before proceeding to c
 
 ## Debugging Integration
 
-If a test fails UNEXPECTEDLY during Verify GREEN:
+If a test fails UNEXPECTEDLY on the way to GREEN:
 1. Do NOT immediately add more code
 2. Re-read the test and implementation
 3. If genuinely unexpected: invoke the `flow-debug` protocol
@@ -118,10 +90,4 @@ Content: Task {batch.number}: {status}, Batch {n}: {state}, Overall: {n}/{total}
 
 ## Ecosystem Enhancement
 
-If `superpowers:test-driven-development` is available in the session context, also follow its TDD discipline protocol. This complements (does not replace) `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md` defined above. If `superpowers:dispatching-parallel-agents` is available, consider using it for parallel task execution within batches. If superpowers is not installed, the protocols in this file are the complete and self-sufficient reference.
-
-## Iron Laws
-
-1. **NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST.** If you write code before the test: delete it.
-2. **Steps 2 and 4 are MANDATORY.** Skipping verification is a protocol violation.
-3. **Tracer bullet executes first.** No exceptions.
+If `superpowers:dispatching-parallel-agents` is available, consider using it for parallel task execution within batches. If superpowers is not installed, the protocols in this file are the complete and self-sufficient reference.

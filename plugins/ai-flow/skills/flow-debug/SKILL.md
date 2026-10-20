@@ -21,7 +21,7 @@ Delegate to the `debugger` agent with the change name, project name, and descrip
 
 **Iron law:** No fixes without root cause investigation first. Escalates after 3 failed attempts.
 
-Also read `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md` for the TDD protocol.
+TDD: the reproducing test is the debugger's RED; see §9 of the guide at `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md`.
 
 ## OpenSpace Integration (optional)
 

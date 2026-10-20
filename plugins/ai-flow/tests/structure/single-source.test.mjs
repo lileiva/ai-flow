@@ -629,3 +629,74 @@ test('negative: an exceptions section without config caveat, record format or a 
   const bad = '## 10. When TDD does not apply\n| Change | Instead |\n|---|---|\n| Docs-only | link check |\n| Config-only | |\n';
   assert.deepEqual(exceptionsProblems(bad), ['config-only: no replacement verification', 'no row for prompt-only', 'behaviour-changing config is not called out as not exempt', 'no "TDD n/a: <reason>; verified by <command>" record format']);
 });
+
+// ---- the TDD guide is the single TDD source (REQ-015, REQ-029, decision 1: strict, no allowlist) ----
+
+const TDD_REF = '${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md';
+const RGR_STEP_BLOCKS = [/RED\s*[—-]\s*Write Failing Test/i, /^#+.*Verify RED/m, /GREEN\s*[—-]\s*Write Minimal Code/i, /^#+.*Verify GREEN/m, /^#+.*\bREFACTOR\b/m];
+const TDD_CRAFT_MARKERS = [/ZOMBIES/, /characteri[sz]ation/i, /triangulat/i];
+const LAW_HEADING = new RegExp(`^#+\\s*${COERCION_PHRASES[0]}s?\\b`, 'im');
+
+/** Runtime md files (other than the guide) that define RGR step blocks or carry the guide's craft vocabulary. */
+function tddDuplicates(files, readFile) {
+  return files.filter((f) => !f.endsWith(TDD_GUIDE)).flatMap((f) => {
+    const t = readFile(f);
+    return [...RGR_STEP_BLOCKS, ...TDD_CRAFT_MARKERS].filter((re) => re.test(t)).map((re) => `${f}: ${re}`);
+  });
+}
+
+test('no runtime md outside the TDD guide defines RGR step blocks or repeats its craft content', () => {
+  assert.deepEqual(tddDuplicates(listRuntimeMd(), read), []);
+});
+
+test('negative: an implementer copy with a headed RED step block is flagged', () => {
+  const clean = `# Implementer\nFollow the TDD guide at \`${TDD_REF}\`.\n`;
+  const copy = `${clean}\n### Step 1: RED — Write Failing Test\n- write one test\n`;
+  assert.deepEqual(tddDuplicates(['agents/implementer.md'], () => clean), []);
+  assert.deepEqual(tddDuplicates(['agents/implementer.md'], () => copy), ['agents/implementer.md: /RED\\s*[—-]\\s*Write Failing Test/i']);
+});
+
+test('implementer.md has no law heading (its TDD rules live in the guide)', () => {
+  assert.doesNotMatch(read('agents/implementer.md'), LAW_HEADING);
+});
+
+test('no runtime md or README tells agents to follow superpowers:test-driven-development (REQ-015 S2, REQ-029)', () => {
+  const files = [...listRuntimeMd().map((f) => [f, read(f)]), ['README.md', fs.readFileSync(path.join(PLUGIN_ROOT, '../../README.md'), 'utf8')]];
+  assert.deepEqual(files.filter(([, t]) => t.includes('superpowers:test-driven-development')).map(([f]) => f), []);
+});
+
+// Characterized at 45a3873 (before Task 4.3), minus the TDD complement; these must stay unchanged (REQ-015 S2).
+const NON_TDD_SUPERPOWERS = {
+  'agents/debugger.md': ['superpowers:systematic-debugging'],
+  'agents/explorer.md': ['superpowers:brainstorming'],
+  'agents/implementer.md': ['superpowers:dispatching-parallel-agents'],
+  'agents/orchestrator.md': ['superpowers:dispatching-parallel-agents', 'superpowers:finishing-a-development-branch', 'superpowers:using-git-worktrees'],
+  'agents/verifier.md': ['superpowers:verification-before-completion'],
+};
+
+test('non-TDD superpowers references are unchanged', () => {
+  const found = {};
+  for (const f of listRuntimeMd()) {
+    const refs = [...new Set(read(f).match(/superpowers:[a-z-]+/g) ?? [])].sort();
+    if (refs.length) found[f] = refs;
+  }
+  assert.deepEqual(found, NON_TDD_SUPERPOWERS);
+});
+
+for (const f of ['agents/implementer.md', 'agents/debugger.md', 'agents/planner.md', 'skills/flow-apply/SKILL.md', 'skills/flow-debug/SKILL.md']) {
+  test(`${f} points at the TDD guide READ_REF`, () => {
+    assert.ok(read(f).includes(TDD_REF));
+  });
+}
+
+test('flow-apply and flow-debug carry no TDD step list', () => {
+  for (const f of ['skills/flow-apply/SKILL.md', 'skills/flow-debug/SKILL.md']) {
+    assert.doesNotMatch(read(f), /verify RED|RED\s*(→|->)\s*\S+/i, f);
+  }
+});
+
+test('implementer keeps its role mechanics: batch scoping, tracer sub-steps, commit format, self-review, progress tracking', () => {
+  const impl = read('agents/implementer.md');
+  assert.deepEqual(missingHeadings(impl, [/Batch Scoping/, /Self-Review/i, /Progress Tracking/]), []);
+  assert.deepEqual(missingMentions(impl, [/tracer sub-step/i, /\(REQ-\{id\}, Scenario \{n\}\)/, /Batch 0[^.\n]*first|first[^.\n]*Batch 0/i]), []);
+});

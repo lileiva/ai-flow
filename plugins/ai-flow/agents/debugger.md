@@ -50,6 +50,8 @@ Do not guess. Do not patch symptoms. Find the root cause, then fix it with TDD.
 
 ## Phase 4: Fix with TDD
 
+RED = the reproducing test; see §9 and §12 of the TDD guide at `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md`.
+
 1. **Write reproducing test** — captures the bug, MUST fail (RED)
 2. **Write the fix** — fix ROOT CAUSE, smallest change possible
 3. **Verify GREEN** — new test passes, full suite passes

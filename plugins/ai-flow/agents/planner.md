@@ -36,6 +36,8 @@ Design (REQUIRED):
 
 ## Task Format
 
+Bake TDD steps per §12 of the TDD guide at `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md`.
+
 ### Standard Task (single layer or already-connected layers)
 
 ```markdown
