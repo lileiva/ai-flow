@@ -100,3 +100,32 @@ test('4.0.0-alpha.2 entry covers skill-sync removal, the SessionStart change, th
 test('negative: an alpha.2 entry without the SessionStart and dependencies notes is flagged', () => {
   assert.deepEqual(missingAlpha2Topics('## [4.0.0-alpha.2]\n- Removed skill-sync\n### Eval comparison\n'), ['SessionStart exit 126', 'SessionStart 0 tokens in 3.x', 'SessionStart ~2.8k tokens', 'dependencies finding']);
 });
+
+// ---- alpha.2 eval summary (REQ-013 S4, REQ-021 S4) ----
+
+/** The body of one `### <name>` subsection of an entry, up to the next ### heading. */
+function subsection(body, name) {
+  const start = body.indexOf(`### ${name}\n`);
+  if (start < 0) return '';
+  const next = body.indexOf('\n### ', start + 1);
+  return body.slice(start + name.length + 5, next < 0 ? undefined : next).trim();
+}
+
+/** What an Eval comparison subsection lacks: outcome, TDD, SessionStart, the gate SHA; not a placeholder. */
+function missingEvalSummary(text) {
+  return [
+    ['not a placeholder', (t) => t.length > 0 && !/to be filled/i.test(t)],
+    ['outcome', (t) => /outcome/i.test(t)],
+    ['TDD', (t) => /TDD/.test(t)],
+    ['SessionStart', (t) => /SessionStart/.test(t)],
+    ['gate SHA', (t) => /\b[0-9a-f]{7,40}\b/.test(t)],
+  ].filter(([, ok]) => !ok(text)).map(([n]) => n);
+}
+
+test('4.0.0-alpha.2 Eval comparison summarizes outcome, TDD and SessionStart at the gate SHA', () => {
+  assert.deepEqual(missingEvalSummary(subsection(entry(log(), '4.0.0-alpha.2'), 'Eval comparison')), []);
+});
+
+test('negative: the placeholder Eval comparison is flagged', () => {
+  assert.deepEqual(missingEvalSummary('To be filled after the alpha.2 gate.'), ['not a placeholder', 'outcome', 'TDD', 'SessionStart', 'gate SHA']);
+});

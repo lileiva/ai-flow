@@ -24,7 +24,30 @@ Second pre-release of the 4.0.0 line: hygiene. References resolve, the SessionSt
 - A user-level `~/.claude/CLAUDE.md` that still says "Read and follow `skills/flow-x/SKILL.md`" predates the `${CLAUDE_PLUGIN_ROOT}` references; it is outside the plugin and is not changed here.
 
 ### Eval comparison
-To be filled after the alpha.2 gate.
+Gate at `8029d9b` (sonnet, Claude Code 2.1.304, 2026-10-20), 5 cases x 3 runs vs `v3.4.0-sonnet.json` (2.1.302; patch-only CLI difference, compared with `--allow-env-mismatch`). 15/15 runs without harness errors, not rate-limited; notional cost $16.57 (subscription).
+
+No blocking regression. Outcome pass rate is 1.0 on every case. TDD is 1.0 (score and ratio) on case d, the per-phase apply case, same as the baseline. Subagent questions and read-only-agent writes are 0 wherever observable.
+
+| Case | Outcome | TDD (score / ratio) | Phase order | Delegated to orchestrator | Artifacts | Tokens | Wall time (s) |
+|---|---|---|---|---|---|---|---|
+| a bugfix | 1.0 (1.0) | n/a (baseline 1.0) | 0.33 (0) | 3/3 (1/3) | n/a (1.0) | 2.11M (1.96M) | 568 (478) |
+| b small feature | 1.0 (1.0) | n/a (baseline 1.0) | 0 (0) | 3/3 (2/3) | n/a (1.0) | 1.95M (2.03M) | 472 (467) |
+| c medium feature | 1.0 (1.0) | n/a (baseline 0.5 / 0.875) | 0 (0) | 3/3 (1/3) | n/a (1.0) | 2.60M (2.26M) | 676 (686) |
+| d apply (seeded) | 1.0 (1.0) | 1.0 / 1.0 (1.0 / 1.0) | 1.0 (1.0) | - | n/a | 0.36M (0.31M) | 41 (40) |
+| e propose+plan (seeded) | 1.0 (1.0) | n/a | 0.67 (1.0) | - | 1.0 (1.0) | 0.75M (0.69M) | 225 (186) |
+
+Baseline values in parentheses.
+
+- **SessionStart now runs.** The hook succeeded (exit 0) in all 15 runs. Measured at `8029d9b`, it adds 2,890 first-turn input tokens (intended hook cost 2,893; always-on plugin cost 1,813). In 3.x it added 0 tokens because the hook failed with exit 126. This increase is intended.
+- **The main thread now delegates every end-to-end run.** With `using-ai-flow` injected, all 9 runs of cases a-c handed the flow to `ai-flow:orchestrator`; the baseline did this in 4 of 9. The phase agents then run nested, outside the trace. So TDD, artifact and tool-use grades for a-c are n/a (not observable), not regressions. Their CLI `run-error` comes from nested mock accounting ("agent mock calls the trace does not show"), not from an outcome failure. Case d remains the TDD signal.
+- **Gates.** The orchestrator now prints gate markers in end-to-end runs: 4 of 9 runs printed all four gates, against 0 in the baseline. In non-interactive runs it still launches the next phase before the gate is answered, so only run 1 of case a passes phase order. On case e, run 0 printed the proposal gate late (0.67 vs 1.0); phase order is not a blocking metric.
+- **No self-delegation.** No `ai-flow:<X>` agent launched another `ai-flow:<X>` in any of the 15 traces.
+- **Tokens, cost and time (informational).** The deltas come from four sources:
+  - SessionStart injection: +11k main-thread tokens on d and +53k on e;
+  - delegation: main-thread tokens fall by 154k-302k on a-c, while the orchestrator rises by 25k on a and c;
+  - the TDD guide read and two implementer launches per e2e run: implementer +4k on d and +15k to +36k on a-c.
+
+  Total tokens are within one baseline sd on a, b, c and e, and +18% on d (above one sd). Cost on a (+$0.19) and wall time on a and e are also above one sd.
 
 ## [4.0.0-alpha.1] - unreleased
 
