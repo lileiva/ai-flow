@@ -508,13 +508,13 @@ const TDD_SECTIONS = [
   [4, /granularity|step size/i],
   [5, /test doubles|fakes.*mocks/i],
   [6, /outside-in.*inside-out|inside-out.*outside-in/i],
-  [7, /acceptance|tracer/i, 'Task 4.2'],
-  [8, /refactor(ing)? discipline/i, 'Task 4.2'],
-  [9, /legacy|characteri[sz]ation/i, 'Task 4.2'],
-  [10, /when tdd does not apply/i, 'Task 4.2'],
-  [11, /failure modes/i, 'Task 4.2'],
-  [12, /in ai-flow/i, 'Task 4.2'],
-  [13, /test discovery/i, 'Task 4.2'],
+  [7, /acceptance|tracer/i],
+  [8, /refactor(ing)? discipline/i],
+  [9, /legacy|characteri[sz]ation/i],
+  [10, /when tdd does not apply/i],
+  [11, /failure modes/i],
+  [12, /in ai-flow/i],
+  [13, /test discovery/i],
 ];
 
 /** Body of guide section §n (the "## n. ..." heading up to the next h2), or '' when absent. */
@@ -536,8 +536,8 @@ function budgetProblems(text) {
 
 const guide = () => read(TDD_GUIDE);
 
-for (const [n, topic, todo] of TDD_SECTIONS) {
-  test(`TDD guide §${n} heading: ${topic}`, todo ? { todo } : {}, () => {
+for (const [n, topic] of TDD_SECTIONS) {
+  test(`TDD guide §${n} heading: ${topic}`, () => {
     const heading = headings(guide()).find((h) => new RegExp(`^${n}\\.\\s`).test(h));
     assert.ok(heading, `no "## ${n}. ..." heading`);
     assert.match(heading, topic);
@@ -570,7 +570,7 @@ test('TDD guide §2: RED, GREEN and REFACTOR each say why (REQ-014 S2)', () => {
   }
 });
 
-for (const n of [3, 4, 5, 6]) {
+for (const n of [3, 4, 5, 6, 9, 11]) {
   test(`TDD guide §${n} is concrete: it has an example or decision heuristic (REQ-014 S5)`, () => {
     assert.match(tddSection(guide(), n), /e\.g\.|\bexample\b|```/i);
   });
@@ -581,4 +581,51 @@ test('negative: a guide with a coercion phrase or over budget is flagged; a sect
   assert.deepEqual(coercionHits(COERCION_FIXTURE), [COERCION_PHRASES[0]]);
   assert.deepEqual(budgetProblems('word '.repeat(2700)), ['words 2700 > 2600']);
   assert.doesNotMatch(tddSection('## 3. Next test\nPick a good one.\n## 4. Granularity\nE.g. tiny.\n', 3), /e\.g\.|\bexample\b|```/i);
+});
+
+/** Problems with the exceptions section (§10): exempt kinds, their replacement verification, the config caveat, the record format. */
+function exceptionsProblems(s10) {
+  const p = [];
+  const KINDS = { 'docs-only': /docs?(-only)?\b/i, 'config-only': /config(-only)?\b/i, 'prompt-only': /prompt(-only)?\b|agent\/skill markdown/i };
+  const rows = s10.split('\n').filter((l) => l.startsWith('|'));
+  for (const [kind, re] of Object.entries(KINDS)) {
+    const row = rows.find((r) => re.test(r.split('|')[1] ?? ''));
+    if (!row) p.push(`no row for ${kind}`);
+    else if (!/validat|lint|structural|schema|smoke|eval|suite|check/i.test(row.split('|')[2] ?? '')) p.push(`${kind}: no replacement verification`);
+  }
+  if (!/behaviou?r[^.\n]*not exempt|not exempt[^.\n]*behaviou?r/i.test(s10)) p.push('behaviour-changing config is not called out as not exempt');
+  if (!s10.includes('TDD n/a: <reason>; verified by <command>')) p.push('no "TDD n/a: <reason>; verified by <command>" record format');
+  return p;
+}
+
+test('TDD guide §10: exempt kinds with replacement verification, behaviour-changing config not exempt (REQ-014 S3)', () => {
+  assert.deepEqual(exceptionsProblems(tddSection(guide(), 10)), []);
+});
+
+test('TDD guide §11: failure-modes table with >= 10 rows incl. the key symptoms and the set-aside rationale', () => {
+  const s11 = tddSection(guide(), 11);
+  const rows = s11.split('\n').filter((l) => l.startsWith('|') && !/^\|\s*-/.test(l)).slice(1);
+  assert.ok(rows.length >= 10, `${rows.length} rows`);
+  assert.deepEqual(missingMentions(s11, [/passes immediately/i, /fails for the wrong reason/i, /code written before its test[^\n]*set[^\n]*aside/i, /stuck after 3 attempts/i]), []);
+});
+
+test('TDD guide §12: implementer, debugger, planner (per-task fields) and verifier', () => {
+  const s12 = tddSection(guide(), 12);
+  assert.deepEqual(missingMentions(s12, [/\*\*Implementer/, /\*\*Debugger/, /\*\*Planner/, /\*\*Verifier/]), []);
+  const planner = /\*\*Planner[\s\S]*?(?=\n\*\*|$)/.exec(s12)?.[0] ?? '';
+  assert.deepEqual(missingMentions(planner, [/spec reference/i, /test file/i, /test command/i, /expected RED/i, /GREEN hint/i, /refactor note/i, /TDD n\/a/]), []);
+});
+
+test('TDD guide §13: plan -> .ai-flow.json testRunner -> stack detection, run once before the first RED (REQ-014 S6)', () => {
+  const s13 = tddSection(guide(), 13);
+  const at = (re) => s13.search(re);
+  const order = [at(/plan/i), at(/`testRunner`/), at(/detect/i)];
+  assert.ok(order.every((i) => i >= 0) && order[0] < order[1] && order[1] < order[2], `order ${order}`);
+  assert.match(s13, /\.ai-flow\.json/);
+  assert.match(s13, /run it once before the first RED/i);
+});
+
+test('negative: an exceptions section without config caveat, record format or a prompt row is flagged', () => {
+  const bad = '## 10. When TDD does not apply\n| Change | Instead |\n|---|---|\n| Docs-only | link check |\n| Config-only | |\n';
+  assert.deepEqual(exceptionsProblems(bad), ['config-only: no replacement verification', 'no row for prompt-only', 'behaviour-changing config is not called out as not exempt', 'no "TDD n/a: <reason>; verified by <command>" record format']);
 });
