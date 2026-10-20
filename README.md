@@ -4,7 +4,7 @@ A unified AI-assisted development workflow plugin for [Claude Code](https://clau
 
 AI-Flow orchestrates structured development through DAG-based phases: exploration, proposal, specification, design, planning, implementation (with TDD), verification, and archival — with human review gates at critical points.
 
-For the full reference document, see [unified-ai-dev-flow.md](unified-ai-dev-flow.md). For version history, see [CHANGELOG.md](CHANGELOG.md).
+For the historical v3 design document (archived, not maintained), see [docs/archive/unified-ai-dev-flow.md](docs/archive/unified-ai-dev-flow.md). For version history, see [CHANGELOG.md](CHANGELOG.md).
 
 ## Installation
 

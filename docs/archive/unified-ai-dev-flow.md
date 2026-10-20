@@ -1,5 +1,7 @@
 # AI-Flow: Unified AI-Assisted Development Workflow
 
+> **Archived (historical v3 reference).** This document describes the AI-Flow design as of v3 and is no longer maintained. Current behaviour lives in the plugin itself: see [README.md](../../README.md) and the orchestrator agent at [plugins/ai-flow/agents/orchestrator.md](../../plugins/ai-flow/agents/orchestrator.md). Stale claims were corrected on archiving (4.0.0-alpha.2): the human gates, the review step and the command names.
+
 ## Introduction
 
 AI-Flow is a unified development workflow that combines the **planning rigor** of Spec-Driven Development (SDD) with the **execution discipline** of Test-Driven Development (TDD). It provides a structured, phase-based approach to building software with AI sub-agents — where every feature moves through a clear pipeline from exploration to archived completion, and every line of production code is backed by a failing test that demanded its existence.
@@ -18,7 +20,7 @@ These eight principles govern every phase of AI-Flow. They are non-negotiable.
 | 2 | **No production code without a failing test first** | Superpowers | Every line of production code exists because a test demanded it. This is the iron law of TDD. It ensures that code is always testable, always justified, and never speculative. |
 | 3 | **Evidence over claims — verify before declaring success** | Superpowers | No sub-agent may claim a task is complete without providing fresh verification evidence (test output, build logs, type-check results). "It should work" is not evidence. |
 | 4 | **Structured artifacts at every phase** | Agent Teams | Each phase produces a named, versioned artifact (exploration report, proposal, spec, design, plan, verification report). These artifacts form the project's decision trail and enable recovery after context loss. |
-| 5 | **Human review gates between phases** | Agent Teams | The developer approves proposals, specs, plans, and verification reports before the workflow advances. AI suggests; humans decide. |
+| 5 | **Human review gates between phases** | Agent Teams | The developer approves the proposal, the plan, the tracer-bullet result and the verification report before the workflow advances. AI suggests; humans decide. |
 | 6 | **Tracer bullets — tiny end-to-end slices first** | Agent Teams | Before building the full feature, implement the thinnest possible slice that touches every layer of the system. Get feedback on that slice before expanding. This validates architecture early and cheaply. |
 | 7 | **Fresh context per task** | Both | Sub-agents receive only the context they need for their specific task. This prevents cross-contamination, reduces hallucination risk, and allows parallel execution. |
 | 8 | **Systematic over ad-hoc — process over guessing** | Superpowers | When something breaks, follow a systematic debugging protocol (investigate root cause, form hypotheses, test them) rather than guessing and patching. |
@@ -150,7 +152,7 @@ This phase replaces SDD's generic task breakdown with Superpowers' detailed writ
 - Order tasks by dependency, group into execution batches
 - Identify the **tracer bullet task** — the smallest task that touches all layers end-to-end
 - Build the **Connected Pairs registry** — catalog which layer connections are already validated and prepend tracer sub-steps for tasks that introduce new connections. This ensures every layer boundary is proven before real logic is built on top of it.
-- Run a **plan review loop** with a reviewer sub-agent to catch gaps, ordering issues, or missing test coverage
+- Check the plan for gaps, ordering issues, or missing test coverage (the planner's own coverage validation; there is no separate review agent)
 
 **Output:** Plan artifact — ordered task list with TDD steps, grouped into batches.
 
@@ -200,7 +202,7 @@ Tasks are executed in batches (as defined in the plan). Within a batch, independ
 
 **Output:** Working code with passing tests, committed incrementally. Apply-progress artifact tracking completion status.
 
-**Who does it:** Implementer sub-agents (one per task or batch), Reviewer sub-agents (spec compliance + code quality).
+**Who does it:** Implementer sub-agents (one per task or batch). Spec compliance and code quality are checked by the implementer's own two-stage self-review before each commit.
 
 ---
 
@@ -373,17 +375,17 @@ flowchart TD
 
 | Command | Phase | Description |
 |---------|-------|-------------|
-| `/flow-init` | Phase 0 | Detect stack, bootstrap persistence, build skill registry |
-| `/flow-explore <topic>` | Phase 1 | Brainstorm and explore the problem space and codebase |
-| `/flow-new <change>` | Phase 1+2 | Explore then propose a new change (shortcut) |
-| `/flow-spec` | Phase 3 | Write delta specifications with testable scenarios |
-| `/flow-design` | Phase 4 | Write technical design and architecture decisions |
-| `/flow-plan` | Phase 5 | Break into bite-sized tasks with TDD steps |
-| `/flow-apply` | Phase 6 | Execute the plan with strict TDD and two-stage reviews |
-| `/flow-verify` | Phase 7 | Run completeness, compliance, and test verification |
-| `/flow-archive` | Phase 8 | Merge specs, archive artifacts, close out the change |
-| `/flow-ff` | Phase 2-5 | Fast-forward: propose, spec, design, and plan in sequence |
-| `/flow-debug` | Any | Enter systematic debugging mode |
+| `/ai-flow:flow-init` | Phase 0 | Detect stack, bootstrap persistence, build skill registry |
+| `/ai-flow:flow-explore <topic>` | Phase 1 | Brainstorm and explore the problem space and codebase |
+| `/ai-flow:flow-new <change>` | Phase 1+2 | Explore then propose a new change (shortcut) |
+| `/ai-flow:flow-spec` | Phase 3 | Write delta specifications with testable scenarios |
+| `/ai-flow:flow-design` | Phase 4 | Write technical design and architecture decisions |
+| `/ai-flow:flow-plan` | Phase 5 | Break into bite-sized tasks with TDD steps |
+| `/ai-flow:flow-apply` | Phase 6 | Execute the plan with strict TDD and two-stage reviews |
+| `/ai-flow:flow-verify` | Phase 7 | Run completeness, compliance, and test verification |
+| `/ai-flow:flow-archive` | Phase 8 | Merge specs, archive artifacts, close out the change |
+| `/ai-flow:flow-ff` | Phase 2-5 | Fast-forward: propose, spec, design, and plan in sequence |
+| `/ai-flow:flow-debug` | Any | Enter systematic debugging mode |
 
 ---
 
@@ -394,7 +396,7 @@ Not every change needs the full ceremony. Match the workflow depth to the change
 ```
 Is it a bug fix?
 ├── Yes
-│   └── Use /flow-debug + TDD
+│   └── Use /ai-flow:flow-debug + TDD
 │       (Skip planning phases entirely. Investigate, write a
 │        reproducing test, fix it, verify.)
 │
@@ -402,20 +404,20 @@ Is it a bug fix?
     │
     ├── Small (1-2 files, well-understood change)
     │   └── Lightweight flow:
-    │       /flow-explore → /flow-plan → /flow-apply
+    │       /ai-flow:flow-explore → /ai-flow:flow-plan → /ai-flow:flow-apply
     │       (Skip proposal, spec, and design. Explore enough to
     │        understand the change, plan the tasks, execute with TDD.
     │        Tracer sub-steps are automatic if the plan crosses layers.)
     │
     ├── Medium (3-10 files, moderate complexity)
     │   └── Full flow:
-    │       /flow-new → /flow-spec → /flow-design → /flow-plan → /flow-apply → /flow-verify
-    │       (Every phase. Human gates at proposal, plan, and verify.
+    │       /ai-flow:flow-new → /ai-flow:flow-spec → /ai-flow:flow-design → /ai-flow:flow-plan → /ai-flow:flow-apply → /ai-flow:flow-verify
+    │       (Every phase. Human gates at proposal, plan, tracer bullet, and verify.
     │        Tracer sub-steps are automatic for new layer connections.)
     │
     └── Large (10+ files, cross-cutting, high risk)
         └── Full flow + tracer bullet strategy:
-            Same as Medium, but during /flow-apply, implement the
+            Same as Medium, but during /ai-flow:flow-apply, implement the
             tracer bullet first. Get feedback on the thin slice before
             expanding to the full implementation. Tracer sub-steps
             validate each layer boundary individually.
