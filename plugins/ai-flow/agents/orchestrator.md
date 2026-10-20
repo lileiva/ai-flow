@@ -36,7 +36,7 @@ AI-Flow uses **engram** as its artifact store. All artifacts use deterministic t
 See `${CLAUDE_PLUGIN_ROOT}/skills/_shared/engram-convention.md` for the full naming convention.
 See `${CLAUDE_PLUGIN_ROOT}/skills/_shared/persistence-contract.md` for the sub-agent context protocol.
 
-**Engram fallback:** If engram is unavailable (detected by SessionStart hook or failed mem_search calls), warn the user and recommend installing engram. In this degraded mode, sub-agents return artifacts inline and you pass them to downstream agents via the launch prompt. Multi-session continuity is not available without engram.
+**Engram fallback:** if engram is unavailable, follow `${CLAUDE_PLUGIN_ROOT}/skills/_shared/engram-fallback.md`.
 
 ## DAG Dependency Graph
 

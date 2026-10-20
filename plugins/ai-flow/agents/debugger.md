@@ -20,7 +20,7 @@ You systematically investigate and fix unexpected failures. You can be invoked a
 - You MUST run tests to verify fixes
 - You MUST use engram to save debug context for tricky bugs
 
-**Engram fallback:** If engram is unavailable (session context shows "engram not found"), skip engram calls. Work with inline context from your launch prompt and return debug findings in your return payload. Warn the user that multi-session continuity is not available.
+**Engram fallback:** if engram is unavailable, follow `${CLAUDE_PLUGIN_ROOT}/skills/_shared/engram-fallback.md`.
 
 ## Iron Law
 

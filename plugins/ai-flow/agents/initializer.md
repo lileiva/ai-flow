@@ -22,6 +22,8 @@ You bootstrap the AI-Flow environment so all subsequent phases have the context 
 - You MAY use Glob, Grep, Read, and Bash (for non-destructive commands like `ls`, `git log`)
 - You MUST use engram tools (`mem_save`, `mem_search`) for persistence
 
+**Engram fallback:** if engram is unavailable, follow `${CLAUDE_PLUGIN_ROOT}/skills/_shared/engram-fallback.md`.
+
 ## Stack Detection Checklist
 
 Look for these indicators:

@@ -144,7 +144,7 @@ This artifact is OPTIONAL for downstream phases. The proposer reads it if availa
 
 ## Reading Context
 
-**Engram fallback:** If engram is unavailable (session context shows "engram not found"), skip mem_search/mem_get_observation calls. The orchestrator will pass artifact content directly in your launch prompt. Work with whatever context you receive. Warn the user that multi-session continuity is not available.
+**Engram fallback:** if engram is unavailable, follow `${CLAUDE_PLUGIN_ROOT}/skills/_shared/engram-fallback.md`.
 
 If project context exists:
 1. `mem_search(query: "flow-init/{project-name}", project: "{project-name}")` → get observation ID

@@ -62,7 +62,7 @@
 // | b2 REQ-008 S1 orchestrator: "reusable pattern"                     | kept     | 'orchestrator suggests (never forces) skill creation' |
 // | b2 REQ-008 S3 orchestrator: skill-creator                          | kept     | same |
 // | b2 REQ-008 S4 orchestrator: "suggest"                              | kept     | same |
-// | b2 REQ-011 S1 x9 agents: engram fallback note                      | kept     | 'engram fallback note: agents/<x>.md' (9 agents; Task 3.2 makes it 11 pointers) |
+// | b2 REQ-011 S1 x9 agents: engram fallback note                      | replaced | 'engram fallback pointer: agents/<x>.md ...' (all 11 agents, one shared file, REQ-009) |
 // | b2 REQ-007 orchestrator: "brainstorm" (x2)                         | replaced | 'topic keys: ...' (Artifact Tracking row) |
 // | b4 implementer: superpowers:test-driven-development                | dropped  | inverted in Task 4.3 (TDD guide is the single TDD source, decision 1) |
 // | b4 implementer/debugger/verifier/explorer/orchestrator: Ecosystem Enhancement (x5) | kept | 'ecosystem enhancement: agents/<x>.md ...' |
@@ -92,7 +92,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { PLUGIN_ROOT, loadPhaseMap } from '../lib/plugin-files.mjs';
+import { PLUGIN_ROOT, loadPhaseMap, listRuntimeMd } from '../lib/plugin-files.mjs';
 
 const read = (rel) => fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8');
 const agentFiles = fs.readdirSync(path.join(PLUGIN_ROOT, 'agents')).filter((n) => n.endsWith('.md'));
@@ -246,12 +246,30 @@ test('negative: missingMentions reports each absent pattern', () => {
   assert.equal(missingMentions('Pass artifacts inline.', FALLBACK_MENTIONS).length, 4);
 });
 
-const LEGACY_FALLBACK_AGENTS = ['explorer', 'proposer', 'specifier', 'designer', 'planner', 'implementer', 'verifier', 'archivist', 'debugger'];
-for (const a of LEGACY_FALLBACK_AGENTS) {
-  test(`engram fallback note: agents/${a}.md`, () => {
-    assert.match(read(`agents/${a}.md`), /engram.*unavailable|unavailable.*engram|[Ee]ngram fallback/);
+// Every agent points at the one engram-fallback file (REQ-009 S2/S3, REQ-028). Replaces the 9-agent inline-note check.
+const FALLBACK_REF = '${CLAUDE_PLUGIN_ROOT}/skills/_shared/engram-fallback.md';
+for (const file of agentFiles) {
+  test(`engram fallback pointer: agents/${file} references engram-fallback.md exactly once`, () => {
+    assert.equal(read(`agents/${file}`).split('\n').filter((l) => l.includes(FALLBACK_REF)).length, 1);
   });
 }
+
+// Signature text of the old per-agent paragraph; it may live only in engram-fallback.md.
+const FALLBACK_SIGNATURES = [/skip mem_search\/mem_get_observation/i, /\(session context shows "engram not found"\)/, /skip engram calls/i];
+
+/** Runtime files (other than engram-fallback.md) that still carry fallback-paragraph signature text. */
+function fallbackDuplicates(files, readFile) {
+  return files.filter((f) => !f.endsWith('_shared/engram-fallback.md') && FALLBACK_SIGNATURES.some((re) => re.test(readFile(f))));
+}
+
+test('no duplicated engram-fallback prose outside engram-fallback.md', () => {
+  assert.deepEqual(fallbackDuplicates(listRuntimeMd(), read), []);
+});
+
+test('negative: an agent copy that still carries the old fallback paragraph is flagged', () => {
+  const old = '**Engram fallback:** If engram is unavailable (session context shows "engram not found"), skip mem_search/mem_get_observation calls.';
+  assert.deepEqual(fallbackDuplicates(['agents/x.md', 'skills/_shared/engram-fallback.md'], () => old), ['agents/x.md']);
+});
 
 test('explorer keeps its interactive discovery loop', () => {
   assert.deepEqual(missingMentions(read('agents/explorer.md'), [/AskUserQuestion/, /Ready to proceed/, /follow-up/, /refined problem statement/, /3 (refinement )?rounds|maximum of 3|max(imum)? 3/i]), []);
