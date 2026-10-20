@@ -79,7 +79,7 @@ Each phase has a dedicated agent with domain expertise and appropriate tool rest
 
 | Phase | Agent | Tool Access | Purpose |
 |-------|-------|-------------|---------|
-| 0 | `initializer` | Read-only | Bootstrap project context |
+| 0 | `initializer` | Writes `.ai-flow.json` only | Bootstrap project context |
 | 1 | `explorer` | Read-only | Brainstorm and investigate |
 | 2 | `proposer` | Read-only | Formal change proposals |
 | 3 | `specifier` | Read-only | Delta specs with Given/When/Then |

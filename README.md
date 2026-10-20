@@ -10,8 +10,8 @@ For the full reference document, see [unified-ai-dev-flow.md](unified-ai-dev-flo
 
 ### Prerequisites
 
-- [Claude Code](https://claude.ai/claude-code) v1.0.33+
-- [Engram MCP server](https://github.com/anthropics/engram) for artifact persistence (bundled via `.mcp.json`)
+- [Claude Code](https://claude.ai/claude-code) (tested on 2.1.304)
+- Optional: [engram](https://github.com/gentleman-programming/engram) for artifact persistence across sessions. It is a separate plugin (`engram@engram`), not part of AI-Flow. Without it, AI-Flow passes artifacts inline within one session (see `plugins/ai-flow/skills/_shared/engram-fallback.md`).
 
 ### Step 1: Add the marketplace
 
@@ -30,14 +30,14 @@ Open Claude Code and run:
 ### Step 3: Initialize your project
 
 ```
-/flow-init
+/ai-flow:flow-init
 ```
 
 This detects your tech stack, bootstraps persistence, and creates `.ai-flow.json` with your preferences.
 
 ### Step 4: Verify
 
-Run `/help` and confirm the `flow-` commands and skills appear.
+Run `/help` and confirm the `/ai-flow:flow-*` commands and skills appear.
 
 ### Updating
 
@@ -50,34 +50,34 @@ Run `/help` and confirm the `flow-` commands and skills appear.
 A typical workflow looks like this:
 
 ```
-/flow-new add-user-auth      # Explore the problem space, then create a proposal
-                              # → You approve or revise the proposal
+/ai-flow:flow-new add-user-auth        # Explore the problem space, then create a proposal
+                                       # → You approve or revise the proposal
 
-/flow-spec                    # Write Given/When/Then scenarios
-/flow-design                  # Create technical design (can run in parallel with spec)
+/ai-flow:flow-spec                     # Write Given/When/Then scenarios
+/ai-flow:flow-design                   # Create technical design (can run in parallel with spec)
 
-/flow-plan                    # Break work into batched tasks with TDD steps
-                              # → You approve or revise the plan
+/ai-flow:flow-plan                     # Break work into batched tasks with TDD steps
+                                       # → You approve or revise the plan
 
-/flow-apply                   # Execute tasks: tracer bullet first, then batches
-                              # → You review after tracer bullet
+/ai-flow:flow-apply                    # Execute tasks: tracer bullet first, then batches
+                                       # → You review after tracer bullet
 
-/flow-verify                  # Run compliance checks and test suite
-                              # → You approve or send back for rework
+/ai-flow:flow-verify                   # Run compliance checks and test suite
+                                       # → You approve or send back for rework
 
-/flow-archive                 # Archive artifacts and close the change
+/ai-flow:flow-archive                  # Archive artifacts and close the change
 ```
 
 Or use the shortcuts:
 
 ```
-/flow-ff add-user-auth       # Fast-forward: propose → spec + design → plan
-/flow-continue add-user-auth  # Resume from the last completed phase
+/ai-flow:flow-ff add-user-auth         # Fast-forward: propose → spec + design → plan
+/ai-flow:flow-continue add-user-auth   # Resume from the last completed phase
 ```
 
 ## Configuration
 
-AI-Flow uses `.ai-flow.json` at the project root for per-project settings. Created automatically by `/flow-init`.
+AI-Flow uses `.ai-flow.json` at the project root for per-project settings. Created automatically by `/ai-flow:flow-init`.
 
 ```json
 {}
@@ -89,9 +89,9 @@ User-invokable commands (type directly):
 
 | Command | Description |
 |---------|-------------|
-| `/flow-new <name>` | Start a new change — explore → propose → human gate |
-| `/flow-ff <name>` | Fast-forward — propose → spec + design (parallel) → plan |
-| `/flow-continue <name>` | Resume from last completed phase |
+| `/ai-flow:flow-new <name>` | Start a new change — explore → propose → human gate |
+| `/ai-flow:flow-ff <name>` | Fast-forward — propose → spec + design (parallel) → plan |
+| `/ai-flow:flow-continue <name>` | Resume from last completed phase |
 
 ## Skills
 
@@ -116,7 +116,7 @@ Each phase is executed by a specialized agent with domain expertise and scoped t
 
 | Agent | Phase | Tool Access | Role |
 |-------|-------|-------------|------|
-| `initializer` | 0 | Read-only | Detects stack, conventions, creates `.ai-flow.json` |
+| `initializer` | 0 | Writes `.ai-flow.json` only | Detects stack, conventions, test runner |
 | `explorer` | 1 | Read-only | Brainstorms approaches, investigates codebase |
 | `proposer` | 2 | Read-only | Writes formal proposals with risks and rollback |
 | `specifier` | 3 | Read-only | Writes Given/When/Then scenarios from requirements |
@@ -154,7 +154,7 @@ Defined in `plugins/ai-flow/hooks/hooks.json`.
 
 ## MCP Servers
 
-The plugin bundles an engram MCP server configuration in `.mcp.json`. This ensures artifact persistence is available without manual setup. The server uses `npx engram-mcp` and scopes the project to the plugin root.
+`plugins/ai-flow/.mcp.json` is intentionally empty: AI-Flow ships no MCP server. Persistence comes from the separate engram plugin (`engram@engram`, https://github.com/gentleman-programming/engram). The SessionStart hook warns when engram is not installed, and AI-Flow then runs in inline-only mode.
 
 ## Human Review Gates
 
@@ -171,13 +171,13 @@ The plugin bundles an engram MCP server configuration in `.mcp.json`. This ensur
 plugins/ai-flow/
   .claude-plugin/
     plugin.json              # Plugin metadata (name, version, author)
-  .mcp.json                  # Bundled engram MCP server config
+  .mcp.json                  # Intentionally empty (no MCP servers)
   hooks/
     hooks.json               # Session hooks
   commands/
-    flow-new.md              # /flow-new command
-    flow-ff.md               # /flow-ff command
-    flow-continue.md         # /flow-continue command
+    flow-new.md              # /ai-flow:flow-new command
+    flow-ff.md               # /ai-flow:flow-ff command
+    flow-continue.md         # /ai-flow:flow-continue command
   skills/
     flow-init/SKILL.md       # Phase 0: Project bootstrap
     flow-explore/SKILL.md    # Phase 1: Problem exploration
