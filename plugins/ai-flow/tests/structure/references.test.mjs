@@ -124,7 +124,7 @@ for (const rel of listRuntimeMd()) {
 
 // ---- runtime tree: no relative agents/ or skills/ paths (REQ-005 S1). Scope widens per task: 2.3 skills, 2.4 agents, 2.5 all. ----
 
-const RELATIVE_PATH_SCOPE = (rel) => rel.startsWith('skills/flow-');
+const RELATIVE_PATH_SCOPE = (rel) => rel.startsWith('skills/flow-') || rel.startsWith('agents/');
 const RELATIVE_PATH_ALLOWLIST = []; // {file, linePattern, reason}; intentionally empty for runtime markdown.
 
 for (const rel of listRuntimeMd().filter(RELATIVE_PATH_SCOPE)) {

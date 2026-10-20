@@ -201,6 +201,33 @@ for (const skill of ['flow-apply', 'flow-debug']) {
   });
 }
 
+// ---- orchestrator launches agents by type, never points them at phase skills (REQ-019 S2/S3, D2b) ----
+
+/** Problems with the orchestrator "Sub-Agent Launch Template" section. */
+function launchTemplateViolations(orchestratorText) {
+  const t = section(orchestratorText, /Sub-Agent Launch Template/);
+  if (!t) return ['no Sub-Agent Launch Template section'];
+  const v = [];
+  if (/Skill file:/i.test(t)) v.push('template tells the agent which skill file to load');
+  if (/Read and follow .*flow-[a-z{}]+\/SKILL\.md/.test(t)) v.push('template tells the agent to read a phase SKILL.md');
+  if (!/subagent_type/.test(t) || !t.includes('`ai-flow:{agent}`')) v.push('template does not launch by subagent_type `ai-flow:{agent}`');
+  if (!t.includes('${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md')) v.push('shared protocol is not the tdd-protocol READ_REF');
+  return v;
+}
+
+test('orchestrator launch template: agent by subagent_type, no skill file, TDD guide as READ_REF', () => {
+  assert.deepEqual(launchTemplateViolations(read('agents/orchestrator.md')), []);
+});
+
+test('negative: a launch template that hands the agent a skill file is flagged', () => {
+  const bad = '## Sub-Agent Launch Template\n1. **Skill file:** The corresponding `flow-{phase}` skill\n5. **Shared protocols:** `_shared/tdd-protocol.md`\n## Next\n';
+  assert.deepEqual(launchTemplateViolations(bad), [
+    'template tells the agent which skill file to load',
+    'template does not launch by subagent_type `ai-flow:{agent}`',
+    'shared protocol is not the tdd-protocol READ_REF',
+  ]);
+});
+
 // ---- ported content contracts ----
 
 test('using-ai-flow keeps the SUBAGENT-STOP guard', () => {

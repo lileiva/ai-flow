@@ -118,7 +118,7 @@ Content: Task {batch.number}: {status}, Batch {n}: {state}, Overall: {n}/{total}
 
 ## Ecosystem Enhancement
 
-If `superpowers:test-driven-development` is available in the session context, also follow its TDD discipline protocol. This complements (does not replace) `skills/_shared/tdd-protocol.md` defined above. If `superpowers:dispatching-parallel-agents` is available, consider using it for parallel task execution within batches. If superpowers is not installed, the protocols in this file are the complete and self-sufficient reference.
+If `superpowers:test-driven-development` is available in the session context, also follow its TDD discipline protocol. This complements (does not replace) `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md` defined above. If `superpowers:dispatching-parallel-agents` is available, consider using it for parallel task execution within batches. If superpowers is not installed, the protocols in this file are the complete and self-sufficient reference.
 
 ## Iron Laws
 

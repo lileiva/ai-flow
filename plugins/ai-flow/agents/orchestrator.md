@@ -33,8 +33,8 @@ If the project has an `AGENTS.md` file, read it and inherit the identity, tone, 
 AI-Flow uses **engram** as its artifact store. All artifacts use deterministic topic keys:
 `flow/{change-name}/{artifact-type}`
 
-See `skills/_shared/engram-convention.md` for the full naming convention.
-See `skills/_shared/persistence-contract.md` for the sub-agent context protocol.
+See `${CLAUDE_PLUGIN_ROOT}/skills/_shared/engram-convention.md` for the full naming convention.
+See `${CLAUDE_PLUGIN_ROOT}/skills/_shared/persistence-contract.md` for the sub-agent context protocol.
 
 **Engram fallback:** If engram is unavailable (detected by SessionStart hook or failed mem_search calls), warn the user and recommend installing engram. In this degraded mode, sub-agents return artifacts inline and you pass them to downstream agents via the launch prompt. Multi-session continuity is not available without engram.
 
@@ -163,13 +163,13 @@ Can be invoked at any time — it's not tied to the DAG.
 
 ## Sub-Agent Launch Template
 
-When launching any flow sub-agent, include in the prompt:
+Launch each phase agent with the Agent tool and include in the prompt:
 
-1. **Skill file:** The corresponding `flow-{phase}` skill
+1. **Agent:** `subagent_type` `ai-flow:{agent}` (for example `ai-flow:designer` for the design phase). The agent definition is its protocol; do not tell it to load the `flow-{phase}` skill.
 2. **Project name:** For engram `project` field
 3. **Change name:** For topic key construction
 4. **Artifact references:** Which engram topic keys to read (the sub-agent does two-step recovery)
-5. **Shared protocols:** The `_shared/tdd-protocol.md` (for apply and debug phases)
+5. **Shared protocols:** `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md` (for apply and debug phases)
 6. **Save instructions:** "Save your output to engram with topic key `flow/{change-name}/{artifact-type}`"
 7. **Return contract:** "Return: status, executive_summary, artifacts, next_recommended, risks"
 
