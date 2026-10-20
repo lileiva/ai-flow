@@ -134,3 +134,60 @@ export function untrackedOutsideEvals() {
   const out = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '--', 'plugins/ai-flow'], { cwd: REPO_ROOT, encoding: 'utf8' });
   return out.split('\n').filter((l) => l && !l.startsWith('plugins/ai-flow/evals/'));
 }
+
+// ---- reference lints (D1 grammar) ----
+
+// A relative agents/... or skills/... path not preceded by `}/` (READ_REF), `/`, `.` or a word char.
+const RELATIVE_PATH_RE = /(?:^|[^A-Za-z0-9_/.}-])((?:skills|agents)\/[A-Za-z_][A-Za-z0-9_./-]*)/g;
+// A /flow-<x> command without the ai-flow: plugin prefix.
+const BARE_PREFIX_RE = /(?:^|[^:A-Za-z0-9_-])(\/flow-[a-z]+)/g;
+// ai-flow:<name> (agent, skill or command; the /ai-flow: command form included).
+const QUALIFIED_REF_RE = /ai-flow:([a-z][a-z0-9-]*[a-z0-9])/g;
+
+function matchLines(text, re) {
+  return text.split('\n').flatMap((l, i) => [...l.matchAll(re)].map((m) => ({ line: i + 1, match: m[1].replace(/[.]+$/, '') })));
+}
+
+/** Relative `agents/...` / `skills/...` paths in markdown text, as {line, match}. */
+export function findRelativePaths(text) {
+  return matchLines(text, RELATIVE_PATH_RE);
+}
+
+/** Bare `/flow-<x>` command references (missing the `/ai-flow:` prefix), as {line, match}. */
+export function findBarePrefixes(text) {
+  return matchLines(text, BARE_PREFIX_RE);
+}
+
+/** `ai-flow:<name>` references, as {line, name}. */
+export function extractQualifiedRefs(text) {
+  return text.split('\n').flatMap((l, i) => [...l.matchAll(QUALIFIED_REF_RE)].map((m) => ({ line: i + 1, name: m[1] })));
+}
+
+/** What `ai-flow:<name>` resolves to: 'agent' | 'skill' | 'command', or null. */
+export function resolveQualifiedRef(name) {
+  if (fs.existsSync(path.join(PLUGIN_ROOT, 'agents', `${name}.md`))) return 'agent';
+  if (fs.existsSync(path.join(PLUGIN_ROOT, 'skills', name, 'SKILL.md'))) return 'skill';
+  if (fs.existsSync(path.join(PLUGIN_ROOT, 'commands', `${name}.md`))) return 'command';
+  return null;
+}
+
+/**
+ * Drop violations whose line matches an allowlist entry for the same file. Every entry needs a reason.
+ * @param {{file: string, line: number}[]} violations
+ * @param {{file: string, linePattern: RegExp, reason: string}[]} allowlist
+ * @param {string} text the file's text (to read the violating line)
+ */
+export function applyAllowlist(violations, allowlist, text) {
+  for (const e of allowlist) if (!e.reason || !e.reason.trim()) throw new Error(`allowlist entry for ${e.file} has no reason`);
+  const lines = text.split('\n');
+  return violations.filter((v) => !allowlist.some((e) => e.file === v.file && e.linePattern.test(lines[v.line - 1] ?? '')));
+}
+
+/** All reference-lint violations of one file: {file, line, match, rule}. */
+export function scan(file, text, allowlist = []) {
+  const v = [
+    ...findRelativePaths(text).map((x) => ({ file, ...x, rule: 'relative-path' })),
+    ...findBarePrefixes(text).map((x) => ({ file, ...x, rule: 'bare-prefix' })),
+  ];
+  return applyAllowlist(v, allowlist, text);
+}

@@ -3,7 +3,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { PLUGIN_ROOT, listRuntimeMd, extractReadRefs, checkReadRefs } from '../lib/plugin-files.mjs';
+import {
+  PLUGIN_ROOT, listRuntimeMd, extractReadRefs, checkReadRefs,
+  findRelativePaths, findBarePrefixes, extractQualifiedRefs, resolveQualifiedRef, applyAllowlist, scan,
+} from '../lib/plugin-files.mjs';
 
 test('listRuntimeMd finds agents, skills, shared docs and commands', () => {
   const files = listRuntimeMd();
@@ -66,4 +69,43 @@ test('skill-sync paths are gone', () => {
 
 test('negative: the skill-sync checker flags a line that runs scripts/sync.sh', () => {
   assert.deepEqual(skillSyncMentions('README.md', 'Setup\nrun scripts/sync.sh\n'), ['README.md:2']);
+});
+
+// ---- path and command-prefix lints (REQ-005 S2/S3, REQ-006 S2/S3) ----
+
+const fixture = (n) => fs.readFileSync(path.join(PLUGIN_ROOT, 'tests/fixtures/refs', n), 'utf8');
+
+test('relative agents/ or skills/ path is flagged with its line; ${CLAUDE_PLUGIN_ROOT}/ paths are not', () => {
+  assert.deepEqual(findRelativePaths(fixture('relative.md')), [{ line: 3, match: 'agents/foo.md' }]);
+});
+
+test('bare /flow-<x> command is flagged with its line; a plain word flow-apply is not', () => {
+  assert.deepEqual(findBarePrefixes(fixture('bare.md')), [{ line: 3, match: '/flow-verify' }]);
+});
+
+test('canonical references produce no violations', () => {
+  const t = fixture('canonical.md');
+  assert.deepEqual(findRelativePaths(t), []);
+  assert.deepEqual(findBarePrefixes(t), []);
+});
+
+test('qualified refs ai-flow:<agent>, ai-flow:<skill> and /ai-flow:<cmd> resolve; unknown names do not', () => {
+  assert.deepEqual(extractQualifiedRefs(fixture('canonical.md')).map((r) => r.name), ['flow-verify', 'designer']);
+  for (const n of ['designer', 'flow-apply', 'flow-verify', 'flow-new', 'using-ai-flow']) assert.ok(resolveQualifiedRef(n), n);
+  assert.equal(resolveQualifiedRef('nope'), null);
+});
+
+test('allowlist entry {file, linePattern, reason} skips its line; other lines are still reported', () => {
+  const v = findRelativePaths(fixture('allowlisted.md')).map((x) => ({ file: 'allowlisted.md', ...x }));
+  const kept = applyAllowlist(v, [{ file: 'allowlisted.md', linePattern: /Legacy example/, reason: 'fixture: documents the old layout' }], fixture('allowlisted.md'));
+  assert.deepEqual(kept.map((x) => x.match), ['agents/bar.md']);
+});
+
+test('negative: an allowlist entry without a reason throws', () => {
+  assert.throws(() => applyAllowlist([], [{ file: 'x.md', linePattern: /x/ }], ''), /reason/);
+});
+
+test('scan() applies relative-path and bare-prefix rules together', () => {
+  assert.deepEqual(scan('bare.md', fixture('bare.md')).map((v) => v.rule), ['bare-prefix']);
+  assert.deepEqual(scan('relative.md', fixture('relative.md')).map((v) => v.rule), ['relative-path']);
 });
