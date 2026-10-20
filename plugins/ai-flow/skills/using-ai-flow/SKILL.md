@@ -34,7 +34,7 @@ If CLAUDE.md says "don't use TDD" and a skill says "always use TDD," follow the 
 
 ## AI-Flow Development Workflow
 
-AI-Flow is an 8-phase workflow for planning and implementing changes with rigor. Each phase is handled by a specialized sub-agent. The **orchestrator** (`agents/orchestrator.md`) coordinates the flow -- you NEVER run phase work inline.
+AI-Flow is an 8-phase workflow for planning and implementing changes with rigor. Each phase is handled by a specialized sub-agent. The **orchestrator** (`ai-flow:orchestrator` agent) coordinates the flow -- you NEVER run phase work inline.
 
 ### The 8 Phases
 
@@ -68,21 +68,21 @@ AI-Flow is an 8-phase workflow for planning and implementing changes with rigor.
 
 ### Command -> Agent Mapping
 
-| Command | Agent | Skill Path |
-|---------|-------|------------|
-| `flow-init` | -- | `skills/flow-init/SKILL.md` |
-| `flow-explore` | explorer | `skills/flow-explore/SKILL.md` |
-| `flow-new` | orchestrator (meta) | `agents/orchestrator.md` |
-| `flow-ff` | orchestrator (meta) | `agents/orchestrator.md` |
-| `flow-continue` | orchestrator (meta) | `agents/orchestrator.md` |
-| `flow-propose` | proposer | `skills/flow-propose/SKILL.md` |
-| `flow-spec` | specifier | `skills/flow-spec/SKILL.md` |
-| `flow-design` | designer | `skills/flow-design/SKILL.md` |
-| `flow-plan` | planner | `skills/flow-plan/SKILL.md` |
-| `flow-apply` | implementer | `skills/flow-apply/SKILL.md` |
-| `flow-verify` | verifier | `skills/flow-verify/SKILL.md` |
-| `flow-archive` | archivist | `skills/flow-archive/SKILL.md` |
-| `flow-debug` | debugger | `skills/flow-debug/SKILL.md` |
+| Command | Agent | Entry point |
+|---------|-------|-------------|
+| `flow-init` | `ai-flow:initializer` | skill `ai-flow:flow-init` |
+| `flow-explore` | `ai-flow:explorer` | skill `ai-flow:flow-explore` |
+| `flow-new` | `ai-flow:orchestrator` | command `/ai-flow:flow-new` (meta) |
+| `flow-ff` | `ai-flow:orchestrator` | command `/ai-flow:flow-ff` (meta) |
+| `flow-continue` | `ai-flow:orchestrator` | command `/ai-flow:flow-continue` (meta) |
+| `flow-propose` | `ai-flow:proposer` | skill `ai-flow:flow-propose` |
+| `flow-spec` | `ai-flow:specifier` | skill `ai-flow:flow-spec` |
+| `flow-design` | `ai-flow:designer` | skill `ai-flow:flow-design` |
+| `flow-plan` | `ai-flow:planner` | skill `ai-flow:flow-plan` |
+| `flow-apply` | `ai-flow:implementer` | skill `ai-flow:flow-apply` |
+| `flow-verify` | `ai-flow:verifier` | skill `ai-flow:flow-verify` |
+| `flow-archive` | `ai-flow:archivist` | skill `ai-flow:flow-archive` |
+| `flow-debug` | `ai-flow:debugger` | skill `ai-flow:flow-debug` |
 
 ### Dependency Graph
 
@@ -143,13 +143,13 @@ When AI-Flow is triggered, the orchestrator coordinates the workflow:
 4. `/ai-flow:flow-ff`, `/ai-flow:flow-continue`, `/ai-flow:flow-new` are META-COMMANDS handled by the orchestrator -- NOT skills. NEVER invoke them via the Skill tool.
 5. Sub-agent suggestions for next commands: show user, don't auto-execute
 
-See `agents/orchestrator.md` for the full orchestrator protocol.
+The full orchestrator protocol lives in the `ai-flow:orchestrator` agent definition.
 
 ## Peer Dependencies
 
 This plugin works best with:
 
-- **superpowers** -- Provides TDD, systematic-debugging, brainstorming, verification-before-completion, and other discipline skills referenced by AI-Flow phases. Install via: `claude plugin add superpowers`
+- **superpowers** -- Provides systematic-debugging, brainstorming, verification-before-completion, using-git-worktrees, dispatching-parallel-agents, and other discipline skills referenced by AI-Flow phases. Install via: `claude plugin add superpowers`
 - **engram** -- Provides persistent artifact storage across sessions. Without it, AI-Flow artifacts are inline-only (degraded mode). Install from: https://github.com/gentleman-programming/engram
 
 Both are recommended but not required. AI-Flow degrades gracefully without them.

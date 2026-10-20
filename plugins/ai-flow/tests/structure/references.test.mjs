@@ -124,7 +124,7 @@ for (const rel of listRuntimeMd()) {
 
 // ---- runtime tree: no relative agents/ or skills/ paths (REQ-005 S1). Scope widens per task: 2.3 skills, 2.4 agents, 2.5 all. ----
 
-const RELATIVE_PATH_SCOPE = (rel) => rel.startsWith('skills/flow-') || rel.startsWith('agents/');
+const RELATIVE_PATH_SCOPE = () => true; // whole runtime tree since Task 2.5
 const RELATIVE_PATH_ALLOWLIST = []; // {file, linePattern, reason}; intentionally empty for runtime markdown.
 
 for (const rel of listRuntimeMd().filter(RELATIVE_PATH_SCOPE)) {
@@ -133,3 +133,41 @@ for (const rel of listRuntimeMd().filter(RELATIVE_PATH_SCOPE)) {
     assert.deepEqual(scan(rel, text, RELATIVE_PATH_ALLOWLIST), []);
   });
 }
+
+// ---- using-ai-flow: injected raw by the SessionStart hook, so names only (D1(3), REQ-005 S1) ----
+
+const USING = 'skills/using-ai-flow/SKILL.md';
+const usingText = () => fs.readFileSync(path.join(PLUGIN_ROOT, USING), 'utf8');
+
+test('using-ai-flow has no ${...} tokens (the hook does not substitute them)', () => {
+  assert.deepEqual(usingText().split('\n').flatMap((l, i) => (l.includes('${') ? [i + 1] : [])), []);
+});
+
+test('using-ai-flow names ai-flow:orchestrator as the coordinator', () => {
+  assert.match(usingText(), /`ai-flow:orchestrator`/);
+});
+
+/** Table rows of the "Command -> Agent Mapping" section, each with the ai-flow:<x> refs it names. */
+function mappingRows(text) {
+  const start = text.indexOf('### Command -> Agent Mapping');
+  const end = text.indexOf('\n### ', start + 1);
+  return text.slice(start, end).split('\n').filter((l) => /^\| `/.test(l)).map((l) => ({ row: l, refs: extractQualifiedRefs(l).map((r) => r.name) }));
+}
+
+test('using-ai-flow command mapping: every row names an ai-flow agent that resolves', () => {
+  const rows = mappingRows(usingText());
+  assert.ok(rows.length >= 13, `${rows.length} rows`);
+  assert.deepEqual(rows.filter((r) => !r.refs.some((n) => resolveQualifiedRef(n) === 'agent')).map((r) => r.row), []);
+});
+
+test('negative: a mapping row with a file path and no agent name is flagged', () => {
+  const rows = mappingRows('### Command -> Agent Mapping\n| `flow-spec` | specifier | `skills/flow-spec/SKILL.md` |\n### Next\n');
+  assert.deepEqual(rows.filter((r) => !r.refs.some((n) => resolveQualifiedRef(n) === 'agent')).length, 1);
+});
+
+test('using-ai-flow does not claim TDD comes from superpowers', () => {
+  const line = usingText().split('\n').find((l) => l.startsWith('- **superpowers**')) ?? '';
+  assert.ok(line, 'has a superpowers peer-dependency line');
+  assert.doesNotMatch(line, /TDD|test-driven/i);
+  assert.match(line, /systematic-debugging/);
+});
