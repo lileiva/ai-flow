@@ -26,8 +26,8 @@
 // | b1 REQ-004 run-hook.cmd exec bash                                  | kept     | same |
 // | b1 REQ-004 run-hook.cmd Git Bash detection                         | kept     | same |
 // | b1 REQ-004-S1 run-hook.cmd output == direct session-start output   | kept     | 'run-hook.cmd session-start output equals running session-start directly' |
-// | b1 REQ-009 persistence-contract: none fallback mode                | kept     | 'engram fallback protocol: ...' (target moves to engram-fallback.md in Batch 3) |
-// | b1 REQ-009-S3 persistence-contract: inline artifacts               | kept     | same |
+// | b1 REQ-009 persistence-contract: none fallback mode                | kept     | 'required sections: skills/_shared/persistence-contract.md' (Fallback Mode: `none` heading, now a pointer) |
+// | b1 REQ-009-S3 persistence-contract: inline artifacts               | kept     | 'engram fallback protocol: ...' (on engram-fallback.md since Task 3.3, REQ-009) |
 // | b1 REQ-009-S4 persistence-contract: recommends installing engram   | kept     | same |
 // | b1 REQ-009 persistence-contract: Artifact Store Mode section       | kept     | 'required sections: skills/_shared/persistence-contract.md' |
 // | b1 REQ-009 persistence-contract: skip mem_* calls                  | kept     | 'engram fallback protocol: ...' |
@@ -128,7 +128,7 @@ function section(text, re) {
 
 const REQUIRED_SECTIONS = {
   'skills/using-ai-flow/SKILL.md': [/^Instruction Priority$/, /^Flow Commands$/, /Agent Mapping/, /^Dependency Graph$/, /^Auto-invoke/, /^Orchestrator Rules$/, /^Peer Dependencies$/],
-  'skills/_shared/persistence-contract.md': [/Artifact Store Mode/],
+  'skills/_shared/persistence-contract.md': [/Artifact Store Mode/, /Fallback Mode: `none`/],
   'agents/explorer.md': [/Interactive Requirements Gathering/, /Readiness Gate/, /Refinement Round/],
   'agents/orchestrator.md': [/Skill Creation Detection/, /Identity Inheritance/, /Artifact Tracking/],
   'agents/debugger.md': [/Root Cause Investigation/],
@@ -234,16 +234,16 @@ test('using-ai-flow keeps the SUBAGENT-STOP guard', () => {
   assert.match(read('skills/using-ai-flow/SKILL.md'), /<SUBAGENT-STOP>[\s\S]+<\/SUBAGENT-STOP>/);
 });
 
-// Fallback protocol content. Lives in persistence-contract.md until Batch 3 moves it to engram-fallback.md.
-const FALLBACK_DOC = 'skills/_shared/persistence-contract.md';
-const FALLBACK_MENTIONS = [/none/i, /inline/i, /install[\s\S]{0,80}engram|engram[\s\S]{0,80}install/i, /mem_search|mem_save|mem_get_observation/, /multi-session|session[\s\S]{0,40}lost|conversation[\s\S]{0,20}ends/i];
+// Fallback protocol content: engram-fallback.md since Task 3.3; persistence-contract.md keeps a "Fallback Mode: none" pointer.
+const FALLBACK_DOC = 'skills/_shared/engram-fallback.md';
+const FALLBACK_MENTIONS = [/inline/i, /install[\s\S]{0,80}engram|engram[\s\S]{0,80}install/i, /mem_search|mem_save|mem_get_observation/, /multi-session|session[\s\S]{0,40}lost|conversation[\s\S]{0,20}ends/i];
 
 test('engram fallback protocol: inline artifacts, skipped mem_* calls, install recommendation, multi-session limitation', () => {
   assert.deepEqual(missingMentions(read(FALLBACK_DOC), FALLBACK_MENTIONS), []);
 });
 
 test('negative: missingMentions reports each absent pattern', () => {
-  assert.equal(missingMentions('Pass artifacts inline.', FALLBACK_MENTIONS).length, 4);
+  assert.equal(missingMentions('Pass artifacts inline.', FALLBACK_MENTIONS).length, 3);
 });
 
 // Every agent points at the one engram-fallback file (REQ-009 S2/S3, REQ-028). Replaces the 9-agent inline-note check.
@@ -364,6 +364,51 @@ test('negative: an engram-fallback doc without the orchestrator section or the h
   assert.deepEqual(engramFallbackProblems(bad, 'https://github.com/x/engram'), ['heading /Orchestrator/i', 'orchestrator /inline/i', 'orchestrator /every launch/i', 'install URL https://github.com/x/engram missing']);
 });
 
+// ---- state ownership: orchestrator, proposer and archivist write flow/{change}/state (REQ-023, D10) ----
+
+/** Problems with how a doc describes state writers: both extra writers named in its state section, no stale claims. */
+function stateWriterProblems(text, sectionRe) {
+  const s = section(text, sectionRe);
+  const p = [];
+  if (!s) return [`no section ${sectionRe}`];
+  for (const w of ['orchestrator', 'proposer', 'archivist']) if (!new RegExp(`\\b${w}\\b`).test(s)) p.push(`state section does not name the ${w}`);
+  if (/sub-agents do not save state/i.test(text)) p.push('says sub-agents do not save state');
+  if (/maintained only in the orchestrator's conversation/i.test(text)) p.push("says state lives only in the orchestrator's conversation");
+  return p;
+}
+
+test('orchestrator.md names the orchestrator, proposer and archivist as state writers', () => {
+  assert.deepEqual(stateWriterProblems(read('agents/orchestrator.md'), /DAG State Updates/), []);
+});
+
+test('persistence-contract.md names the same state writers and drops the conversation-only claim', () => {
+  assert.deepEqual(stateWriterProblems(read('skills/_shared/persistence-contract.md'), /DAG State Persistence/), []);
+});
+
+test('Artifact Tracking: the DAG state row lists the proposer and archivist too', () => {
+  const row = topicKeyRows(section(read('agents/orchestrator.md'), /Artifact Tracking/)).find((r) => r.type === 'state');
+  assert.match(row.rest, /orchestrator[^|]*proposer[^|]*archivist/);
+});
+
+test('negative: a state section that omits the archivist (and keeps the stale sentence) is flagged', () => {
+  const bad = '## DAG State Updates\nThe orchestrator saves state; sub-agents do not save state (except proposer).\n';
+  assert.deepEqual(stateWriterProblems(bad, /DAG State Updates/), ['state section does not name the archivist', 'says sub-agents do not save state']);
+});
+
+// Two-step recovery is described once, in engram-convention.md (REQ-009 S4).
+const NUMBERED_RECOVERY = (t) => /^\s*\d+\..*mem_search\(/m.test(t) && /^\s*\d+\..*mem_get_observation\(/m.test(t);
+
+test('two-step recovery is spelled out in engram-convention.md only; persistence-contract.md points to it', () => {
+  assert.ok(NUMBERED_RECOVERY(read('skills/_shared/engram-convention.md')), 'engram-convention has the numbered steps');
+  const pc = read('skills/_shared/persistence-contract.md');
+  assert.ok(!NUMBERED_RECOVERY(pc), 'persistence-contract restates the steps');
+  assert.match(pc, /engram-convention\.md[^\n]*Two-Step Recovery|Two-Step Recovery[^\n]*engram-convention\.md/);
+});
+
+test('negative: a doc restating the numbered mem_search / mem_get_observation steps is detected', () => {
+  assert.ok(NUMBERED_RECOVERY('1. `mem_search(query: k)` -> id\n2. `mem_get_observation(id)` -> content\n'));
+});
+
 // ---- topic-key consistency (replaces the per-file brainstorm greps) ----
 
 /** Rows `| Artifact | `flow/{change-name}/<type>` | ... |` of a markdown table, as {artifact, type, rest}. */
@@ -377,10 +422,12 @@ function topicKeyProblems(orchestratorText, conventionText, readAgent) {
   const problems = [];
   for (const row of topicKeyRows(section(orchestratorText, /Artifact Tracking/))) {
     if (!conv.has(row.type)) problems.push(`${row.type}: not in engram-convention`);
-    const producer = row.rest.split('|')[0].trim();
-    const text = readAgent(producer);
-    if (text === null) problems.push(`${row.type}: producer '${producer}' has no agent file`);
-    else if (!text.includes(`flow/{change-name}/${row.type}`)) problems.push(`${row.type}: agents/${producer}.md never mentions its key`);
+    // The producer cell names one agent, optionally followed by "(also <agent>, <agent>)".
+    for (const producer of row.rest.split('|')[0].match(/[a-z]+/g).filter((w) => w !== 'also')) {
+      const text = readAgent(producer);
+      if (text === null) problems.push(`${row.type}: producer '${producer}' has no agent file`);
+      else if (!text.includes(`flow/{change-name}/${row.type}`)) problems.push(`${row.type}: agents/${producer}.md never mentions its key`);
+    }
   }
   return problems;
 }

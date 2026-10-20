@@ -199,7 +199,7 @@ Content:
 - artifacts: [list all artifact topic keys that exist]
 - pending_gates: [list any pending human gates]
 
-This is YOUR responsibility as orchestrator — sub-agents do not save state (except proposer, which saves a pending-approval state). Without consistent state updates, `flow-continue` cannot recover correctly.
+As the orchestrator you own the DAG state and save it after every phase transition. Two agents also write `flow/{change-name}/state`: the proposer (a pending-approval state after it saves the proposal) and the archivist (the archived state). Every writer reads the current state first and upserts the full document. Without consistent state updates, `/ai-flow:flow-continue` cannot recover correctly.
 
 ### Rework Protocol
 
@@ -251,7 +251,7 @@ The following artifacts are tracked per change. All are stored in engram with de
 | Apply progress | `flow/{change-name}/apply-progress` | implementer | Yes |
 | Verify report | `flow/{change-name}/verify-report` | verifier | Yes |
 | Archive report | `flow/{change-name}/archive-report` | archivist | Yes |
-| DAG state | `flow/{change-name}/state` | orchestrator | Yes |
+| DAG state | `flow/{change-name}/state` | orchestrator (also proposer, archivist) | Yes |
 
 When the brainstorm artifact exists, pass its topic key to the proposer alongside the exploration topic key.
 

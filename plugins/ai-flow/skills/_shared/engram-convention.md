@@ -18,6 +18,8 @@ All AI-Flow artifacts use deterministic topic keys for engram persistence:
 | Archive report | `flow/{change-name}/archive-report` | `flow/auth-system/archive-report` |
 | DAG state | `flow/{change-name}/state` | `flow/auth-system/state` |
 
+Writers of the DAG state: the orchestrator (every phase transition), the proposer (pending approval) and the archivist (archived). Each reads the current state and upserts the full document.
+
 ## Two-Step Recovery (Mandatory)
 
 Engram search results are truncated. Always use two steps:

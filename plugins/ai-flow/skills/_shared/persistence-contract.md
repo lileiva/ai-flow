@@ -6,15 +6,7 @@ AI-Flow uses **engram** as its persistence backend. All artifacts are stored in 
 
 ## Fallback Mode: `none`
 
-When engram is unavailable (detected by the SessionStart hook or by failed `mem_search` calls), AI-Flow operates in a degraded inline-only mode:
-
-1. Sub-agents SKIP all `mem_save`, `mem_search`, and `mem_get_observation` calls
-2. Sub-agents include the full artifact content in their return payload under the `artifacts` key
-3. The orchestrator passes artifact content to downstream sub-agents via the launch prompt
-4. State tracking is maintained only in the orchestrator's conversation context
-5. **WARNING:** Multi-session flows are not supported in `none` mode. If the conversation ends, all artifacts are lost.
-
-This is a degraded mode -- a safety net, not a promoted workflow. The SessionStart hook warns users to install engram for full functionality. We recommend installing engram from: https://github.com/gentleman-programming/engram
+When engram is unavailable, AI-Flow runs in a degraded inline-only mode. The detection signals and what each agent does are in `engram-fallback.md` (the single source).
 
 ## Sub-Agent Context Protocol
 
@@ -25,7 +17,7 @@ Sub-agents start with a fresh context. The orchestrator controls what context th
 | Context | Who Reads | How |
 |---------|-----------|-----|
 | Non-flow tasks | Orchestrator searches engram, passes summary in prompt | `mem_search` + `mem_get_observation` |
-| Flow phases with dependencies | Sub-agent reads directly from engram | Orchestrator passes topic keys, sub-agent does two-step recovery |
+| Flow phases with dependencies | Sub-agent reads directly from engram | Orchestrator passes topic keys, sub-agent does two-step recovery (see Two-Step Recovery in `engram-convention.md`) |
 | Flow phases without dependencies | Nobody | Sub-agent starts fresh |
 
 ### Writing Artifacts
@@ -58,7 +50,7 @@ Every sub-agent returns:
 
 ## DAG State Persistence
 
-After each phase transition, the orchestrator saves the DAG state to engram:
+The orchestrator owns the DAG state and saves it after each phase transition. The proposer (pending-approval state, after saving the proposal) and the archivist (archived state) also write it. Every writer reads the current state first and upserts the full document:
 
 Topic key: `flow/{change-name}/state`
 
