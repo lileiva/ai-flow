@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { PLUGIN_ROOT, gitMode, validatePluginCopy } from '../lib/plugin-files.mjs';
@@ -95,4 +96,9 @@ const SKIP_VALIDATE = process.env.AIFLOW_TESTS_SKIP_VALIDATE === '1' ? 'AIFLOW_T
 test('claude plugin validate passes on a temp copy of the plugin', { skip: SKIP_VALIDATE }, () => {
   const r = validatePluginCopy();
   assert.equal(r.status, 0, r.stdout + r.stderr);
+});
+
+test('negative: claude plugin validate fails on a temp copy with a malformed plugin.json', { skip: SKIP_VALIDATE }, () => {
+  const r = validatePluginCopy((dir) => fs.writeFileSync(path.join(dir, '.claude-plugin', 'plugin.json'), '{ "name": "ai-flow", '));
+  assert.notEqual(r.status, 0, r.stdout + r.stderr);
 });
