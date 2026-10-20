@@ -1,5 +1,6 @@
 // Shared helpers for the plugin structure suite (tests/structure/*.test.mjs).
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -208,4 +209,20 @@ export function loadPhaseMap() {
 /** The engram install URL named by the SessionStart hook's warning. */
 export function extractHookEngramUrl(hookText) {
   return /https:\/\/github\.com\/[^\s"]+engram/.exec(hookText)?.[0] ?? '';
+}
+
+/**
+ * Run `claude plugin validate` on a temp copy of the plugin (evals/ excluded: large, not part of the manifest).
+ * @param {(dir: string) => void} [mutate] edits the copy before validating
+ * @returns {{status: number|null, stdout: string, stderr: string}}
+ */
+export function validatePluginCopy(mutate = () => {}) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aiflow-validate-'));
+  try {
+    fs.cpSync(PLUGIN_ROOT, dir, { recursive: true, filter: (src) => !src.startsWith(path.join(PLUGIN_ROOT, 'evals')) });
+    mutate(dir);
+    return spawnSync('claude', ['plugin', 'validate', dir], { encoding: 'utf8', timeout: 60000 });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }

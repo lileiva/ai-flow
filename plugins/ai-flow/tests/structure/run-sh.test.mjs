@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
-import { PLUGIN_ROOT, gitMode } from '../lib/plugin-files.mjs';
+import { PLUGIN_ROOT, gitMode, validatePluginCopy } from '../lib/plugin-files.mjs';
 
 const RUN_SH = path.join(PLUGIN_ROOT, 'tests', 'run.sh');
 const FIX = path.join(PLUGIN_ROOT, 'tests', 'fixtures', 'run-sh');
@@ -87,4 +87,12 @@ test('node older than 20 is rejected', () => {
   const r = runSh({ PATH: `${fx('old-node')}:/usr/bin:/bin` });
   assert.notEqual(r.status, 0);
   assert.match(r.stdout + r.stderr, /node >= 20 is required \(found v18\.19\.0\)/);
+});
+
+// ---- claude plugin validate on temp plugin copies (REQ-002 S1, S2) ----
+const SKIP_VALIDATE = process.env.AIFLOW_TESTS_SKIP_VALIDATE === '1' ? 'AIFLOW_TESTS_SKIP_VALIDATE=1 (claude plugin validate opted out)' : false;
+
+test('claude plugin validate passes on a temp copy of the plugin', { skip: SKIP_VALIDATE }, () => {
+  const r = validatePluginCopy();
+  assert.equal(r.status, 0, r.stdout + r.stderr);
 });
