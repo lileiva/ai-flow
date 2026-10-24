@@ -13,7 +13,8 @@ import { scrubLocalPaths } from '../lib/scrub.mjs';
 const RESULT_MAX = 2048;
 const TEXT_MAX = 2048;
 const PROMPT_MAX = 300;
-const DROP_TYPES = new Set(['rate_limit_event', 'stream_event']);
+// Subagent transcripts (B2b E4): attachment lines carry the host email (session_context); api-request* are noise.
+const DROP_TYPES = new Set(['rate_limit_event', 'stream_event', 'attachment', 'api-request', 'api-request-shape', 'api-request-blob']);
 const DROP_SUBTYPES = new Set(['thinking_tokens']);
 const KEEP_INPUT = ['file_path', 'notebook_path', 'command', 'description', 'subagent_type', 'pattern', 'path', 'skill', 'query', 'id', 'title', 'topic_key', 'project', 'type', 'old_string', 'new_string', 'content', 'prompt'];
 const INPUT_MAX = { prompt: PROMPT_MAX, content: TEXT_MAX, old_string: 500, new_string: 500 };
@@ -45,9 +46,11 @@ function trimBlock(b) {
   if (b.type === 'text') return { type: 'text', text: cutText(b.text, TEXT_MAX) };
   if (b.type === 'tool_use') {
     const input = {};
-    for (const k of KEEP_INPUT) {
+    // MCP inputs are kept whole (strings cut): mock calls are reconciled by canonical input (B2b W5, D7).
+    const keys = b.name?.startsWith('mcp__') ? Object.keys(b.input ?? {}) : KEEP_INPUT;
+    for (const k of keys) {
       if (b.input?.[k] === undefined) continue;
-      const max = k === 'content' && isEngramWrite(b.name) ? ENGRAM_CONTENT_MAX : INPUT_MAX[k];
+      const max = k === 'content' && isEngramWrite(b.name) ? ENGRAM_CONTENT_MAX : INPUT_MAX[k] ?? (b.name?.startsWith('mcp__') ? TEXT_MAX : undefined);
       input[k] = max ? cut(b.input[k], max) : b.input[k];
     }
     return { type: 'tool_use', id: b.id, name: b.name, input };
@@ -71,7 +74,7 @@ function trimLine(o) {
     const m = o.message ?? {};
     const content = Array.isArray(m.content) ? m.content.map(trimBlock) : cut(m.content, TEXT_MAX);
     const message = { ...(m.id ? { id: m.id } : {}), role: m.role, ...(m.model ? { model: m.model } : {}), content, ...(m.usage ? { usage: m.usage } : {}) };
-    return { type: o.type, parent_tool_use_id: o.parent_tool_use_id ?? null, ...(o.isSidechain !== undefined ? { isSidechain: o.isSidechain } : {}), message };
+    return { type: o.type, parent_tool_use_id: o.parent_tool_use_id ?? null, ...(o.isSidechain !== undefined ? { isSidechain: o.isSidechain } : {}), ...(o.agentId ? { agentId: o.agentId } : {}), message };
   }
   if (o.type === 'system') {
     const s = { ...o };

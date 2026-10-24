@@ -47,3 +47,40 @@ test('committed tool-use fixtures equal what make-fixture derives from real-case
   const real = read('real-case-a');
   for (const name of Object.keys(TOOLUSE_RECIPES)) assert.equal(read(name), makeFixture(real, name), name);
 });
+
+// B2b Task 2.5 (REQ-007 S1-S3, design D6): self-delegation at any depth, from the agent tree.
+const NESTED_DIR = new URL('./fixtures/nested/', import.meta.url).pathname;
+async function analyzeE2e(mutation) {
+  const fs = await import('node:fs');
+  const { analyzeTrace } = await import('../analyze.mjs');
+  const { loadBundle } = await import('../lib/nested.mjs');
+  const { mutateBundle } = await import('./helpers.mjs');
+  const src = `${NESTED_DIR}delegated-e2e`;
+  const dir = mutation ? mutateBundle(src, mutation) : src;
+  return analyzeTrace(fs.readFileSync(`${dir}/trace.jsonl`, 'utf8'), { caseName: 'a-e2e', bundle: loadBundle(dir) });
+}
+
+test('self_delegation: main -> orchestrator -> phase agents has none (REQ-007 S1)', async () => {
+  assert.deepEqual((await analyzeE2e()).tool_use.self_delegation, { count: 0, launches: [] });
+});
+
+test('self_delegation: orchestrator (depth 1) launching ai-flow:orchestrator is counted at depth 2 (REQ-007 S2)', async () => {
+  assert.deepEqual((await analyzeE2e({ selfDelegate: true })).tool_use.self_delegation, { count: 1, launches: [{ agent: 'orchestrator', depth: 2, launched_by: 'orchestrator' }] });
+});
+
+test('self_delegation is n/a under failed capture, never 0 (REQ-007 S3)', async () => {
+  const a = await analyzeE2e({ corrupt: 'all' });
+  assert.equal(a.tool_use.self_delegation, 'n/a');
+  assert.match(a.tool_use.reason, /^capture failed:/);
+});
+
+test('self_delegation counts implementer -> implementer at depth 3; main is never a launcher', async () => {
+  const { selfDelegation } = await import('../lib/tooluse.mjs');
+  const { loadConfig } = await import('../lib/config.mjs');
+  const tree = [
+    { tool_use_id: 'o', agent: 'ai-flow:orchestrator', depth: 1, launched_by: 'main' },
+    { tool_use_id: 'i', agent: 'ai-flow:implementer', depth: 2, launched_by: 'o' },
+    { tool_use_id: 'i2', agent: 'ai-flow:implementer', depth: 3, launched_by: 'i' },
+  ];
+  assert.deepEqual(selfDelegation(tree, loadConfig()), { count: 1, launches: [{ agent: 'implementer', depth: 3, launched_by: 'implementer' }] });
+});

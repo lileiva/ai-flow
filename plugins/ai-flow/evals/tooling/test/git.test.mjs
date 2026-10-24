@@ -66,3 +66,9 @@ test('hooks/run-hook.cmd stays 100644 at v3.4.0 (as-shipped, U3)', () => {
   assert.equal(mode & 0o111, 0);
   assert.match(execFileSync('git', ['ls-files', '-s', 'plugins/ai-flow/hooks/run-hook.cmd'], { cwd: wt, encoding: 'utf8' }), /^100644 /);
 });
+
+test('B2b: versionAt(ref) reads plugin.json version at a tag or a commit SHA (tracer, REQ-011)', async () => {
+  const { versionAt } = await import('../lib/git.mjs');
+  assert.equal(versionAt('v3.4.0'), '3.4.0');
+  assert.equal(versionAt('8029d9b'), '4.0.0-alpha.2');
+});

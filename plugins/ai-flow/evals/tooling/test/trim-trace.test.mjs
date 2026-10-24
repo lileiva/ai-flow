@@ -84,3 +84,28 @@ test('trimming a long text keeps the gate and completion markers that follow the
   assert.ok(out.length < 3000, `trimmed to ${out.length}`);
   for (const m of ['AUTO-APPROVED GATE: proposal', 'STOPPED AT GATE: plan', 'EVAL-RUN-COMPLETE']) assert.ok(out.includes(m), m);
 });
+
+test('B2b: trimTrace keeps transcript agentId/isSidechain and drops attachment and api-request* lines (seeded session_context email)', () => {
+  const text = [
+    { type: 'user', isSidechain: true, agentId: 'a1', sessionId: 's', uuid: 'u1', message: { role: 'user', content: 'go' } },
+    { type: 'attachment', isSidechain: true, agentId: 'a1', attachment: { type: 'session_context', userEmail: 'probe@example.invalid' } },
+    { type: 'api-request', agentId: 'a1', body: 'x' },
+    { type: 'api-request-shape', agentId: 'a1' },
+    { type: 'api-request-blob', agentId: 'a1' },
+    { type: 'assistant', isSidechain: true, agentId: 'a1', message: { id: 'm1', role: 'assistant', content: [{ type: 'text', text: 'hi' }], usage: { input_tokens: 1, output_tokens: 1 } } },
+  ].map((l) => JSON.stringify(l)).join('\n');
+  const out = trimTrace(text, { home: '/home/someone' });
+  const lines = out.trim().split('\n').map((l) => JSON.parse(l));
+  assert.deepEqual(lines.map((l) => l.type), ['user', 'assistant']);
+  assert.ok(lines.every((l) => l.agentId === 'a1' && l.isSidechain === true));
+  assert.ok(!out.includes('session_context') && !out.includes('example.invalid'));
+});
+
+test('B2b W5: trimTrace keeps every input key of an mcp__ tool call (mock calls are matched by canonical input)', () => {
+  const line = { type: 'assistant', message: { id: 'm', content: [{ type: 'tool_use', id: 't', name: 'mcp__memx__note', input: { text: 'from-leaf', tags: ['a'], long: 'y'.repeat(5000) } }] } };
+  const out = JSON.parse(trimTrace(JSON.stringify(line)).trim());
+  const input = out.message.content[0].input;
+  assert.equal(input.text, 'from-leaf');
+  assert.deepEqual(input.tags, ['a']);
+  assert.equal(input.long.length, 2048);
+});

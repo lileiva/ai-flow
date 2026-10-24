@@ -11,7 +11,11 @@
 # Self-test overrides (used by tests/structure/run-sh.test.mjs only; do not lower the floor elsewhere):
 #   AIFLOW_TESTS_STRUCTURE_GLOB  space-separated globs, relative to the repo root or absolute
 #   AIFLOW_TESTS_EVALS_CMD       command for the evals tooling step
-#   AIFLOW_TESTS_MIN_EXECUTED    executed-test floor (default 422)
+#   AIFLOW_TESTS_MIN_EXECUTED    executed-test floor (default 790)
+#   AIFLOW_TESTS_EVAL_CACHE_DIR  the .eval-cache dir checked for the prepare.mjs hint (default <repo>/.eval-cache)
+#
+# Prerequisite: `node plugins/ai-flow/evals/tooling/prepare.mjs` once (network) builds .eval-cache/. Without it
+# about 47 evals tests skip and a few fail; run.sh then prints a hint naming prepare.mjs.
 
 set -uo pipefail
 
@@ -23,7 +27,8 @@ cd "$REPO_ROOT" || exit 1
 
 STRUCTURE_GLOB="${AIFLOW_TESTS_STRUCTURE_GLOB:-plugins/ai-flow/tests/structure/*.test.mjs}"
 EVALS_CMD="${AIFLOW_TESTS_EVALS_CMD:-bash plugins/ai-flow/tests/test_evals_tooling.sh}"
-MIN_EXECUTED="${AIFLOW_TESTS_MIN_EXECUTED:-422}"
+MIN_EXECUTED="${AIFLOW_TESTS_MIN_EXECUTED:-790}"
+EVAL_CACHE_DIR="${AIFLOW_TESTS_EVAL_CACHE_DIR:-$REPO_ROOT/.eval-cache}"
 
 STATUS=0
 EXECUTED=0
@@ -125,6 +130,12 @@ record_suite evals "$EVALS_RC" "$EVALS_OUT"
 # --- summary ---
 echo "=== summary ==="
 printf '%s\n' "${SUMMARY[@]}"
+# W4: cache-dependent evals tests skip (reason "no .eval-cache...") or fail when prepare.mjs has not been run.
+CACHE_SKIPS="$(grep -cE '(# SKIP|^﹣ .*#) no \.eval-cache' <<<"$EVALS_OUT")"
+if [ ! -d "$EVAL_CACHE_DIR" ] || [ "${CACHE_SKIPS:-0}" -gt 0 ]; then
+  [ -d "$EVAL_CACHE_DIR" ] && CACHE_STATE="is incomplete" || CACHE_STATE="is missing"
+  echo "NOTE: .eval-cache ${CACHE_STATE} (${CACHE_SKIPS:-0} evals tests skipped for it): run \`node plugins/ai-flow/evals/tooling/prepare.mjs\` first (once, needs network). Without it cache-dependent evals tests skip or fail and the run can miss MIN_EXECUTED."
+fi
 if [ "$EXECUTED" -lt "$MIN_EXECUTED" ]; then
   echo "FAIL: executed ${EXECUTED} is below MIN_EXECUTED ${MIN_EXECUTED}"
   STATUS=1

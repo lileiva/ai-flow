@@ -1,5 +1,5 @@
 {
-  "$comment": "Summary written by run.mjs to <out>/summary.json (REQ-015). Validated by lib/schema.mjs (subset). Supports type, required, properties, additionalProperties, items, enum, oneOf and local $ref. A stat is null when a case has no non-harness-error runs (n=0).",
+  "$comment": "Summary written by run.mjs to <out>/summary.json (REQ-015). Validated by lib/schema.mjs (subset). Supports type, required, properties, additionalProperties, items, enum, oneOf and local $ref. A stat is null when a case has no non-harness-error runs (n=0). B2b (additive, optional): cases[x].{nested_capture, run_errors, na_capture, self_delegation, runs}, session_start.measured, meta.{label, observability, session_start_cost_usd, regraded_from, regraded_at, regrade_reason}.",
   "type": "object",
   "required": [
     "schema_version",
@@ -88,6 +88,30 @@
         },
         "total_cost_usd": {
           "type": "number"
+        },
+        "label": {
+          "type": "string"
+        },
+        "observability": {
+          "type": "object"
+        },
+        "session_start_cost_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "regraded_from": {
+          "type": "string"
+        },
+        "regraded_at": {
+          "type": "string"
+        },
+        "regrade_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
@@ -161,6 +185,157 @@
           },
           "harness_errors_retried": {
             "type": "integer"
+          },
+          "nested_capture": {
+            "type": "object",
+            "required": [
+              "complete",
+              "partial",
+              "failed",
+              "not_applicable"
+            ],
+            "properties": {
+              "complete": {
+                "type": "integer"
+              },
+              "partial": {
+                "type": "integer"
+              },
+              "failed": {
+                "type": "integer"
+              },
+              "not_applicable": {
+                "type": "integer"
+              }
+            }
+          },
+          "run_errors": {
+            "type": "object",
+            "required": [
+              "nested_mock_accounting",
+              "unexplained"
+            ],
+            "properties": {
+              "nested_mock_accounting": {
+                "type": "integer"
+              },
+              "unexplained": {
+                "type": "integer"
+              }
+            }
+          },
+          "na_capture": {
+            "type": "object",
+            "required": [
+              "tdd",
+              "artifacts",
+              "tool_use"
+            ],
+            "properties": {
+              "tdd": {
+                "type": "integer"
+              },
+              "artifacts": {
+                "type": "integer"
+              },
+              "tool_use": {
+                "type": "integer"
+              }
+            }
+          },
+          "self_delegation": {
+            "$ref": "#/definitions/stat_or_na"
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "run_index",
+                "tokens_total",
+                "cost_usd",
+                "wall_time_s",
+                "nested_capture"
+              ],
+              "properties": {
+                "run_index": {
+                  "type": "integer"
+                },
+                "tokens_total": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "cost_usd": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "wall_time_s": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "per_agent_tokens": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "max_depth": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "agents_launched": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "nested_capture": {
+                  "enum": [
+                    "complete",
+                    "partial",
+                    "failed",
+                    "not_applicable",
+                    null
+                  ]
+                },
+                "run_error_class": {
+                  "enum": [
+                    "nested_mock_accounting",
+                    "unexplained",
+                    null
+                  ]
+                },
+                "retried": {
+                  "type": "integer"
+                },
+                "harness_error": {
+                  "type": "boolean"
+                },
+                "per_agent_tokens_transcript": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "per_agent_tokens_transcript": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "$ref": "#/definitions/stat"
+            }
           }
         }
       }
@@ -172,6 +347,9 @@
           "type": "object"
         },
         "intended": {
+          "type": "object"
+        },
+        "measured": {
           "type": "object"
         }
       }

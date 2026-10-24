@@ -6,8 +6,11 @@
 //                     [--max-cost-usd X (optional, off by default)] [-j N] [--out DIR] [--keep-artifacts] [--unsafe-host-grading]
 //                     [--compare <baseline.json>] [--gate] [--dry-run] [--retry-harness-errors N]
 //                     [--promote <version> [--session-start <measure-session-start.json>]] [--resume <results-dir>]
-//   --promote  also measures SessionStart (measure-session-start.mjs) unless --session-start overrides it
-//   --gate     full suite, runs 3, harness-error retries, compare against baselines/v3.4.0-<model>.json
+//   --promote / --gate  also measure SessionStart (measure-session-start.mjs) unless --session-start overrides it;
+//              the output is kept as <out>/session-start.json and summary.session_start.measured
+//   --gate     full suite, runs 3, harness-error retries, compare against the config.gateBaseline baseline
+//              (default baselines/v3.4.0-<model>.json); --allow-env-mismatch passes through to compare
+//   --skip-nested-canary  skip the nested-capture canary (one haiku run) that --gate/--promote run after preflight
 //   --dry-run  print the resolved plan as JSON and spawn nothing
 //   --resume   complete a stopped suite (e.g. rate-limited): keep the clean runs in <results-dir>/runs and re-run
 //              only the missing or harness-error case x run slots (one `--case <id> --runs <missing>` per case);
@@ -24,21 +27,22 @@ import { addWorktree, behaviorHash, overlayEvals, removeWorktree, revParse } fro
 import { sandboxNodeStrategy } from './lib/node-runtime.mjs';
 import { EVALS_DIR, PLUGIN_DIR } from './lib/paths.mjs';
 import { discover } from './lib/discover.mjs';
-import { compare, formatTable } from './compare.mjs';
+import { compare, formatReport } from './compare.mjs';
 import { promote } from './promote.mjs';
 import { assembleRunMetrics, harnessErrorMetrics } from './lib/metrics.mjs';
 import { assertValid, loadSchema } from './lib/schema.mjs';
 import { loadSentinels } from './lib/env.mjs';
 import { classifyRun, exitCodeFor } from './lib/classify.mjs';
-import { removeKeptTemp, reportPreflight, runPreflight } from './preflight.mjs';
+import { removeKeptTemp, reportPreflight, runNestedCanaryCheck, runPreflight } from './preflight.mjs';
 import { utilizationWarning } from './lib/ratelimit.mjs';
 import { measureSessionStart } from './measure-session-start.mjs';
+import { loadKept, retainBundle } from './lib/nested.mjs';
 
 export const EXIT = { OK: 0, REGRESSION: 1, COST_CAP: 2, PREFLIGHT: 3, PROJECTION: 4, HARNESS: 5 };
 
 
 export function parseArgs(argv) {
-  const o = { cases: [], tags: [], runs: null, model: process.env.AIFLOW_EVAL_MODEL || 'sonnet', judgeModel: 'haiku', pluginRef: 'HEAD', cap: null, concurrency: 1, out: null, keep: false, unsafeHostGrading: false, gate: false, dryRun: false, compare: null, retryHarness: null, promote: null, sessionStart: null, resume: null };
+  const o = { cases: [], tags: [], runs: null, model: process.env.AIFLOW_EVAL_MODEL || 'sonnet', judgeModel: 'haiku', pluginRef: 'HEAD', cap: null, concurrency: 1, out: null, keep: false, unsafeHostGrading: false, gate: false, dryRun: false, compare: null, retryHarness: null, promote: null, sessionStart: null, resume: null, allowEnvMismatch: false, skipNestedCanary: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const next = () => argv[++i];
@@ -51,6 +55,8 @@ export function parseArgs(argv) {
     else if (a === '--promote') o.promote = next();
     else if (a === '--session-start') o.sessionStart = next();
     else if (a === '--resume') o.resume = next();
+    else if (a === '--allow-env-mismatch') o.allowEnvMismatch = true;
+    else if (a === '--skip-nested-canary') o.skipNestedCanary = true;
     else if (a === '--runs') o.runs = Number(next());
     else if (a === '--model') o.model = next();
     else if (a === '--judge-model') o.judgeModel = next();
@@ -66,7 +72,7 @@ export function parseArgs(argv) {
     o.cases = [];
     o.tags = [];
     o.runs = 3;
-    o.compare ??= path.join(baselinesDir(), `v3.4.0-${o.model}.json`);
+    o.compare ??= path.join(baselinesDir(), resolveGateBaseline(loadConfig(), o.model));
   }
   o.subset = o.cases.length > 0 || o.tags.length > 0;
   o.runs ??= o.subset ? 1 : 3;
@@ -74,6 +80,12 @@ export function parseArgs(argv) {
   // No USD cap by default: evals run on Claude Code subscriptions, not API billing (user decision 2026-10-16).
   // --max-cost-usd stays available as an optional native CLI ceiling. Cost is still recorded as a metric.
   return o;
+}
+
+/** --gate baseline file name (design D8): config.gateBaseline[<model>], else its default with {model} filled in. */
+export function resolveGateBaseline(cfg, model) {
+  const gb = cfg.gateBaseline ?? {};
+  return (gb[model] ?? gb.default ?? 'v3.4.0-{model}.json').replaceAll('{model}', model);
 }
 
 export const baselinesDir = (env = process.env) => env.AIFLOW_EVAL_BASELINES_DIR || path.join(EVALS_DIR, 'baselines');
@@ -126,12 +138,27 @@ export function workspaceOf(keptDir) {
 
 const RUN_SCHEMA = loadSchema('run-metrics');
 
-export function runMetrics({ caseName, index, run, caseDir, o, sentinels }) {
+/** Session id of a trace (system/init session_id), or null. */
+function sessionIdOf(text) {
+  const init = text.split('\n', 50).map((l) => { try { return JSON.parse(l); } catch { return null; } }).find((o) => o?.type === 'system' && o.subtype === 'init');
+  return init?.session_id ?? null;
+}
+
+export function runMetrics({ caseName, index, run, caseDir, o, sentinels, outDir }) {
   const keptDir = keptDirOf(run.tracePath);
   const extra = { artifacts_dir: { kept_dir: keptDir, trace: run.tracePath ?? null } };
   const traceExists = Boolean(run.tracePath && fs.existsSync(run.tracePath));
-  const analysis = traceExists ? analyzeTrace(fs.readFileSync(run.tracePath, 'utf8'), { caseName, sentinels }) : null;
-  const cls = classifyRun(run, { traceExists, lastMainText: analysis?.last_main_text ?? '' });
+  let analysis = null;
+  if (traceExists) {
+    const text = fs.readFileSync(run.tracePath, 'utf8');
+    const sessionId = sessionIdOf(text);
+    // B2b D2: keep the nested capture before the kept dir is removed; grade from the unscrubbed kept copy.
+    const bundleDir = outDir ? path.join(outDir, 'traces', `${caseId(caseName)}-${index}`) : null;
+    if (bundleDir) retainBundle(keptDir, sessionId, bundleDir, { tracePath: run.tracePath });
+    analysis = analyzeTrace(text, { caseName, sentinels, bundle: loadKept(keptDir, sessionId) });
+    if (bundleDir) fs.writeFileSync(path.join(bundleDir, 'capture.json'), JSON.stringify(analysis.nested_capture, null, 2));
+  }
+  const cls = classifyRun(run, { traceExists, lastMainText: analysis?.last_main_text ?? '', analysis });
   let m;
   if (cls.harness_error) {
     m = harnessErrorMetrics({ caseName, index, run, reason: cls.failure_reason, extra });
@@ -145,11 +172,43 @@ export function runMetrics({ caseName, index, run, caseDir, o, sentinels }) {
       harness = true;
       errorRaw = `grading-unavailable: ${e.message}`;
     }
-    m = assembleRunMetrics({ caseName, index, run, analysis, outcome, failureReason: harness ? 'grading_unavailable' : cls.failure_reason, harnessError: harness, extra });
+    m = assembleRunMetrics({ caseName, index, run, analysis, outcome, failureReason: harness ? 'grading_unavailable' : cls.failure_reason, harnessError: harness, extra: { ...extra, run_error: cls.run_error ?? null } });
     if (errorRaw) m.error_raw = errorRaw;
   }
   if (analysis && Object.keys(analysis.rate_limit).length) m.rate_limit = analysis.rate_limit;
   return assertValid(RUN_SCHEMA, m, `run metrics ${caseName}#${index}`);
+}
+
+/** B2 SessionStart band for input_delta_tokens (informational, R5): outside it the runner only warns. */
+export const SESSION_START_BAND = [2360, 3295];
+
+/**
+ * SessionStart measurement for a suite (REQ-009, design D11): --session-start <file> is copied unchanged into
+ * <outDir>/session-start.json; else --gate / --promote run `measure` (measure-session-start) and persist its output.
+ * A failed measurement is returned as measured {error} with a warning (promote refuses it later). Returns
+ * { intended, measured, cost_usd } (all null when nothing is measured).
+ */
+export async function resolveSessionStart(o, { outDir, measure, rateLimited = false, log = (l) => console.error(l) }) {
+  const file = path.join(outDir, 'session-start.json');
+  let measured = null;
+  if (o.sessionStart) {
+    fs.copyFileSync(o.sessionStart, file);
+    measured = JSON.parse(fs.readFileSync(o.sessionStart, 'utf8'));
+  } else if ((o.gate || o.promote) && !rateLimited) {
+    try {
+      measured = await measure({ pluginRef: o.pluginRef, model: o.model });
+      fs.writeFileSync(file, JSON.stringify(measured, null, 2));
+    } catch (e) {
+      measured = { error: e.message };
+      log(`runner: warning: SessionStart measurement failed: ${e.message} (recorded as session_start.measured.error)`);
+    }
+  }
+  if (!measured) return { intended: null, measured: null, cost_usd: null };
+  const delta = measured.as_shipped?.input_delta_tokens;
+  if (typeof delta === 'number' && (delta < SESSION_START_BAND[0] || delta > SESSION_START_BAND[1])) {
+    log(`runner: warning: SessionStart input_delta_tokens ${delta} outside the B2 band [${SESSION_START_BAND.join(', ')}] (informational)`);
+  }
+  return { intended: measured.intended ?? null, measured, cost_usd: measured.cost_usd ?? null };
 }
 
 /** Highest utilization per rate-limit window across runs (informational; decision 2). */
@@ -192,11 +251,20 @@ export async function main(argv = process.argv.slice(2)) {
     return EXIT.PREFLIGHT;
   }
   if (o.dryRun) {
-    const plan = { cases: selectCases(o), runs: o.runs, cap_usd: o.cap, model: o.model, judge_model: o.judgeModel, plugin_ref: o.pluginRef, subset: o.subset, tags: o.tags, retry_harness_errors: o.retryHarness, compare: o.compare, promote: o.promote, args: evalArgs('<plugin>', o, '<out>') };
+    const plan = { cases: selectCases(o), runs: o.runs, cap_usd: o.cap, model: o.model, judge_model: o.judgeModel, plugin_ref: o.pluginRef, subset: o.subset, tags: o.tags, retry_harness_errors: o.retryHarness, compare: o.compare, allow_env_mismatch: o.allowEnvMismatch, skip_nested_canary: o.skipNestedCanary, promote: o.promote, args: evalArgs('<plugin>', o, '<out>') };
     console.log(JSON.stringify(plan, null, 2));
     return EXIT.OK;
   }
   if (!reportPreflight(runPreflight({ unsafeHostGrading: o.unsafeHostGrading }))) return EXIT.PREFLIGHT;
+  // B2b D9: before a gate or a promotion, prove the CLI still writes nested transcripts where capture reads them.
+  if (o.gate || o.promote) {
+    if (o.skipNestedCanary) console.error('runner: warning: --skip-nested-canary: the nested capture canary did not run (capture may be reported failed)');
+    else {
+      const canary = await runNestedCanaryCheck();
+      if (!canary.ok) { console.error(`preflight: FAIL nested-canary: ${canary.message}`); return EXIT.PREFLIGHT; }
+      console.error(`preflight: ${canary.message}`);
+    }
+  }
   const strategy = sandboxNodeStrategy({ config: loadConfig() });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const outDir = path.resolve(o.out ?? o.resume ?? path.join(EVALS_DIR, 'results', stamp));
@@ -227,7 +295,7 @@ export async function main(argv = process.argv.slice(2)) {
       for (const c of agg.cases ?? []) {
         const caseDir = path.join(pluginDir, 'evals', 'cases', c.name);
         (c.arms?.with ?? []).forEach((run, k) => {
-          const m = runMetrics({ caseName: c.name, index: indexOf(c.name, k), run, caseDir, o, sentinels });
+          const m = runMetrics({ caseName: c.name, index: indexOf(c.name, k), run, caseDir, o, sentinels, outDir });
           record(m);
           runs.push(m);
           fresh.push(m);
@@ -270,7 +338,7 @@ export async function main(argv = process.argv.slice(2)) {
         const c = (agg.cases ?? [])[0];
         const run = c?.arms?.with?.[0];
         if (!run) break;
-        const m = runMetrics({ caseName: c.name, index: slot.run_index, run, caseDir: path.join(pluginDir, 'evals', 'cases', c.name), o, sentinels });
+        const m = runMetrics({ caseName: c.name, index: slot.run_index, run, caseDir: path.join(pluginDir, 'evals', 'cases', c.name), o, sentinels, outDir });
         m.retried = k;
         const at = slotOf(slot);
         removeKeptTemp(runs[at].artifacts_dir.kept_dir);
@@ -290,20 +358,17 @@ export async function main(argv = process.argv.slice(2)) {
       complete: !aggregate.partial && !rateLimited(runs), incomplete_reason: rateLimited(runs) ? 'rate_limited' : aggregate.partial ? 'cost_cap' : null,
       total_cost_usd: Math.round((priorCost + (aggregate.costUsd ?? 0)) * 1e6) / 1e6, subset: o.subset, worktree, results_dir: outDir,
       rate_limit: mergeRateLimits(runs),
+      // B2b: grades come from the main trace merged with the retained nested transcripts (compare D8 note).
+      observability: { nested_capture: 'transcripts', analyzer: 'b2b' },
     };
     if (o.resume) meta.resumed_from = path.resolve(o.resume);
     const warning = utilizationWarning(meta.rate_limit);
     if (warning) console.error(`runner: ${warning}`);
-    // D10: --promote measures the intended SessionStart cost on temp plugin copies (4 tiny runs) unless a
-    // --session-start <file> override is given.
-    let intended = null;
-    if (o.sessionStart) intended = JSON.parse(fs.readFileSync(o.sessionStart, 'utf8')).intended ?? null;
-    else if (o.promote && !rateLimited(runs)) {
-      const ss = await measureSessionStart({ pluginRef: o.pluginRef, model: o.model, env });
-      fs.writeFileSync(path.join(outDir, 'session-start.json'), JSON.stringify(ss, null, 2));
-      intended = ss.intended;
-    }
-    summary = summarize(runs, meta, { sessionStartIntended: intended });
+    // D10 / B2b D11: --gate and --promote measure SessionStart (4 tiny runs on temp plugin copies) unless a
+    // --session-start <file> override is given; the measurement is persisted with the results.
+    const ss = await resolveSessionStart(o, { outDir, rateLimited: rateLimited(runs), measure: (opts) => measureSessionStart({ ...opts, env }) });
+    meta.session_start_cost_usd = ss.cost_usd;
+    summary = summarize(runs, meta, { sessionStartIntended: ss.intended, sessionStartMeasured: ss.measured });
     fs.writeFileSync(path.join(outDir, 'summary.json'), JSON.stringify(summary, null, 2));
   } finally {
     if (!o.keep) {
@@ -314,10 +379,10 @@ export async function main(argv = process.argv.slice(2)) {
   console.log(`summary: ${path.join(outDir, 'summary.json')}`);
   let regression = false;
   if (o.compare) {
-    const cmp = compare(JSON.parse(fs.readFileSync(o.compare, 'utf8')), summary);
+    const cmp = compare(JSON.parse(fs.readFileSync(o.compare, 'utf8')), summary, { allowEnvMismatch: o.allowEnvMismatch });
     fs.writeFileSync(path.join(outDir, 'compare.json'), JSON.stringify(cmp, null, 2));
     if (cmp.envMismatch.length) console.error(`runner: compare refused: ${cmp.envMismatch.join('; ')}`);
-    console.log(formatTable(cmp.rows));
+    console.log(formatReport(cmp));
     console.log(`regressions: ${cmp.regressions}`);
     regression = cmp.exitCode !== 0;
   }

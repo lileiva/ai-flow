@@ -1,0 +1,10 @@
+{"type":"user","parent_tool_use_id":null,"message":{"role":"user","content":"implement"}}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"i1","role":"assistant","content":[{"type":"tool_use","id":"toolu_W1","name":"Write","input":{"file_path":"/w/test/x.test.js","content":"test"}}],"usage":{"input_tokens":10,"output_tokens":5}}}
+{"type":"user","parent_tool_use_id":null,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_W1","content":"ok"}]}}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"i2","role":"assistant","content":[{"type":"tool_use","id":"toolu_B1","name":"Bash","input":{"command":"npx vitest run"}}],"usage":{"input_tokens":10,"output_tokens":5}}}
+{"type":"user","parent_tool_use_id":null,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_B1","content":" Test Files  1 failed (1)\n      Tests  1 failed (1)"}]}}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"i3","role":"assistant","content":[{"type":"tool_use","id":"toolu_W2","name":"Write","input":{"file_path":"/w/src/x.js","content":"impl"}}],"usage":{"input_tokens":10,"output_tokens":5}}}
+{"type":"user","parent_tool_use_id":null,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_W2","content":"ok"}]}}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"i4","role":"assistant","content":[{"type":"tool_use","id":"toolu_B2","name":"Bash","input":{"command":"npx vitest run"}}],"usage":{"input_tokens":10,"output_tokens":5}}}
+{"type":"user","parent_tool_use_id":null,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_B2","content":" Test Files  1 passed (1)\n      Tests  1 passed (1)"}]}}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"i5","role":"assistant","content":[{"type":"text","text":"done"}],"usage":{"input_tokens":10,"output_tokens":5}}}

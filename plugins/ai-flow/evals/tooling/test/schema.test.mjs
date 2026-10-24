@@ -104,3 +104,50 @@ test('harness-error metrics validate with null totals and explicit reasons (no z
   assert.equal(m.per_phase, null);
   assert.match(m.per_phase_reason, /harness error/);
 });
+
+// B2b Task 1.1 (REQ-014 S2, D6, D8): additive fields; old files keep validating.
+function newFormatRunMetrics() {
+  const m = realRunMetrics();
+  m.nested_capture = { status: 'partial', expected: 2, captured: 1, missing: [{ tool_use_id: 't2', agent: 'ai-flow:planner', launched_by: 't1', depth: 2 }], orphans: [], inconsistent: [], reason: 'capture partial: missing planner' };
+  m.agent_tree = [{ tool_use_id: 't1', agent: 'ai-flow:orchestrator', depth: 1, launched_by: 'main', source: 'transcript' }];
+  m.tdd = { ...m.tdd, na_cause: null };
+  m.artifacts = { applicable: false, score: null, missing: [], reason: 'capture partial: missing planner', na_cause: 'capture' };
+  m.tool_use = { subagent_ask: { total: 0, by_agent: {} }, readonly_writes: { total: 0, by_agent: {} }, unknown_attribution: 0, self_delegation: { count: 0, launches: [] } };
+  m.run_error = { message: 'mocks: memx: the harness answered 2 agent mock calls the trace does not show', class: 'nested_mock_accounting', details: { server: 'memx', reported: 2, unseen: 2, found_in_transcripts: 2 } };
+  return m;
+}
+
+test('a new-format run-metrics (nested_capture, agent_tree, self_delegation, run_error, na_cause) validates (REQ-014 S2)', () => {
+  assert.deepEqual(validate(RUN_SCHEMA, newFormatRunMetrics()), []);
+  assert.deepEqual(validate(RUN_SCHEMA, { ...newFormatRunMetrics(), run_error: null }), []);
+});
+
+test('seeded negatives: nested_capture.status, run_error.class and na_cause outside their enums are rejected', () => {
+  const bogus = newFormatRunMetrics();
+  bogus.nested_capture.status = 'bogus';
+  assert.ok(paths(validate(RUN_SCHEMA, bogus)).includes('$.nested_capture.status'));
+  const cls = newFormatRunMetrics();
+  cls.run_error.class = 'weird';
+  assert.ok(paths(validate(RUN_SCHEMA, cls)).includes('$.run_error.class'));
+  const cause = newFormatRunMetrics();
+  cause.artifacts.na_cause = 'other';
+  assert.ok(paths(validate(RUN_SCHEMA, cause)).includes('$.artifacts.na_cause'));
+});
+
+test('the committed v3.4.0-sonnet baseline still validates, and a new-format baseline validates too (REQ-014 S2)', () => {
+  const v340 = JSON.parse(fs.readFileSync(path.join(HERE, '..', '..', 'baselines', 'v3.4.0-sonnet.json'), 'utf8'));
+  assert.deepEqual(validate(BASELINE_SCHEMA, v340), []);
+  const b = baseline();
+  b.meta = { ...b.meta, label: 'v4.0.0-alpha.2', observability: { nested_capture: 'transcripts', analyzer: 'b2b' }, session_start_cost_usd: 0.13 };
+  b.session_start.measured = { as_shipped: { input_delta_tokens: 2890 }, first_turn_input_tokens: 1000, method: 'first-turn input delta', claude_version: '2.1.309', plugin_ref: '8029d9b', cost_usd: 0.13 };
+  Object.assign(b.cases.a, {
+    nested_capture: { complete: 2, partial: 1, failed: 0, not_applicable: 0 },
+    run_errors: { nested_mock_accounting: 3, unexplained: 0 },
+    na_capture: { tdd: 0, artifacts: 1, tool_use: 1 },
+    self_delegation: { mean: 0, stdev: 0 },
+    runs: [{ run_index: 0, tokens_total: 1, cost_usd: 1, wall_time_s: 1, per_agent_tokens: {}, max_depth: 2, agents_launched: 10, nested_capture: 'complete', run_error_class: null, retried: 0 }],
+  });
+  assert.deepEqual(validate(BASELINE_SCHEMA, b), []);
+  b.cases.a.nested_capture.complete = 'two';
+  assert.ok(paths(validate(BASELINE_SCHEMA, b)).some((p) => p.startsWith('$.cases.a.nested_capture')));
+});

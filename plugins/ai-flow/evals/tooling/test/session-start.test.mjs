@@ -124,3 +124,78 @@ test('the full variant records the hook stdout chars seen by Claude Code (cross-
   const r = await measureSessionStart({ pluginRef: 'v3.4.0', model: 'sonnet', env });
   assert.equal(r.full_hook.stdout_chars, 7227);
 });
+
+// B2b Task 3.3 (REQ-009 S1-S3, design D11): the SessionStart measurement is persisted with gate results.
+import { resolveSessionStart } from '../run.mjs';
+import { summarize as summarizeRuns } from '../summarize.mjs';
+import { tmpDir as b2bTmp } from './helpers.mjs';
+
+const MEASURED = {
+  plugin_ref: '8029d9b', model: 'sonnet', claude_version: '2.1.309', date: '2026-10-23T00:00:00Z',
+  first_turn_input_tokens: { 'as-shipped': 15951, full: 15951, 'no-hooks': 13061, empty: 11229 },
+  as_shipped: { hook_outcome: 'success', exit_code: 0, injected_tokens: 2000, input_delta_tokens: 2890 },
+  intended: { hook_tokens: 2890, hook_chars: 9000, always_on_tokens: 1832, method: 'first-turn input delta on temp plugin copies' },
+  cost_usd: 0.13,
+};
+const counting = (impl) => { const f = async (...a) => { f.calls++; return impl(...a); }; f.calls = 0; return f; };
+
+test('--gate measures SessionStart and writes results/<ts>/session-start.json (tracer, REQ-009)', async () => {
+  const outDir = b2bTmp();
+  const measure = counting(() => MEASURED);
+  const r = await resolveSessionStart({ gate: true, pluginRef: '8029d9b', model: 'sonnet' }, { outDir, measure, log: () => {} });
+  assert.equal(measure.calls, 1);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(outDir, 'session-start.json'), 'utf8')), MEASURED);
+  assert.equal(r.measured.as_shipped.input_delta_tokens, 2890);
+});
+
+test('the summary carries session_start.measured (input_delta_tokens, first-turn inputs, method, CLI, ref, cost) and meta.session_start_cost_usd stays apart from total cost (REQ-009 S1)', async () => {
+  const r = await resolveSessionStart({ gate: true, pluginRef: '8029d9b', model: 'sonnet' }, { outDir: b2bTmp(), measure: async () => MEASURED, log: () => {} });
+  const META = { plugin_version: '4.0.0-alpha.2', plugin_ref: '8029d9b', plugin_sha: 'x', claude_version: '2.1.309', model: 'sonnet', judge_model: 'haiku', date: 'd', runs_per_case: 1, cap_usd: null, cases_run: ['a'], complete: true, incomplete_reason: null, total_cost_usd: 1, session_start_cost_usd: r.cost_usd };
+  const s = summarizeRuns([{ case: 'a', run_index: 0, harness_error: false, tokens: { total: 1 }, outcome: { pass: true }, cli: { costUsd: 1, durationSeconds: 1 }, tdd: { applicable: false }, session_start: { hook_outcome: 'success', exit_code: 0, injected_tokens_est: 2000 } }], META, { sessionStartIntended: r.intended, sessionStartMeasured: r.measured });
+  const m = s.session_start.measured;
+  assert.equal(m.as_shipped.input_delta_tokens, 2890);
+  assert.deepEqual(m.first_turn_input_tokens, MEASURED.first_turn_input_tokens);
+  assert.equal(m.method, MEASURED.intended.method);
+  assert.equal(m.claude_version, '2.1.309');
+  assert.equal(m.plugin_ref, '8029d9b');
+  assert.equal(m.cost_usd, 0.13);
+  assert.equal(s.meta.session_start_cost_usd, 0.13);
+  assert.equal(s.meta.total_cost_usd, 1);
+  assert.equal(s.session_start.as_shipped.injected_tokens_est_chars4, 2000, 'the chars/4 field is labelled an estimate');
+  assert.equal(s.session_start.as_shipped.injected_tokens, 2000, 'legacy key kept');
+});
+
+test('--session-start <file> is copied unchanged and nothing is re-measured (REQ-009 S2)', async () => {
+  const outDir = b2bTmp();
+  const file = path.join(b2bTmp(), 'm.json');
+  fs.writeFileSync(file, JSON.stringify(MEASURED, null, 1));
+  const measure = counting(() => { throw new Error('must not run'); });
+  const r = await resolveSessionStart({ gate: true, sessionStart: file }, { outDir, measure, log: () => {} });
+  assert.equal(measure.calls, 0);
+  assert.equal(fs.readFileSync(path.join(outDir, 'session-start.json'), 'utf8'), fs.readFileSync(file, 'utf8'));
+  assert.equal(r.measured.as_shipped.input_delta_tokens, 2890);
+  assert.deepEqual(r.intended, MEASURED.intended);
+});
+
+test('a failing measurement under --gate is recorded as measured {error} with a warning, never silently absent (REQ-009 S3)', async () => {
+  const logs = [];
+  const r = await resolveSessionStart({ gate: true }, { outDir: b2bTmp(), measure: async () => { throw new Error('variant full left no trace'); }, log: (l) => logs.push(l) });
+  assert.match(r.measured.error, /variant full left no trace/);
+  assert.equal(r.intended, null);
+  assert.ok(logs.some((l) => /warning: SessionStart measurement failed/.test(l)));
+});
+
+test('input_delta_tokens outside the informational band [2360, 3295] prints a warning only (R5)', async () => {
+  const logs = [];
+  await resolveSessionStart({ gate: true }, { outDir: b2bTmp(), measure: async () => ({ ...MEASURED, as_shipped: { ...MEASURED.as_shipped, input_delta_tokens: 4000 } }), log: (l) => logs.push(l) });
+  assert.ok(logs.some((l) => /input_delta_tokens 4000 outside the B2 band \[2360, 3295\]/.test(l)));
+  const quiet = [];
+  await resolveSessionStart({ gate: true }, { outDir: b2bTmp(), measure: async () => MEASURED, log: (l) => quiet.push(l) });
+  assert.deepEqual(quiet, []);
+});
+
+test('without --gate or --promote nothing is measured', async () => {
+  const measure = counting(() => MEASURED);
+  assert.deepEqual(await resolveSessionStart({}, { outDir: b2bTmp(), measure, log: () => {} }), { intended: null, measured: null, cost_usd: null });
+  assert.equal(measure.calls, 0);
+});

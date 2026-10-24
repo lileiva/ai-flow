@@ -56,3 +56,21 @@ test('committed phase fixtures equal what make-fixture derives from real-case-a'
   const real = read('real-case-a');
   for (const name of Object.keys(PHASE_RECIPES)) assert.equal(read(name), makeFixture(real, name), name);
 });
+
+test('B2b TG1: a gate repeated in the same stream is kept (two plan approvals), unlike a cross-stream echo', async () => {
+  const { mainEvents } = await import('../lib/phases.mjs');
+  const { loadConfig } = await import('../lib/config.mjs');
+  const say = (parent, t) => ({ type: 'assistant', parent_tool_use_id: parent, message: { content: [{ type: 'text', text: t }] } });
+  const lines = [
+    { type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'o', name: 'Agent', input: { subagent_type: 'ai-flow:orchestrator' } }] } },
+    say('o', 'AUTO-APPROVED GATE: plan'), say('o', 'AUTO-APPROVED GATE: plan'), say(null, 'summary: AUTO-APPROVED GATE: plan'),
+  ];
+  assert.deepEqual(mainEvents(lines, loadConfig(), '/w').filter((e) => e.kind === 'gate').map((e) => e.gate), ['plan', 'plan']);
+});
+
+test('a main-thread Write of a backup file (src/slugify.js.bak) is not phase work', () => {
+  const line = (file) => JSON.stringify({ type: 'assistant', parent_tool_use_id: null, message: { role: 'assistant', content: [{ type: 'tool_use', id: `t-${file}`, name: 'Write', input: { file_path: file, content: 'x' } }] } });
+  const p = analyzeTrace([line('src/slugify.js.bak'), line('src/.#slugify.js')].join('\n'), { caseName: 'a-e2e-bugfix-slugify' }).phases;
+  assert.deepEqual(p.main_thread_phase_work, []);
+  assert.equal(p.order_violations.includes('orchestrator performed phase work'), false);
+});

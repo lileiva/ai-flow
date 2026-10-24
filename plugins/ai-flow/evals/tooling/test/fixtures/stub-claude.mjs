@@ -4,7 +4,12 @@
 //   { bashResults: [string], exitCode?: number, costUsd?: number (per run), caseName?: string, error?: string,
 //     traceFile?: path (copied as each run's trace), workspaceFrom?: path (copied as each run's workspace),
 //     caseNames?: { <id>: name }, allCases?: [name] (when no --case is given),
-//     partial?: boolean, noTrace?: boolean (the run leaves no trace.jsonl), runsProduced?: number (fewer runs, e.g. cap abort) }
+//     partial?: boolean, noTrace?: boolean (the run leaves no trace.jsonl), runsProduced?: number (fewer runs, e.g. cap abort),
+//     nested?: { transcriptsDir: path (holding subagents/ and optionally mock-calls.jsonl), sessionId?: string } }
+// With `nested`, each run also gets the CLI's subagent transcript layout (CLI 2.1.309, B2b design E2/E6):
+// <run>/config/projects/<cwd-slug>/<sessionId>/subagents/agent-<id>.{jsonl,meta.json} and <run>/out/mock-calls.jsonl.
+// Every transcript gets a seeded `session_context` attachment and a text line carrying a fake email and a
+// macOS home-dir path, so tests can prove the retained bundle drops or scrubs them.
 // Like the real CLI (2.1.301) under --keep-temp, each run leaves <tmp>/e-XXXX/{out/trace.jsonl,sealed/home/cwd}
 // behind with a read-only root (dr-x------) and a d--------- sealed dir holding the workspace.
 // Every invocation appends its argv (JSON array) to AIFLOW_STUB_LOG when set.
@@ -62,6 +67,28 @@ function errorFor(caseName) {
   return e[k] ?? null;
 }
 
+const SEEDED_EMAIL = 'probe@example.invalid';
+const SEEDED_PATH = '/Use' + 'rs/someone/x'; // split so the committed-files scan (scrub.test) does not trip
+function writeNested(runRoot, cwd) {
+  const src = sc.nested.transcriptsDir;
+  const sessionId = sc.nested.sessionId ?? 'stub-session';
+  const dest = path.join(runRoot, 'config', 'projects', cwd.replace(/\//g, '-'), sessionId, 'subagents');
+  fs.mkdirSync(dest, { recursive: true });
+  for (const f of fs.readdirSync(path.join(src, 'subagents'))) {
+    let text = fs.readFileSync(path.join(src, 'subagents', f), 'utf8');
+    if (f.endsWith('.jsonl')) {
+      const seeded = [
+        { type: 'attachment', isSidechain: true, attachment: { type: 'session_context', userEmail: SEEDED_EMAIL, cwd: SEEDED_PATH } },
+        { type: 'assistant', isSidechain: true, message: { id: `msg_seeded_${f}`, role: 'assistant', content: [{ type: 'text', text: `mail ${SEEDED_EMAIL} at ${SEEDED_PATH}` }] } },
+      ];
+      text = text.trimEnd() + '\n' + seeded.map((l) => JSON.stringify(l)).join('\n') + '\n';
+    }
+    fs.writeFileSync(path.join(dest, f), text);
+  }
+  const mock = path.join(src, 'mock-calls.jsonl');
+  if (fs.existsSync(mock)) fs.copyFileSync(mock, path.join(runRoot, 'out', 'mock-calls.jsonl'));
+}
+
 function oneRun(caseName) {
   const runRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'e-'));
   const outDir = path.join(runRoot, 'out');
@@ -74,6 +101,7 @@ function oneRun(caseName) {
   const useTraceFile = sc.traceFile && sc.firstTurnInputs?.[pluginKey] == null;
   fs.writeFileSync(tracePath, useTraceFile ? fs.readFileSync(sc.traceFile, 'utf8') : bashTrace(cwd));
   if (sc.noTrace) fs.rmSync(tracePath);
+  if (sc.nested) writeNested(runRoot, cwd);
   fs.mkdirSync(path.join(runRoot, 'sealed'), { recursive: true });
   fs.chmodSync(path.join(runRoot, 'sealed'), 0o000);
   fs.chmodSync(runRoot, 0o500);

@@ -9,25 +9,35 @@ const PRE_PHASES = ['explore', 'propose', 'spec', 'design', 'plan'];
 
 /**
  * Ordered main-thread events: { kind: 'launch', agent, phase, order } | { kind: 'gate', gate, order } | { kind: 'write', file, order }.
- * Delegated orchestration (D2): when the main thread launches the orchestrator agent, that sidechain's launches,
- * gates and writes count as main-thread events (it runs the flow, launching the phase agents as nested subagents).
+ * Delegated orchestration (D2, generalized by B2b D5): an orchestrator launched by the main thread, or by an
+ * orchestrator that is itself delegated (self-delegation at any depth), runs the flow; its launches, gates and writes
+ * count as main-thread events. Launches by phase agents (e.g. implementer -> debugger) are not main events.
+ * A gate marker already recorded from another stream is an echo (e.g. the main thread repeating the orchestrator's
+ * gates in its final summary) and counts once (B2b TG1); a repeat within the same stream is kept.
  * events.delegated_to names the delegate ('orchestrator') or is null.
  */
 export function mainEvents(lines, cfg, cwd) {
   const r = roles(cfg);
   const events = [];
   const delegated = new Set();
+  const gateStreams = new Map();
   let order = 0;
   for (const o of lines) {
+    const stream = o.parent_tool_use_id ?? 'main';
     if (o.type !== 'assistant' || (o.parent_tool_use_id && !delegated.has(o.parent_tool_use_id))) continue;
     for (const c of o.message?.content ?? []) {
       if (c.type === 'tool_use' && (c.name === 'Agent' || c.name === 'Task')) {
-        if (!o.parent_tool_use_id && r.shortName(c.input?.subagent_type ?? '') === 'orchestrator') delegated.add(c.id);
+        if (r.shortName(c.input?.subagent_type ?? '') === 'orchestrator') delegated.add(c.id);
         events.push({ kind: 'launch', agent: r.shortName(c.input?.subagent_type ?? 'general-purpose'), phase: r.phaseOf(c.input?.subagent_type), order: order++ });
       } else if (c.type === 'tool_use' && r.isWriteTool(c.name)) {
         events.push({ kind: 'write', file: relPath(c.input?.file_path ?? c.input?.notebook_path, cwd), order: order++ });
       } else if (c.type === 'text') {
-        for (const m of c.text.matchAll(GATE_RE)) events.push({ kind: 'gate', gate: m[1], order: order++ });
+        for (const m of c.text.matchAll(GATE_RE)) {
+          const seen = gateStreams.get(m[1]);
+          if (seen && !seen.has(stream)) continue;
+          if (!seen) gateStreams.set(m[1], new Set([stream]));
+          events.push({ kind: 'gate', gate: m[1], order: order++ });
+        }
       }
     }
   }

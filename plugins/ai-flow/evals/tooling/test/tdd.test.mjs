@@ -144,3 +144,62 @@ test('[SC3-impl-first] a main-thread edit after the implementer changed the file
   assert.equal(g.pass, false);
   assert.equal(g.reason, 'impl-first by main: src/csv/format.js edited before any test file covering it (after ai-flow:implementer had changed it)');
 });
+
+// B2b rework: the 2nd a-0 implementer ran a mutation check (`sed -i.bak ... src/slugify.js; mv src/slugify.js.bak
+// src/slugify.js`) inside a python script that rewrote the test file. The script-writer heuristic named
+// src/slugify.js.bak and the grader blamed it as an impl-first change. Backup/temp files are never impl or test files.
+test('backup and editor temp files (.bak .orig .rej ~ .swp .#) are neither implementation nor test files', async () => {
+  const { isImplFile, isTestFile } = await import('../lib/tdd.mjs');
+  for (const f of ['src/slugify.js.bak', 'src/slugify.js.orig', 'src/slugify.js.rej', 'src/slugify.js~', 'src/.slugify.js.swp', 'src/.#slugify.js',
+    'test/slugify.test.js.bak', 'test/slugify.test.js~', 'test/.#slugify.test.js']) {
+    assert.equal(isImplFile(f), false, `impl: ${f}`);
+    assert.equal(isTestFile(f), false, `test: ${f}`);
+  }
+  assert.equal(isImplFile('src/slugify.js'), true);
+  assert.equal(isTestFile('test/slugify.test.js'), true);
+});
+
+test('[SC3-test-first] the a-0 mutation-check pattern does not grade src/slugify.js.bak as an impl change', () => {
+  const script = "python3 - <<'E'\np='test/slugify.test.js'\ns=open(p,encoding='utf8').read()\nopen(p,'w',encoding='utf8').write(s)\nE\n"
+    + "npx vitest run test/slugify.test.js 2>&1 | tail -15\n"
+    + "sed -i.bak \"s/^    .normalize('NFD')$/    /\" src/slugify.js && npx vitest run 2>&1 | grep -E \"FAIL|Tests \" ; mv src/slugify.js.bak src/slugify.js";
+  assert.equal(bashWriteTargets(script).includes('src/slugify.js.bak'), false);
+  const calls = [
+    bash("cat >> test/slugify.test.js <<'E'\nit('x', () => {});\nE"),
+    bash('npm test 2>&1 | tail -5', RED),
+    bash("cat > src/slugify.js <<'E'\nx\nE"),
+    bash(script, GREEN),
+  ];
+  const g = gradeTdd(tddEvents(calls, '/w'));
+  assert.deepEqual([...new Set(g.impl_changes.map((c) => c.file))], ['src/slugify.js']);
+  assert.equal(g.pass, true, g.reason);
+});
+
+// B2b rework 2 (verify W2): in-place edits with a backup suffix (sed -i.bak, --in-place=SUFFIX) and perl -i were
+// not recognised as writes, so impl-first edits made that way were undercounted. The backup file itself stays excluded.
+test('bashWriteTargets: sed/perl in-place forms with or without a backup suffix name the edited file', () => {
+  for (const cmd of [
+    "sed -i.bak 's/a/b/' src/x.js",
+    "sed -i'.bak' 's/a/b/' src/x.js",
+    "sed -i '' 's/a/b/' src/x.js",
+    "sed --in-place 's/a/b/' src/x.js",
+    "sed --in-place=.orig 's/a/b/' src/x.js",
+    "sed -E -i.bak 's/a/b/' src/x.js",
+    "perl -pi -e 's/a/b/' src/x.js",
+    "perl -i.bak -pe 's/a/b/' src/x.js",
+  ]) assert.deepEqual(bashWriteTargets(cmd), ['src/x.js'], cmd);
+  assert.deepEqual(bashWriteTargets("sed -i.bak 's/a/b/' src/x.js && mv src/x.js.bak src/x.js"), ['src/x.js']);
+});
+
+test('bashWriteTargets: sed/perl without in-place (stdout, -n, -e, perl -I/-M) are not writes', () => {
+  for (const cmd of [
+    "sed 's/a/b/' src/x.js",
+    "sed -n 's/a/b/p' src/x.js",
+    "sed -E -e 's/i/j/' src/x.js",
+    "sed --expression='s/i/j/' src/x.js",
+    "perl -pe 's/a/b/' src/x.js",
+    "perl -ne 'print if /i/' src/x.js",
+    "perl -Ilib -pe 's/a/b/' src/x.js",
+    "perl -Mlib=src -ne 'print' src/x.js",
+  ]) assert.deepEqual(bashWriteTargets(cmd), [], cmd);
+});

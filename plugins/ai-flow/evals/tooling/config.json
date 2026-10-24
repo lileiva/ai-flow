@@ -117,7 +117,15 @@
     },
     "per_phase_tokens": {
       "better": "lower"
+    },
+    "self_delegation": {
+      "better": "lower",
+      "rate": false
     }
   },
-  "rateTolerance": 0.34
+  "rateTolerance": 0.34,
+  "gateBaseline": {
+    "sonnet": "v4.0.0-alpha.2-sonnet.json",
+    "default": "v3.4.0-{model}.json"
+  }
 }

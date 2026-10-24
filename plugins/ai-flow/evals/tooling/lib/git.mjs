@@ -13,6 +13,11 @@ export function revParse(ref) {
   return git(['rev-parse', `${ref}^{commit}`]);
 }
 
+/** plugin.json version of plugins/ai-flow at a git ref (tag or commit SHA), via `git show` (B2b D8). */
+export function versionAt(ref) {
+  return JSON.parse(git(['show', `${revParse(ref)}:plugins/ai-flow/.claude-plugin/plugin.json`])).version;
+}
+
 /** Add a detached worktree for ref under the temp dir; returns its absolute path. */
 export function addWorktree(ref) {
   const sha = revParse(ref);

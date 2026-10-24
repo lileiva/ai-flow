@@ -84,6 +84,30 @@ test('executed count below the floor fails the run', () => {
   assert.match(r.last, /^executed: 5 /);
 });
 
+// W4 (B2b verify): without .eval-cache, cache-dependent evals tests skip (and a few fail); say how to fix it.
+const PREPARE_HINT = /run `node plugins\/ai-flow\/evals\/tooling\/prepare\.mjs` first/;
+
+test('evals tests skipped for a missing .eval-cache print the prepare.mjs hint with the skip count', () => {
+  const r = runSh({ AIFLOW_TESTS_EVALS_CMD: `bash ${fx('fake-evals-nocache.sh')}`, AIFLOW_TESTS_EVAL_CACHE_DIR: os.tmpdir() });
+  assert.match(r.stdout, PREPARE_HINT, r.stdout);
+  assert.match(r.stdout, /2 evals tests skipped for it/);
+  assert.match(r.last, /^executed: /, 'the executed line stays last');
+});
+
+test('a missing .eval-cache dir prints the prepare.mjs hint next to the floor failure', () => {
+  const r = runSh({ AIFLOW_TESTS_EVAL_CACHE_DIR: path.join(os.tmpdir(), 'aiflow-no-such-eval-cache'), AIFLOW_TESTS_MIN_EXECUTED: '1000' });
+  assert.notEqual(r.status, 0);
+  assert.match(r.stdout, /\.eval-cache is missing/);
+  assert.match(r.stdout, PREPARE_HINT);
+  assert.match(r.stdout, /executed 5 is below MIN_EXECUTED 1000/);
+});
+
+test('negative: with the cache present and no cache skips there is no prepare.mjs hint', () => {
+  const r = runSh({ AIFLOW_TESTS_EVAL_CACHE_DIR: os.tmpdir() });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.doesNotMatch(r.stdout, /prepare\.mjs/);
+});
+
 test('node older than 20 is rejected', () => {
   const r = runSh({ PATH: `${fx('old-node')}:/usr/bin:/bin` });
   assert.notEqual(r.status, 0);

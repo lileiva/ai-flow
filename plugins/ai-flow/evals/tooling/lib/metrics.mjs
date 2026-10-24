@@ -31,6 +31,7 @@ export function assembleRunMetrics({ caseName, index, run, analysis: a, outcome,
     session_start: a.session_start,
     env: a.env,
     parse_errors: a.parse_errors,
+    ...(a.nested_capture ? { nested_capture: a.nested_capture, agent_tree: a.agent_tree, per_agent_tokens_transcript: a.per_agent_tokens_transcript ?? null } : {}),
     outcome,
     ...extra,
   };

@@ -118,3 +118,56 @@ test('a different claude major version also exits 6', () => {
   const minor = base(); minor.meta.claude_version = '2.2.0';
   assert.equal(compare(base(), minor).exitCode, 0);
 });
+
+// B2b Task 3.2 (REQ-014 S1, REQ-010 S2, design D8/D12): old baseline vs new-format candidate.
+const V340 = () => JSON.parse(fs.readFileSync(path.join(HERE, '..', '..', 'baselines', 'v3.4.0-sonnet.json'), 'utf8'));
+function newFormat(from = V340()) {
+  const c = structuredClone(from);
+  c.meta.observability = { nested_capture: 'transcripts', analyzer: 'b2b' };
+  for (const cs of Object.values(c.cases)) {
+    cs.self_delegation = { mean: 0, stdev: 0, n_applicable: 3 };
+    cs.nested_capture = { complete: 3, partial: 0, failed: 0, not_applicable: 0 };
+    cs.runs = [0, 1, 2].map((i) => ({ run_index: i, tokens_total: cs.tokens_total.mean, cost_usd: 1, wall_time_s: 1, nested_capture: 'complete' }));
+  }
+  return c;
+}
+
+test('compare(v3.4.0-sonnet baseline, new-format summary) runs; self_delegation shows "n/a (baseline)" (tracer)', () => {
+  const res = compare(V340(), newFormat());
+  assert.equal(row(res, 'a', 'self_delegation').status, 'n/a (baseline)');
+});
+
+test('fields the baseline lacks are "n/a (baseline)" and never regressions (REQ-014 S1)', () => {
+  const c = newFormat();
+  c.cases.a.self_delegation = { mean: 5, stdev: 0, n_applicable: 3 };
+  const res = compare(V340(), c);
+  assert.equal(row(res, 'a', 'self_delegation').status, 'n/a (baseline)');
+  assert.ok(!res.rows.some((r) => r.metric === 'self_delegation' && r.status === 'regression'));
+  assert.equal(row(compare(newFormat(), V340()), 'a', 'self_delegation').status, 'n/a (candidate)');
+});
+
+test('the observability note appears when the baseline predates nested capture, not between two new-format files (D8)', () => {
+  assert.match(compare(V340(), newFormat()).notes.join('\n'), /baseline predates nested capture/);
+  assert.deepEqual(compare(newFormat(), newFormat()).notes, []);
+});
+
+test('case d tokens more than 1 sd worse, driven by one run: the markdown lists its 3 per-run token values (REQ-010 S2)', async () => {
+  const { formatReport } = await import('../compare.mjs');
+  const b = V340();
+  const c = newFormat();
+  const { mean, stdev } = b.cases.d.tokens_total;
+  c.cases.d.runs = [474000, Math.round(mean), Math.round(mean)].map((t, i) => ({ run_index: i, tokens_total: t, cost_usd: 1, wall_time_s: 1, nested_capture: 'complete' }));
+  c.cases.d.tokens_total = { mean: Math.round(mean + 2 * stdev + 1), stdev: 1 };
+  const md = formatReport(compare(b, c, { allowEnvMismatch: true }), { markdown: true });
+  assert.match(md, /Per-run detail/);
+  assert.match(md, /\| d \| tokens_total \| 474000, \d+, \d+ \|/);
+  const within = newFormat();
+  within.cases.d.tokens_total = { mean: mean + stdev / 2, stdev: 1 };
+  assert.doesNotMatch(formatReport(compare(b, within, { allowEnvMismatch: true }), { markdown: true }), /Per-run detail/, 'seeded negative: within 1 sd, no block');
+});
+
+test('new-format vs new-format: self_delegation is compared like any lower-is-better metric', () => {
+  const c = newFormat();
+  c.cases.a.self_delegation = { mean: 2, stdev: 0, n_applicable: 3 };
+  assert.equal(row(compare(newFormat(), c), 'a', 'self_delegation').status, 'regression');
+});

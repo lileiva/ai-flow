@@ -7,12 +7,18 @@ import path from 'node:path';
 
 const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 
+/** Backup/temp files (sed -i.bak, patch .orig/.rej, editor ~ / .swp / .#lock) are never impl or test files. */
+export function isBackupFile(rel) {
+  return /(\.bak|\.orig|\.rej|~|\.swp)$/.test(rel) || /(^|\/)\.#[^/]*$/.test(rel);
+}
+
 export function isTestFile(rel) {
+  if (isBackupFile(rel)) return false;
   return /(^|\/)test\/.*\.test\.[cm]?[jt]sx?$/.test(rel) || /\.test\.[^/]+$/.test(rel);
 }
 
 export function isImplFile(rel) {
-  return rel.startsWith('src/') && !isTestFile(rel);
+  return rel.startsWith('src/') && !isBackupFile(rel) && !isTestFile(rel);
 }
 
 const stem = (rel) => path.posix.basename(rel).replace(/\.test\.[^/]+$/, '').replace(/\.[^./]+$/, '');
@@ -51,11 +57,15 @@ export function relPath(file, cwd) {
 const unquote = (t) => t.replace(/^['"]+|['"]+$/g, '').replace(/^\.\//, '');
 const SEGMENT_RE = /\n|;|&&|\|\||\|/;
 const SCRIPT_WRITE_RE = /writeFileSync|writeFile\(|appendFileSync|open\([^)]*,\s*['"][wa]|\.write_text\(/;
+// In-place edit flags, with an optional backup suffix: sed -i, -i.bak, -i'.bak', -Ei, --in-place[=SUFFIX];
+// perl -pi, -i.bak (a cluster of no-argument switches containing i; -I/-M take arguments and are not in-place).
+const SED_IN_PLACE_RE = /^(-[a-zA-Z]*i|--in-place(=|$))/;
+const PERL_IN_PLACE_RE = /^-[aclnpstuwEUTWX0-9]*i/;
 const PATH_TOKEN_RE = /[\w./$-]*(?:src|tests?)\/[\w./-]+\.[A-Za-z0-9]+/g;
 
 /**
  * Test/impl files a Bash command writes (heuristic, REQ-007 with Bash-based edits): output redirection (`>`, `>>`),
- * `tee`, `sed -i`, the target of `cp`/`mv`, and every src/test path named by a script that writes files
+ * `tee`, in-place `sed -i[SUFFIX]`/`--in-place[=SUFFIX]` and `perl -i[SUFFIX]`, the target of `cp`/`mv`, and every src/test path named by a script that writes files
  * (fs.writeFileSync, open(..., 'w'), write_text). Reads and test runs are not writes. Order of appearance, deduped.
  */
 export function bashWriteTargets(command, cwd) {
@@ -65,7 +75,8 @@ export function bashWriteTargets(command, cwd) {
   for (const m of command.matchAll(/\btee\s+(?:-a\s+)?([^\s;&|]+)/g)) raw.push(m[1]);
   for (const seg of command.split(SEGMENT_RE)) {
     const words = seg.trim().split(/\s+/);
-    if (/^sed$/.test(words[0]) && words.some((w) => /^(-[a-zA-Z]*i[a-zA-Z]*|--in-place)$/.test(w))) raw.push(...words.slice(1));
+    if ((words[0] === 'sed' && words.some((w) => SED_IN_PLACE_RE.test(w)))
+      || (words[0] === 'perl' && words.some((w) => PERL_IN_PLACE_RE.test(w)))) raw.push(...words.slice(1));
     if (/^(cp|mv)$/.test(words[0]) && words.length > 2) raw.push(words[words.length - 1]);
   }
   if (SCRIPT_WRITE_RE.test(command)) raw.push(...(command.match(PATH_TOKEN_RE) ?? []));

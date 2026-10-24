@@ -1,0 +1,25 @@
+{"type":"system","subtype":"init","cwd":"/w","model":"m","session_id":"s-e2e"}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"main-m1","role":"assistant","content":[{"type":"tool_use","id":"toolu_ORCH","name":"Agent","input":{"subagent_type":"ai-flow:orchestrator","description":"run","prompt":"fix bug"}}],"usage":{"input_tokens":10,"output_tokens":5}}}
+{"type":"system","subtype":"task_started","tool_use_id":"toolu_ORCH","task_id":"aorch","spawn_depth":1,"subagent_type":"ai-flow:orchestrator","task_type":"local_agent"}
+{"type":"system","subtype":"task_started","tool_use_id":"toolu_PROP","task_id":"aprop","spawn_depth":2,"subagent_type":"ai-flow:proposer","task_type":"local_agent","parent_task_id":"aorch"}
+{"type":"system","subtype":"task_started","tool_use_id":"toolu_SPEC","task_id":"aspec","spawn_depth":2,"subagent_type":"ai-flow:specifier","task_type":"local_agent","parent_task_id":"aorch"}
+{"type":"system","subtype":"task_started","tool_use_id":"toolu_DES","task_id":"ades","spawn_depth":2,"subagent_type":"ai-flow:designer","task_type":"local_agent","parent_task_id":"aorch"}
+{"type":"system","subtype":"task_started","tool_use_id":"toolu_PLAN","task_id":"aplan","spawn_depth":2,"subagent_type":"ai-flow:planner","task_type":"local_agent","parent_task_id":"aorch"}
+{"type":"system","subtype":"task_started","tool_use_id":"toolu_IMPL","task_id":"aimpl","spawn_depth":2,"subagent_type":"ai-flow:implementer","task_type":"local_agent","parent_task_id":"aorch"}
+{"type":"system","subtype":"task_started","tool_use_id":"toolu_DBG","task_id":"adbg","spawn_depth":3,"subagent_type":"ai-flow:debugger","task_type":"local_agent","parent_task_id":"aimpl"}
+{"type":"system","subtype":"task_started","tool_use_id":"toolu_VER","task_id":"aver","spawn_depth":2,"subagent_type":"ai-flow:verifier","task_type":"local_agent","parent_task_id":"aorch"}
+{"type":"system","subtype":"task_started","tool_use_id":"toolu_ARCH","task_id":"aarch","spawn_depth":2,"subagent_type":"ai-flow:archivist","task_type":"local_agent","parent_task_id":"aorch"}
+{"type":"assistant","parent_tool_use_id":"toolu_ORCH","isSidechain":true,"message":{"id":"aorch-m1","role":"assistant","content":[{"type":"tool_use","id":"toolu_PROP","name":"Agent","input":{"subagent_type":"ai-flow:proposer","description":"proposer","prompt":"go"}}],"usage":{"input_tokens":10,"output_tokens":5}}}
+{"type":"user","parent_tool_use_id":"toolu_ORCH","isSidechain":true,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_PROP","content":"proposer done"}]}}
+{"type":"system","subtype":"task_notification","tool_use_id":"toolu_ARCH","task_id":"aarch","status":"completed","usage":{"total_tokens":100,"tool_uses":1,"duration_ms":1000}}
+{"type":"system","subtype":"task_notification","tool_use_id":"toolu_VER","task_id":"aver","status":"completed","usage":{"total_tokens":100,"tool_uses":1,"duration_ms":1000}}
+{"type":"system","subtype":"task_notification","tool_use_id":"toolu_DBG","task_id":"adbg","status":"completed","usage":{"total_tokens":100,"tool_uses":1,"duration_ms":1000}}
+{"type":"system","subtype":"task_notification","tool_use_id":"toolu_IMPL","task_id":"aimpl","status":"completed","usage":{"total_tokens":100,"tool_uses":5,"duration_ms":1000}}
+{"type":"system","subtype":"task_notification","tool_use_id":"toolu_PLAN","task_id":"aplan","status":"completed","usage":{"total_tokens":100,"tool_uses":1,"duration_ms":1000}}
+{"type":"system","subtype":"task_notification","tool_use_id":"toolu_DES","task_id":"ades","status":"completed","usage":{"total_tokens":100,"tool_uses":1,"duration_ms":1000}}
+{"type":"system","subtype":"task_notification","tool_use_id":"toolu_SPEC","task_id":"aspec","status":"completed","usage":{"total_tokens":100,"tool_uses":1,"duration_ms":1000}}
+{"type":"system","subtype":"task_notification","tool_use_id":"toolu_PROP","task_id":"aprop","status":"completed","usage":{"total_tokens":100,"tool_uses":1,"duration_ms":1000}}
+{"type":"system","subtype":"task_notification","tool_use_id":"toolu_ORCH","task_id":"aorch","status":"completed","usage":{"total_tokens":200,"tool_uses":7,"duration_ms":9000}}
+{"type":"user","parent_tool_use_id":null,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_ORCH","content":"flow complete"}]}}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"main-m2","role":"assistant","content":[{"type":"text","text":"EVAL-RUN-COMPLETE"}],"usage":{"input_tokens":10,"output_tokens":5}}}
+{"type":"result","subtype":"success","total_cost_usd":0.1,"modelUsage":{"m":{"inputTokens":1000,"outputTokens":500}}}

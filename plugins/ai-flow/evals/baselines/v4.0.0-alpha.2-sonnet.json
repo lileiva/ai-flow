@@ -1,0 +1,1210 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "plugin_version": "4.0.0-alpha.2",
+    "plugin_ref": "8029d9b",
+    "plugin_sha": "8029d9b5ea6a0141b8a013575de093c36e231015",
+    "evals_sha": "0e99981ea10947ff94ca6b85f506e6b8df457515",
+    "behavior_hash": "a8db88f8f89b8ab7d8b3c6affcde3d771a97eeb033f08b2bbec9f6589bf64440",
+    "claude_version": "2.1.309",
+    "model": "sonnet",
+    "judge_model": "haiku",
+    "date": "2026-10-24T00:16:21.062Z",
+    "runs_per_case": 3,
+    "cap_usd": null,
+    "cases_run": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+    ],
+    "complete": true,
+    "incomplete_reason": null,
+    "total_cost_usd": 16.272986,
+    "subset": false,
+    "rate_limit": {},
+    "observability": {
+      "nested_capture": "transcripts",
+      "analyzer": "b2b"
+    },
+    "session_start_cost_usd": 0.128424,
+    "regraded_from": "b2b-alpha2-gate",
+    "regraded_at": "2026-10-24T18:54:04.090Z",
+    "regrade_reason": "graders fixed after promotion: W5 truncated mock input matched by prefix (5f9a45c); backup/temp files (e.g. src/slugify.js.bak) are not impl/test files (c0b343f); sed -i.bak/--in-place=SUFFIX and perl -i in-place edits detected as Bash writes (e5be8f4)",
+    "label": "v4.0.0-alpha.2"
+  },
+  "session_start": {
+    "as_shipped": {
+      "hook_outcome": "success",
+      "exit_code": 0,
+      "injected_tokens": 1819,
+      "injected_tokens_est_chars4": 1819
+    },
+    "intended": {
+      "hook_tokens": 2887,
+      "hook_chars": 7421,
+      "always_on_tokens": 1904,
+      "method": "first-turn input delta on temp plugin copies (full+x minus no-hooks; no-hooks minus empty)"
+    },
+    "measured": {
+      "as_shipped": {
+        "hook_outcome": "success",
+        "exit_code": 0,
+        "injected_tokens": 1819,
+        "input_delta_tokens": 2887
+      },
+      "intended": {
+        "hook_tokens": 2887,
+        "hook_chars": 7421,
+        "always_on_tokens": 1904,
+        "method": "first-turn input delta on temp plugin copies (full+x minus no-hooks; no-hooks minus empty)"
+      },
+      "first_turn_input_tokens": {
+        "as-shipped": 15670,
+        "full": 15670,
+        "no-hooks": 12783,
+        "empty": 10879
+      },
+      "method": "first-turn input delta on temp plugin copies (full+x minus no-hooks; no-hooks minus empty)",
+      "claude_version": "2.1.310",
+      "plugin_ref": "8029d9b",
+      "model": "sonnet",
+      "cost_usd": 0.128424
+    }
+  },
+  "cases": {
+    "a": {
+      "n": 3,
+      "harness_errors": 0,
+      "harness_errors_retried": 0,
+      "outcome_pass_rate": {
+        "mean": 1,
+        "stdev": 0
+      },
+      "tokens_total": {
+        "mean": 2148885.333,
+        "stdev": 219501.05
+      },
+      "cost_usd": {
+        "mean": 1.522,
+        "stdev": 0.074
+      },
+      "wall_time_s": {
+        "mean": 581.333,
+        "stdev": 38.812
+      },
+      "tdd_score": {
+        "mean": 0.333,
+        "stdev": 0.577,
+        "n_applicable": 3
+      },
+      "tdd_ratio": {
+        "mean": 0.667,
+        "stdev": 0.289,
+        "n_applicable": 3
+      },
+      "phase_order": {
+        "mean": 0.333,
+        "stdev": 0.577,
+        "n_applicable": 3
+      },
+      "artifact_completeness": {
+        "mean": 0.917,
+        "stdev": 0.144,
+        "n_applicable": 3
+      },
+      "subagent_ask": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "readonly_writes": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_phase_tokens": {
+        "ai-flow:archivist": {
+          "mean": 37648,
+          "stdev": 2068.673
+        },
+        "ai-flow:designer": {
+          "mean": 28631.667,
+          "stdev": 1199.574
+        },
+        "ai-flow:explorer": {
+          "mean": 26181,
+          "stdev": 1330.143
+        },
+        "ai-flow:implementer": {
+          "mean": 86976.667,
+          "stdev": 5070.863
+        },
+        "ai-flow:orchestrator": {
+          "mean": 39099,
+          "stdev": 608.136
+        },
+        "ai-flow:planner": {
+          "mean": 35296.667,
+          "stdev": 2875.858
+        },
+        "ai-flow:proposer": {
+          "mean": 27849.667,
+          "stdev": 1322.181
+        },
+        "ai-flow:specifier": {
+          "mean": 35302,
+          "stdev": 15187.975
+        },
+        "ai-flow:verifier": {
+          "mean": 39589.667,
+          "stdev": 2440.611
+        },
+        "main": {
+          "mean": 63688,
+          "stdev": 13734.272
+        }
+      },
+      "nested_capture": {
+        "complete": 3,
+        "partial": 0,
+        "failed": 0,
+        "not_applicable": 0
+      },
+      "run_errors": {
+        "nested_mock_accounting": 3,
+        "unexplained": 0
+      },
+      "na_capture": {
+        "tdd": 0,
+        "artifacts": 0,
+        "tool_use": 0
+      },
+      "self_delegation": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_agent_tokens_transcript": {
+        "ai-flow:archivist": {
+          "mean": 134635.333,
+          "stdev": 3609.744
+        },
+        "ai-flow:designer": {
+          "mean": 133519.667,
+          "stdev": 14925.321
+        },
+        "ai-flow:explorer": {
+          "mean": 92895.667,
+          "stdev": 3728.323
+        },
+        "ai-flow:implementer": {
+          "mean": 846557,
+          "stdev": 107210.316
+        },
+        "ai-flow:orchestrator": {
+          "mean": 305785.333,
+          "stdev": 56989.208
+        },
+        "ai-flow:planner": {
+          "mean": 147772.333,
+          "stdev": 21692.96
+        },
+        "ai-flow:proposer": {
+          "mean": 117322,
+          "stdev": 3801.17
+        },
+        "ai-flow:specifier": {
+          "mean": 141179.333,
+          "stdev": 70987.982
+        },
+        "ai-flow:verifier": {
+          "mean": 164485.333,
+          "stdev": 23512.616
+        },
+        "main": {
+          "mean": 63688,
+          "stdev": 13734.272
+        }
+      },
+      "runs": [
+        {
+          "run_index": 0,
+          "harness_error": false,
+          "tokens_total": 1969302,
+          "cost_usd": 1.4484982999999998,
+          "wall_time_s": 617,
+          "per_agent_tokens": {
+            "ai-flow:explorer": 25612,
+            "ai-flow:proposer": 27200,
+            "ai-flow:specifier": 26091,
+            "ai-flow:designer": 30003,
+            "ai-flow:planner": 36978,
+            "ai-flow:implementer": 82093,
+            "ai-flow:verifier": 38326,
+            "ai-flow:archivist": 37012,
+            "ai-flow:orchestrator": 38599,
+            "main": 47830
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:archivist": 132325,
+            "ai-flow:designer": 145409,
+            "ai-flow:explorer": 91059,
+            "ai-flow:implementer": 764372,
+            "ai-flow:orchestrator": 273410,
+            "ai-flow:planner": 141010,
+            "ai-flow:proposer": 115090,
+            "ai-flow:specifier": 89054,
+            "ai-flow:verifier": 169196,
+            "main": 47830
+          },
+          "max_depth": 2,
+          "agents_launched": 10,
+          "nested_capture": "complete",
+          "run_error_class": "nested_mock_accounting",
+          "retried": 0
+        },
+        {
+          "run_index": 1,
+          "harness_error": false,
+          "tokens_total": 2083780,
+          "cost_usd": 1.520429200000001,
+          "wall_time_s": 540,
+          "per_agent_tokens": {
+            "ai-flow:explorer": 25230,
+            "ai-flow:proposer": 26978,
+            "ai-flow:specifier": 26983,
+            "ai-flow:designer": 28115,
+            "ai-flow:planner": 36936,
+            "ai-flow:implementer": 86621,
+            "ai-flow:verifier": 42403,
+            "ai-flow:archivist": 39960,
+            "ai-flow:orchestrator": 38922,
+            "main": 71769
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:archivist": 138795,
+            "ai-flow:designer": 116770,
+            "ai-flow:explorer": 90442,
+            "ai-flow:implementer": 807473,
+            "ai-flow:orchestrator": 272358,
+            "ai-flow:planner": 172041,
+            "ai-flow:proposer": 115165,
+            "ai-flow:specifier": 112456,
+            "ai-flow:verifier": 185286,
+            "main": 71769
+          },
+          "max_depth": 2,
+          "agents_launched": 10,
+          "nested_capture": "complete",
+          "run_error_class": "nested_mock_accounting",
+          "retried": 0
+        },
+        {
+          "run_index": 2,
+          "harness_error": false,
+          "tokens_total": 2393574,
+          "cost_usd": 1.5971373999999994,
+          "wall_time_s": 587,
+          "per_agent_tokens": {
+            "ai-flow:explorer": 27701,
+            "ai-flow:proposer": 29371,
+            "ai-flow:specifier": 52832,
+            "ai-flow:designer": 27777,
+            "ai-flow:planner": 31976,
+            "ai-flow:implementer": 92216,
+            "ai-flow:verifier": 38040,
+            "ai-flow:archivist": 35972,
+            "ai-flow:orchestrator": 39776,
+            "main": 71465
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:archivist": 132786,
+            "ai-flow:designer": 138380,
+            "ai-flow:explorer": 97186,
+            "ai-flow:implementer": 967826,
+            "ai-flow:orchestrator": 371588,
+            "ai-flow:planner": 130266,
+            "ai-flow:proposer": 121711,
+            "ai-flow:specifier": 222028,
+            "ai-flow:verifier": 138974,
+            "main": 71465
+          },
+          "max_depth": 2,
+          "agents_launched": 11,
+          "nested_capture": "complete",
+          "run_error_class": "nested_mock_accounting",
+          "retried": 0
+        }
+      ]
+    },
+    "b": {
+      "n": 3,
+      "harness_errors": 0,
+      "harness_errors_retried": 0,
+      "outcome_pass_rate": {
+        "mean": 1,
+        "stdev": 0
+      },
+      "tokens_total": {
+        "mean": 2028114.333,
+        "stdev": 51562.309
+      },
+      "cost_usd": {
+        "mean": 1.384,
+        "stdev": 0.083
+      },
+      "wall_time_s": {
+        "mean": 470.333,
+        "stdev": 30.892
+      },
+      "tdd_score": {
+        "mean": 0.667,
+        "stdev": 0.577,
+        "n_applicable": 3
+      },
+      "tdd_ratio": {
+        "mean": 0.833,
+        "stdev": 0.289,
+        "n_applicable": 3
+      },
+      "phase_order": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "artifact_completeness": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "subagent_ask": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "readonly_writes": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_phase_tokens": {
+        "ai-flow:archivist": {
+          "mean": 35977.667,
+          "stdev": 3769.571
+        },
+        "ai-flow:designer": {
+          "mean": 28955.333,
+          "stdev": 423.936
+        },
+        "ai-flow:explorer": {
+          "mean": 24803,
+          "stdev": 190.481
+        },
+        "ai-flow:implementer": {
+          "mean": 86652.667,
+          "stdev": 3351.364
+        },
+        "ai-flow:orchestrator": {
+          "mean": 37346.667,
+          "stdev": 174.345
+        },
+        "ai-flow:planner": {
+          "mean": 36010,
+          "stdev": 2914.387
+        },
+        "ai-flow:proposer": {
+          "mean": 28043.333,
+          "stdev": 333.2
+        },
+        "ai-flow:specifier": {
+          "mean": 26179.333,
+          "stdev": 1879.795
+        },
+        "ai-flow:verifier": {
+          "mean": 35504,
+          "stdev": 2863.718
+        },
+        "main": {
+          "mean": 72757.667,
+          "stdev": 25187.075
+        }
+      },
+      "nested_capture": {
+        "complete": 3,
+        "partial": 0,
+        "failed": 0,
+        "not_applicable": 0
+      },
+      "run_errors": {
+        "nested_mock_accounting": 3,
+        "unexplained": 0
+      },
+      "na_capture": {
+        "tdd": 0,
+        "artifacts": 0,
+        "tool_use": 0
+      },
+      "self_delegation": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_agent_tokens_transcript": {
+        "ai-flow:archivist": {
+          "mean": 130852.667,
+          "stdev": 8239.725
+        },
+        "ai-flow:designer": {
+          "mean": 142493,
+          "stdev": 852.171
+        },
+        "ai-flow:explorer": {
+          "mean": 82225.333,
+          "stdev": 13188.925
+        },
+        "ai-flow:implementer": {
+          "mean": 789546.333,
+          "stdev": 86442.448
+        },
+        "ai-flow:orchestrator": {
+          "mean": 279198.667,
+          "stdev": 17763.974
+        },
+        "ai-flow:planner": {
+          "mean": 139545.667,
+          "stdev": 9205.041
+        },
+        "ai-flow:proposer": {
+          "mean": 127224.667,
+          "stdev": 11840.267
+        },
+        "ai-flow:specifier": {
+          "mean": 118515,
+          "stdev": 18606
+        },
+        "ai-flow:verifier": {
+          "mean": 144789.333,
+          "stdev": 14521.526
+        },
+        "main": {
+          "mean": 72757.667,
+          "stdev": 25187.075
+        }
+      },
+      "runs": [
+        {
+          "run_index": 0,
+          "harness_error": false,
+          "tokens_total": 1973839,
+          "cost_usd": 1.3083146999999995,
+          "wall_time_s": 437,
+          "per_agent_tokens": {
+            "ai-flow:explorer": 25017,
+            "ai-flow:proposer": 27795,
+            "ai-flow:specifier": 24453,
+            "ai-flow:designer": 28478,
+            "ai-flow:planner": 33138,
+            "ai-flow:implementer": 82933,
+            "ai-flow:verifier": 34987,
+            "ai-flow:archivist": 31720,
+            "ai-flow:orchestrator": 37179,
+            "main": 98326
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:archivist": 121438,
+            "ai-flow:designer": 141509,
+            "ai-flow:explorer": 90097,
+            "ai-flow:implementer": 713607,
+            "ai-flow:orchestrator": 299561,
+            "ai-flow:planner": 130897,
+            "ai-flow:proposer": 140808,
+            "ai-flow:specifier": 106489,
+            "ai-flow:verifier": 130252,
+            "main": 98326
+          },
+          "max_depth": 2,
+          "agents_launched": 10,
+          "nested_capture": "complete",
+          "run_error_class": "nested_mock_accounting",
+          "retried": 0
+        },
+        {
+          "run_index": 1,
+          "harness_error": false,
+          "tokens_total": 2076449,
+          "cost_usd": 1.3717433999999993,
+          "wall_time_s": 476,
+          "per_agent_tokens": {
+            "ai-flow:explorer": 24652,
+            "ai-flow:proposer": 28422,
+            "ai-flow:specifier": 25903,
+            "ai-flow:designer": 29100,
+            "ai-flow:planner": 35927,
+            "ai-flow:implementer": 87588,
+            "ai-flow:verifier": 32934,
+            "ai-flow:archivist": 37323,
+            "ai-flow:orchestrator": 37527,
+            "main": 47970
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:archivist": 134370,
+            "ai-flow:designer": 142983,
+            "ai-flow:explorer": 66999,
+            "ai-flow:implementer": 883616,
+            "ai-flow:orchestrator": 271160,
+            "ai-flow:planner": 138519,
+            "ai-flow:proposer": 121779,
+            "ai-flow:specifier": 109110,
+            "ai-flow:verifier": 159295,
+            "main": 47970
+          },
+          "max_depth": 2,
+          "agents_launched": 10,
+          "nested_capture": "complete",
+          "run_error_class": "nested_mock_accounting",
+          "retried": 0
+        },
+        {
+          "run_index": 2,
+          "harness_error": false,
+          "tokens_total": 2034055,
+          "cost_usd": 1.4721583999999996,
+          "wall_time_s": 498,
+          "per_agent_tokens": {
+            "ai-flow:explorer": 24740,
+            "ai-flow:proposer": 27913,
+            "ai-flow:specifier": 28182,
+            "ai-flow:designer": 29288,
+            "ai-flow:planner": 38965,
+            "ai-flow:implementer": 89437,
+            "ai-flow:verifier": 38591,
+            "ai-flow:archivist": 38890,
+            "ai-flow:orchestrator": 37334,
+            "main": 71977
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:archivist": 136750,
+            "ai-flow:designer": 142987,
+            "ai-flow:explorer": 89580,
+            "ai-flow:implementer": 771416,
+            "ai-flow:orchestrator": 266875,
+            "ai-flow:planner": 149221,
+            "ai-flow:proposer": 119087,
+            "ai-flow:specifier": 139946,
+            "ai-flow:verifier": 144821,
+            "main": 71977
+          },
+          "max_depth": 2,
+          "agents_launched": 10,
+          "nested_capture": "complete",
+          "run_error_class": "nested_mock_accounting",
+          "retried": 0
+        }
+      ]
+    },
+    "c": {
+      "n": 3,
+      "harness_errors": 0,
+      "harness_errors_retried": 0,
+      "outcome_pass_rate": {
+        "mean": 0.667,
+        "stdev": 0.577
+      },
+      "tokens_total": {
+        "mean": 2279637.333,
+        "stdev": 103117.319
+      },
+      "cost_usd": {
+        "mean": 1.653,
+        "stdev": 0.078
+      },
+      "wall_time_s": {
+        "mean": 590,
+        "stdev": 39
+      },
+      "tdd_score": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "tdd_ratio": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "phase_order": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "artifact_completeness": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "subagent_ask": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "readonly_writes": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_phase_tokens": {
+        "ai-flow:archivist": {
+          "mean": 13153.667,
+          "stdev": 22782.819
+        },
+        "ai-flow:designer": {
+          "mean": 30672.333,
+          "stdev": 773.111
+        },
+        "ai-flow:explorer": {
+          "mean": 28291,
+          "stdev": 440.667
+        },
+        "ai-flow:implementer": {
+          "mean": 82682,
+          "stdev": 34428.111
+        },
+        "ai-flow:initializer": {
+          "mean": 7028.333,
+          "stdev": 12173.43
+        },
+        "ai-flow:orchestrator": {
+          "mean": 12311.667,
+          "stdev": 21324.432
+        },
+        "ai-flow:planner": {
+          "mean": 41012,
+          "stdev": 3801.682
+        },
+        "ai-flow:proposer": {
+          "mean": 38676.333,
+          "stdev": 15421.892
+        },
+        "ai-flow:specifier": {
+          "mean": 44060.667,
+          "stdev": 27961.72
+        },
+        "ai-flow:verifier": {
+          "mean": 16803.333,
+          "stdev": 29104.227
+        },
+        "main": {
+          "mean": 64234.667,
+          "stdev": 14693.533
+        }
+      },
+      "nested_capture": {
+        "complete": 3,
+        "partial": 0,
+        "failed": 0,
+        "not_applicable": 0
+      },
+      "run_errors": {
+        "nested_mock_accounting": 3,
+        "unexplained": 0
+      },
+      "na_capture": {
+        "tdd": 0,
+        "artifacts": 0,
+        "tool_use": 0
+      },
+      "self_delegation": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_agent_tokens_transcript": {
+        "ai-flow:archivist": {
+          "mean": 38251.667,
+          "stdev": 66253.83
+        },
+        "ai-flow:designer": {
+          "mean": 146788.333,
+          "stdev": 1901.62
+        },
+        "ai-flow:explorer": {
+          "mean": 130307.333,
+          "stdev": 14490.135
+        },
+        "ai-flow:implementer": {
+          "mean": 1032262,
+          "stdev": 158312.537
+        },
+        "ai-flow:initializer": {
+          "mean": 19631.333,
+          "stdev": 34002.467
+        },
+        "ai-flow:orchestrator": {
+          "mean": 255746.333,
+          "stdev": 22062.952
+        },
+        "ai-flow:planner": {
+          "mean": 146089.333,
+          "stdev": 6851.11
+        },
+        "ai-flow:proposer": {
+          "mean": 160369.333,
+          "stdev": 65835.965
+        },
+        "ai-flow:specifier": {
+          "mean": 178716,
+          "stdev": 113148.053
+        },
+        "ai-flow:verifier": {
+          "mean": 121276.667,
+          "stdev": 109537.295
+        },
+        "main": {
+          "mean": 64234.667,
+          "stdev": 14693.533
+        }
+      },
+      "runs": [
+        {
+          "run_index": 0,
+          "harness_error": false,
+          "tokens_total": 2244124,
+          "cost_usd": 1.7419021,
+          "wall_time_s": 611,
+          "per_agent_tokens": {
+            "ai-flow:initializer": 21085,
+            "ai-flow:explorer": 28712,
+            "ai-flow:proposer": 56484,
+            "ai-flow:designer": 30915,
+            "ai-flow:specifier": 76281,
+            "ai-flow:planner": 42846,
+            "ai-flow:implementer": 43891,
+            "main": 71350
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:designer": 147561,
+            "ai-flow:explorer": 146989,
+            "ai-flow:implementer": 853731,
+            "ai-flow:initializer": 58894,
+            "ai-flow:orchestrator": 268951,
+            "ai-flow:planner": 149835,
+            "ai-flow:proposer": 236390,
+            "ai-flow:specifier": 309286,
+            "main": 71350
+          },
+          "max_depth": 2,
+          "agents_launched": 11,
+          "nested_capture": "complete",
+          "run_error_class": "nested_mock_accounting",
+          "retried": 0
+        },
+        {
+          "run_index": 1,
+          "harness_error": false,
+          "tokens_total": 2395818,
+          "cost_usd": 1.6219394999999999,
+          "wall_time_s": 545,
+          "per_agent_tokens": {
+            "ai-flow:explorer": 28328,
+            "ai-flow:proposer": 29775,
+            "ai-flow:specifier": 26149,
+            "ai-flow:designer": 29807,
+            "ai-flow:planner": 36641,
+            "ai-flow:implementer": 94545,
+            "ai-flow:verifier": 50410,
+            "ai-flow:archivist": 39461,
+            "ai-flow:orchestrator": 36935,
+            "main": 74016
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:archivist": 114755,
+            "ai-flow:designer": 144622,
+            "ai-flow:explorer": 123087,
+            "ai-flow:implementer": 1087500,
+            "ai-flow:orchestrator": 268012,
+            "ai-flow:planner": 138182,
+            "ai-flow:proposer": 122225,
+            "ai-flow:specifier": 109420,
+            "ai-flow:verifier": 213018,
+            "main": 74016
+          },
+          "max_depth": 2,
+          "agents_launched": 10,
+          "nested_capture": "complete",
+          "run_error_class": "nested_mock_accounting",
+          "retried": 0
+        },
+        {
+          "run_index": 2,
+          "harness_error": false,
+          "tokens_total": 2198970,
+          "cost_usd": 1.5965105999999998,
+          "wall_time_s": 614,
+          "per_agent_tokens": {
+            "ai-flow:explorer": 27833,
+            "ai-flow:proposer": 29770,
+            "ai-flow:specifier": 29752,
+            "ai-flow:designer": 31295,
+            "ai-flow:planner": 43549,
+            "ai-flow:implementer": 109610,
+            "main": 47338
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:designer": 148182,
+            "ai-flow:explorer": 120846,
+            "ai-flow:implementer": 1155555,
+            "ai-flow:orchestrator": 230276,
+            "ai-flow:planner": 150251,
+            "ai-flow:proposer": 122493,
+            "ai-flow:specifier": 117442,
+            "ai-flow:verifier": 150812,
+            "main": 47338
+          },
+          "max_depth": 2,
+          "agents_launched": 9,
+          "nested_capture": "complete",
+          "run_error_class": "nested_mock_accounting",
+          "retried": 0
+        }
+      ]
+    },
+    "d": {
+      "n": 3,
+      "harness_errors": 0,
+      "harness_errors_retried": 0,
+      "outcome_pass_rate": {
+        "mean": 1,
+        "stdev": 0
+      },
+      "tokens_total": {
+        "mean": 433699.667,
+        "stdev": 120787.95
+      },
+      "cost_usd": {
+        "mean": 0.222,
+        "stdev": 0.023
+      },
+      "wall_time_s": {
+        "mean": 44.667,
+        "stdev": 3.215
+      },
+      "tdd_score": {
+        "mean": 0.333,
+        "stdev": 0.577,
+        "n_applicable": 3
+      },
+      "tdd_ratio": {
+        "mean": 0.556,
+        "stdev": 0.509,
+        "n_applicable": 3
+      },
+      "phase_order": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "artifact_completeness": "n/a",
+      "subagent_ask": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "readonly_writes": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_phase_tokens": {
+        "ai-flow:implementer": {
+          "mean": 36066.667,
+          "stdev": 1482.385
+        },
+        "main": {
+          "mean": 73819,
+          "stdev": 535.852
+        }
+      },
+      "nested_capture": {
+        "complete": 3,
+        "partial": 0,
+        "failed": 0,
+        "not_applicable": 0
+      },
+      "run_errors": {
+        "nested_mock_accounting": 0,
+        "unexplained": 0
+      },
+      "na_capture": {
+        "tdd": 0,
+        "artifacts": 0,
+        "tool_use": 0
+      },
+      "self_delegation": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_agent_tokens_transcript": {
+        "ai-flow:implementer": {
+          "mean": 359263,
+          "stdev": 120533.163
+        },
+        "main": {
+          "mean": 73819,
+          "stdev": 535.852
+        }
+      },
+      "runs": [
+        {
+          "run_index": 0,
+          "harness_error": false,
+          "tokens_total": 307599,
+          "cost_usd": 0.1964896,
+          "wall_time_s": 41,
+          "per_agent_tokens": {
+            "ai-flow:implementer": 34369,
+            "main": 73348
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:implementer": 233679,
+            "main": 73348
+          },
+          "max_depth": 1,
+          "agents_launched": 1,
+          "nested_capture": "complete",
+          "run_error_class": null,
+          "retried": 0
+        },
+        {
+          "run_index": 1,
+          "harness_error": false,
+          "tokens_total": 548361,
+          "cost_usd": 0.24027149999999997,
+          "wall_time_s": 47,
+          "per_agent_tokens": {
+            "ai-flow:implementer": 37105,
+            "main": 73707
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:implementer": 474014,
+            "main": 73707
+          },
+          "max_depth": 1,
+          "agents_launched": 1,
+          "nested_capture": "complete",
+          "run_error_class": null,
+          "retried": 0
+        },
+        {
+          "run_index": 2,
+          "harness_error": false,
+          "tokens_total": 445139,
+          "cost_usd": 0.22915190000000002,
+          "wall_time_s": 46,
+          "per_agent_tokens": {
+            "ai-flow:implementer": 36726,
+            "main": 74402
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:implementer": 370096,
+            "main": 74402
+          },
+          "max_depth": 1,
+          "agents_launched": 1,
+          "nested_capture": "complete",
+          "run_error_class": null,
+          "retried": 0
+        }
+      ]
+    },
+    "e": {
+      "n": 3,
+      "harness_errors": 0,
+      "harness_errors_retried": 0,
+      "outcome_pass_rate": {
+        "mean": 1,
+        "stdev": 0
+      },
+      "tokens_total": {
+        "mean": 882367,
+        "stdev": 213086.508
+      },
+      "cost_usd": {
+        "mean": 0.643,
+        "stdev": 0.121
+      },
+      "wall_time_s": {
+        "mean": 262.667,
+        "stdev": 80.959
+      },
+      "tdd_score": "n/a",
+      "tdd_ratio": "n/a",
+      "phase_order": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "artifact_completeness": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "subagent_ask": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "readonly_writes": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_phase_tokens": {
+        "ai-flow:designer": {
+          "mean": 29630.333,
+          "stdev": 911.281
+        },
+        "ai-flow:planner": {
+          "mean": 41082.667,
+          "stdev": 4229.97
+        },
+        "ai-flow:proposer": {
+          "mean": 25948.333,
+          "stdev": 631.747
+        },
+        "ai-flow:specifier": {
+          "mean": 35666.667,
+          "stdev": 15856.108
+        },
+        "main": {
+          "mean": 287762,
+          "stdev": 100826.583
+        }
+      },
+      "nested_capture": {
+        "complete": 3,
+        "partial": 0,
+        "failed": 0,
+        "not_applicable": 0
+      },
+      "run_errors": {
+        "nested_mock_accounting": 0,
+        "unexplained": 0
+      },
+      "na_capture": {
+        "tdd": 0,
+        "artifacts": 0,
+        "tool_use": 0
+      },
+      "self_delegation": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_agent_tokens_transcript": {
+        "ai-flow:designer": {
+          "mean": 129377.667,
+          "stdev": 16767.401
+        },
+        "ai-flow:planner": {
+          "mean": 184372.667,
+          "stdev": 32325.484
+        },
+        "ai-flow:proposer": {
+          "mean": 113228.667,
+          "stdev": 24643.327
+        },
+        "ai-flow:specifier": {
+          "mean": 165379.333,
+          "stdev": 56755.478
+        },
+        "main": {
+          "mean": 287762,
+          "stdev": 100826.583
+        }
+      },
+      "runs": [
+        {
+          "run_index": 0,
+          "harness_error": false,
+          "tokens_total": 1128086,
+          "cost_usd": 0.7789611000000001,
+          "wall_time_s": 245,
+          "per_agent_tokens": {
+            "ai-flow:proposer": 26625,
+            "ai-flow:specifier": 53924,
+            "ai-flow:designer": 30647,
+            "ai-flow:planner": 45500,
+            "main": 402026
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:designer": 148687,
+            "ai-flow:planner": 208868,
+            "ai-flow:proposer": 138366,
+            "ai-flow:specifier": 227225,
+            "main": 402026
+          },
+          "max_depth": 1,
+          "agents_launched": 5,
+          "nested_capture": "complete",
+          "run_error_class": null,
+          "retried": 0
+        },
+        {
+          "run_index": 1,
+          "harness_error": false,
+          "tokens_total": 770575,
+          "cost_usd": 0.5482218,
+          "wall_time_s": 351,
+          "per_agent_tokens": {
+            "ai-flow:proposer": 25374,
+            "ai-flow:specifier": 25347,
+            "ai-flow:designer": 28887,
+            "ai-flow:planner": 37069,
+            "main": 211296
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:designer": 118495,
+            "ai-flow:planner": 196516,
+            "ai-flow:proposer": 89111,
+            "ai-flow:specifier": 153232,
+            "main": 211296
+          },
+          "max_depth": 1,
+          "agents_launched": 4,
+          "nested_capture": "complete",
+          "run_error_class": null,
+          "retried": 0
+        },
+        {
+          "run_index": 2,
+          "harness_error": false,
+          "tokens_total": 748440,
+          "cost_usd": 0.6012566,
+          "wall_time_s": 192,
+          "per_agent_tokens": {
+            "ai-flow:proposer": 25846,
+            "ai-flow:specifier": 27729,
+            "ai-flow:designer": 29357,
+            "ai-flow:planner": 40679,
+            "main": 249964
+          },
+          "per_agent_tokens_transcript": {
+            "ai-flow:designer": 120951,
+            "ai-flow:planner": 147734,
+            "ai-flow:proposer": 112209,
+            "ai-flow:specifier": 115681,
+            "main": 249964
+          },
+          "max_depth": 1,
+          "agents_launched": 4,
+          "nested_capture": "complete",
+          "run_error_class": null,
+          "retried": 0
+        }
+      ]
+    }
+  }
+}

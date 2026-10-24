@@ -31,6 +31,31 @@
       "hook_chars": 6800,
       "always_on_tokens": 1832,
       "method": "first-turn input delta"
+    },
+    "measured": {
+      "as_shipped": {
+        "hook_outcome": "error",
+        "exit_code": 126,
+        "injected_tokens": 0,
+        "input_delta_tokens": 0
+      },
+      "intended": {
+        "hook_tokens": 1839,
+        "hook_chars": 6800,
+        "always_on_tokens": 1832,
+        "method": "first-turn input delta"
+      },
+      "first_turn_input_tokens": {
+        "as-shipped": 13061,
+        "full": 14900,
+        "no-hooks": 13061,
+        "empty": 11229
+      },
+      "method": "first-turn input delta",
+      "claude_version": "2.1.301",
+      "plugin_ref": "v3.4.0",
+      "model": "sonnet",
+      "cost_usd": 0.13
     }
   },
   "cases": {

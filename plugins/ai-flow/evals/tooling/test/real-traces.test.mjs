@@ -75,10 +75,12 @@ test('[phase-order] real case (b), P5.1 run 1: the flow delegated to ai-flow:orc
   assert.ok(a.phases.order_violations.includes('missing gate: tracer'), a.phases.order_violations.join('; '));
 });
 
-test('real case (b), P5.1 run 1: nested subagents ran outside the trace, so TDD/artifacts/tool-use are n/a (D3)', () => {
+test('real case (b), P5.1 run 1: nested subagents were not retained (pre-B2b), so capture failed and TDD/artifacts/tool-use are n/a (D3, REQ-018 S2)', () => {
   const a = analyzeTrace(read('real-case-b-delegated'), { caseName: 'b-e2e-feature-truncate-words' });
-  assert.equal(a.tdd.applicable, false);
-  assert.match(a.tdd.reason, /not observable: \d+ nested subagent/);
-  assert.equal(a.artifacts.applicable, false);
-  assert.ok(a.tool_use.unobserved_subagents > 0);
+  assert.equal(a.nested_capture.status, 'failed');
+  assert.ok(a.nested_capture.missing.length > 0);
+  for (const g of [a.tdd, a.artifacts, a.tool_use]) {
+    assert.equal(g.applicable, false);
+    assert.equal(g.reason, 'capture failed: nested transcripts not retained (pre-B2b trace)');
+  }
 });

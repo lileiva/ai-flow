@@ -58,3 +58,8 @@ test('roles() strips the plugin prefix from subagent_type and answers role quest
   assert.equal(r.isWriteTool('NotebookEdit'), true);
   assert.equal(r.isWriteTool('mcp__plugin_engram_engram__mem_save'), false);
 });
+
+test('B2b: self_delegation is a lower-is-better count metric and gateBaseline.default resolves to v3.4.0-<model>.json (D6, D8)', () => {
+  assert.deepEqual(cfg.metrics.self_delegation, { better: 'lower', rate: false });
+  assert.equal(cfg.gateBaseline.default.replace('{model}', 'sonnet'), 'v3.4.0-sonnet.json');
+});

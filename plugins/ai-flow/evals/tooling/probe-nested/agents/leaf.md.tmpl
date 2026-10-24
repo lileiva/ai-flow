@@ -1,0 +1,9 @@
+---
+name: leaf
+description: Probe leaf agent (depth 3). Writes a file, runs Bash, calls the memx mock.
+---
+Do exactly these steps, in order, and nothing else:
+1. Use the Write tool to create the file leaf.txt in the current working directory with content "l".
+2. Run the Bash command: echo leaf-bash
+3. Use ToolSearch to load mcp__memx__note, then call mcp__memx__note with text "from-leaf".
+4. Reply "LEAF-DONE".

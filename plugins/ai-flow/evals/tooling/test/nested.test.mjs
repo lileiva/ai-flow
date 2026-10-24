@@ -48,14 +48,19 @@ test('D2: a delegated orchestrator that launches the implementer before the plan
   assert.ok(p.order_violations.includes('apply before plan'), p.order_violations.join('; '));
 });
 
-test('D3: TDD, artifacts and tool-use are n/a (not observable) when nested subagents ran outside the trace', () => {
+test('D3 as amended by B2b (REQ-018 S2): a legacy trace whose nested subagents were not retained is capture failed; TDD, artifacts and tool-use are n/a with that reason', () => {
   const a = analyzeTrace(delegatedTrace(), { caseName: 'a-e2e-bugfix-slugify' });
+  assert.equal(a.nested_capture.status, 'failed');
+  assert.equal(a.nested_capture.missing.length, 7);
+  const reason = 'capture failed: nested transcripts not retained (pre-B2b trace)';
   assert.equal(a.tdd.applicable, false);
-  assert.match(a.tdd.reason, /not observable: 7 nested subagent/);
+  assert.equal(a.tdd.reason, reason);
   assert.equal(a.artifacts.applicable, false);
   assert.equal(a.artifacts.score, null);
-  assert.match(a.artifacts.reason, /not observable/);
-  assert.equal(a.tool_use.unobserved_subagents, 7);
+  assert.equal(a.artifacts.reason, reason);
+  assert.equal(a.tool_use.applicable, false);
+  assert.equal(a.tool_use.reason, reason);
+  assert.ok(!JSON.stringify(a).includes('not observable'));
 });
 
 test('D3: summarize excludes unobservable tool-use counts (n/a instead of a false 0)', () => {
@@ -63,6 +68,15 @@ test('D3: summarize excludes unobservable tool-use counts (n/a instead of a fals
   const tool = (unobserved) => ({ subagent_ask: { total: 0, by_agent: {} }, readonly_writes: { total: 0, by_agent: {} }, unknown_attribution: 0, unobserved_subagents: unobserved });
   const run = (i, unobserved) => ({ case: 'a', run_index: i, harness_error: false, tokens: { total: 1 }, outcome: { pass: true }, cli: { costUsd: 1, durationSeconds: 1 }, tdd: { applicable: false, pass: null, ratio: null }, tool_use: tool(unobserved) });
   const s = summarize([run(0, 7), run(1, 0)], META);
+  assert.equal(s.cases.a.subagent_ask.n_applicable, 1);
+  assert.equal(s.cases.a.readonly_writes.n_applicable, 1);
+});
+
+test('B2b: summarize treats a tool_use grade made n/a by capture (applicable false) as n/a, not 0', () => {
+  const META = { plugin_version: '3.4.0', plugin_ref: 'v3.4.0', plugin_sha: 'abc', claude_version: '2.1.302', model: 'sonnet', judge_model: 'haiku', date: '2026-10-18T00:00:00Z', runs_per_case: 1, cap_usd: null, cases_run: ['a'], complete: true, incomplete_reason: null, total_cost_usd: 1 };
+  const tool = (applicable) => ({ subagent_ask: { total: 0, by_agent: {} }, readonly_writes: { total: 0, by_agent: {} }, unknown_attribution: 0, ...(applicable ? {} : { applicable: false, reason: 'capture failed: x', na_cause: 'capture' }) });
+  const run = (i, applicable) => ({ case: 'a', run_index: i, harness_error: false, tokens: { total: 1 }, outcome: { pass: true }, cli: { costUsd: 1, durationSeconds: 1 }, tdd: { applicable: false, pass: null, ratio: null }, tool_use: tool(applicable) });
+  const s = summarize([run(0, false), run(1, true)], META);
   assert.equal(s.cases.a.subagent_ask.n_applicable, 1);
   assert.equal(s.cases.a.readonly_writes.n_applicable, 1);
 });

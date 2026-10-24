@@ -89,11 +89,14 @@ export function unobservedSubagents(lines) {
   return out;
 }
 
-/** Agent type that produced a line: 'main' for the main thread, 'unknown' when the sidechain is unmapped. */
+/**
+ * Agent type that produced a line: 'main' for the main thread, else the type of its launch. A merged transcript line
+ * whose launch is unknown (an orphan, B2b R6) falls back to its meta.agentType (agent_type); otherwise 'unknown'.
+ */
 export function agentOf(line, idx) {
   const p = line.parent_tool_use_id;
   if (!p) return 'main';
-  return idx.get(p) ?? 'unknown';
+  return idx.get(p) ?? line.agent_type ?? 'unknown';
 }
 
 /** Ordered tool calls with their results: [{ id, name, input, agent, instance, result }]. */
@@ -147,4 +150,21 @@ export function perPhase(lines, idx, runTotal, { unreliable = false } = {}) {
   const sum = Object.values(per).reduce((s, p) => s + p.tokens_total, 0);
   const coverage = runTotal ? Math.round((sum / runTotal) * 1000) / 1000 : null;
   return { per_phase: per, per_phase_reason: null, per_phase_source: 'task_notification', per_phase_coverage: coverage };
+}
+
+/**
+ * Informational tokens per agent type summed from the (merged) lines of its instances, deduped per message id
+ * (B2b TG2). Unlike per_phase (task_notification usage), this counts every transcript message, cache included.
+ * tree: the merged agent tree [{ tool_use_id, agent }]. Returns { <type>: tokens, main: tokens }.
+ */
+export function agentTranscriptTokens(lines, tree) {
+  const byType = new Map();
+  for (const t of tree) byType.set(t.agent, [...(byType.get(t.agent) ?? []), t.tool_use_id]);
+  const out = {};
+  for (const [type, ids] of [...byType].sort()) {
+    const set = new Set(ids);
+    out[type] = tokenTotals(lines, (o) => set.has(o.parent_tool_use_id)).total;
+  }
+  out.main = tokenTotals(lines, (o) => !o.parent_tool_use_id).total;
+  return out;
 }

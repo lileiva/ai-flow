@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-run metrics written by run.mjs to <out>/runs/<case>-<i>.json (REQ-015 S1, design section 3). Validated by lib/schema.mjs (subset). per_phase may be null only with a per_phase_reason (REQ-011 S3).",
+  "$comment": "Per-run metrics written by run.mjs to <out>/runs/<case>-<i>.json (REQ-015 S1, design section 3). Validated by lib/schema.mjs (subset). per_phase may be null only with a per_phase_reason (REQ-011 S3). B2b (additive, optional): nested_capture, agent_tree, tool_use.self_delegation, run_error, na_cause on tdd/artifacts/tool_use.",
   "type": "object",
   "required": [
     "case",
@@ -209,6 +209,13 @@
         },
         "env_errors": {
           "type": "integer"
+        },
+        "na_cause": {
+          "enum": [
+            "capture",
+            "intrinsic",
+            null
+          ]
         }
       }
     },
@@ -290,6 +297,19 @@
           "items": {
             "type": "string"
           }
+        },
+        "na_cause": {
+          "enum": [
+            "capture",
+            "intrinsic",
+            null
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
@@ -333,6 +353,43 @@
         },
         "unknown_attribution": {
           "type": "integer"
+        },
+        "na_cause": {
+          "enum": [
+            "capture",
+            "intrinsic",
+            null
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "self_delegation": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "count",
+                "launches"
+              ],
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "launches": {
+                  "type": "array"
+                }
+              }
+            },
+            {
+              "enum": [
+                "n/a"
+              ]
+            }
+          ]
         }
       }
     },
@@ -374,6 +431,107 @@
     },
     "retried": {
       "type": "integer"
+    },
+    "nested_capture": {
+      "type": "object",
+      "required": [
+        "status",
+        "expected",
+        "captured",
+        "missing"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "complete",
+            "partial",
+            "failed",
+            "not_applicable"
+          ]
+        },
+        "expected": {
+          "type": "integer"
+        },
+        "captured": {
+          "type": "integer"
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "tool_use_id",
+              "agent"
+            ]
+          }
+        },
+        "orphans": {
+          "type": "array"
+        },
+        "inconsistent": {
+          "type": "array"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "agent_tree": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "tool_use_id",
+          "agent",
+          "depth",
+          "launched_by"
+        ]
+      }
+    },
+    "run_error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "message",
+        "class"
+      ],
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "class": {
+          "enum": [
+            "nested_mock_accounting",
+            "unexplained"
+          ]
+        },
+        "details": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "per_agent_tokens_transcript": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "number"
+      }
     }
   },
   "if": {

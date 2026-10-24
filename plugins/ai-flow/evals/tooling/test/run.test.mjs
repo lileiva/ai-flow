@@ -22,10 +22,10 @@ function runWithStub(args, scenario = {}, extraEnv = {}) {
   fs.writeFileSync(scenarioFile, JSON.stringify({ caseName: 'a-e2e-bugfix-slugify', ...scenario }));
   const log = path.join(dir, 'argv.jsonl');
   const out = path.join(dir, 'out');
-  const res = spawnSync('bash', [RUN_SH, ...args, '--out', out], {
-    encoding: 'utf8',
-    env: { ...process.env, AIFLOW_EVAL_CLAUDE_BIN: STUB, AIFLOW_STUB_SCENARIO: scenarioFile, AIFLOW_STUB_LOG: log, ...extraEnv },
-  });
+  // An extraEnv value of null removes that variable (e.g. ANTHROPIC_API_KEY, REQ-015 S3).
+  const env = { ...process.env, AIFLOW_EVAL_CLAUDE_BIN: STUB, AIFLOW_STUB_SCENARIO: scenarioFile, AIFLOW_STUB_LOG: log, ...extraEnv };
+  for (const [k, v] of Object.entries(env)) if (v === null) delete env[k];
+  const res = spawnSync('bash', [RUN_SH, ...args, '--out', out], { encoding: 'utf8', env });
   const argv = fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : [];
   return { res, argv, out };
 }
@@ -149,6 +149,11 @@ test('with a cap and -j > 1 the runner warns that the overrun can exceed one run
 });
 
 // Task 3.3 (REQ-013 S1-S2, D11 re-scoped: no USD cap by default; U1 gate).
+/** Both sonnet gate baselines (v3.4.0 and the config.gateBaseline.sonnet file) as minimal fixtures. */
+function seedGateBaselines(dir) {
+  for (const f of ['v3.4.0-sonnet.json', 'v4.0.0-alpha.2-sonnet.json']) fs.copyFileSync(path.join(HERE, 'fixtures', 'aggregate', 'baseline-min.json'), path.join(dir, f));
+}
+
 function dry(args, env = {}) {
   const r = spawnSync('bash', [RUN_SH, ...args, '--dry-run'], { encoding: 'utf8', env: { ...process.env, AIFLOW_EVAL_CLAUDE_BIN: '/bin/false', ...env } });
   return { r, plan: r.status === 0 ? JSON.parse(r.stdout) : null };
@@ -183,15 +188,15 @@ test('the model is sonnet unless AIFLOW_EVAL_MODEL or --model says otherwise', (
   assert.equal(dry(['--model', 'haiku'], { AIFLOW_EVAL_MODEL: 'opus' }).plan.model, 'haiku');
 });
 
-test('--gate = full suite, runs 3, harness-error retries on, compared against baselines/v3.4.0-<model>.json', () => {
+test('--gate = full suite, runs 3, harness-error retries on, compared against baselines/v3.4.0-<model>.json for a model without its own gateBaseline key', () => {
   const dir = tmp('aiflow-bl-');
-  fs.copyFileSync(path.join(HERE, 'fixtures', 'aggregate', 'baseline-min.json'), path.join(dir, 'v3.4.0-sonnet.json'));
-  const { r, plan } = dry(['--gate'], { AIFLOW_EVAL_BASELINES_DIR: dir, AIFLOW_EVAL_MODEL: 'sonnet' });
+  fs.copyFileSync(path.join(HERE, 'fixtures', 'aggregate', 'baseline-min.json'), path.join(dir, 'v3.4.0-opus.json'));
+  const { r, plan } = dry(['--gate'], { AIFLOW_EVAL_BASELINES_DIR: dir, AIFLOW_EVAL_MODEL: 'opus' });
   assert.equal(r.status, 0, r.stderr);
   assert.deepEqual(plan.cases, ['a', 'b', 'c', 'd', 'e']);
   assert.equal(plan.runs, 3);
   assert.equal(plan.retry_harness_errors, 2);
-  assert.equal(plan.compare, path.join(dir, 'v3.4.0-sonnet.json'));
+  assert.equal(plan.compare, path.join(dir, 'v3.4.0-opus.json'));
 });
 
 test('--gate without the model baseline refuses before spawning anything (exit 3)', () => {
@@ -325,8 +330,9 @@ test('--promote turns harness-error retries on (dry run)', () => {
 test('--promote on a subset run is refused with exit 7; the summary keeps session_start (intended from --session-start)', { skip }, () => {
   const ssFile = path.join(tmp('aiflow-ss-'), 'ss.json');
   fs.writeFileSync(ssFile, JSON.stringify({ intended: { hook_tokens: 1839, hook_chars: 6800, always_on_tokens: 1832, method: 'first-turn input delta' } }));
-  const { res, out } = runWithStub(['--case', 'a', '--runs', '1', '--plugin-ref', 'v3.4.0', '--promote', 'v3.4.0', '--session-start', ssFile], { traceFile: TRACE, workspaceFrom: fixedWorkspace() }, { AIFLOW_EVAL_BASELINES_DIR: tmp('aiflow-bl-') });
+  const { res, out } = runWithStub(['--case', 'a', '--runs', '1', '--plugin-ref', 'v3.4.0', '--promote', 'v3.4.0', '--session-start', ssFile, '--skip-nested-canary'], { traceFile: TRACE, workspaceFrom: fixedWorkspace() }, { AIFLOW_EVAL_BASELINES_DIR: tmp('aiflow-bl-') });
   assert.equal(res.status, 7, res.stdout + res.stderr);
+  assert.match(res.stderr, /warning: --skip-nested-canary/);
   assert.match(res.stderr, /promote refused: .*partial/);
   const s = JSON.parse(fs.readFileSync(path.join(out, 'summary.json'), 'utf8'));
   assert.equal(s.session_start.as_shipped.exit_code, 126);
@@ -359,13 +365,17 @@ test('--promote without --session-start runs measure-session-start and records i
     firstTurnInputs: { 'as-shipped': 13061, full: 14900, 'no-hooks': 13061, empty: 11229 },
     hookResponses: { 'as-shipped': { outcome: 'error', exit_code: 126, stdout: '' } },
   };
-  const { res, out, argv } = runWithStub(['--case', 'a', '--runs', '1', '--plugin-ref', 'v3.4.0', '--promote', 'v3.4.0'], scenario, { AIFLOW_EVAL_BASELINES_DIR: tmp('aiflow-bl-') });
+  const { res, out, argv } = runWithStub(['--case', 'a', '--runs', '1', '--plugin-ref', 'v3.4.0', '--promote', 'v3.4.0', '--skip-nested-canary'], scenario, { AIFLOW_EVAL_BASELINES_DIR: tmp('aiflow-bl-') });
   assert.equal(res.status, 7, res.stdout + res.stderr);
   assert.equal(argv.filter((a) => ['as-shipped', 'full', 'no-hooks', 'empty'].includes(path.basename(a[2]))).length, 4);
   const s = JSON.parse(fs.readFileSync(path.join(out, 'summary.json'), 'utf8'));
   assert.equal(s.session_start.intended.hook_tokens, 1839);
   assert.equal(s.session_start.intended.always_on_tokens, 1832);
   assert.ok(fs.existsSync(path.join(out, 'session-start.json')));
+  // B2b REQ-009 S1: the full measurement is persisted in the summary, its cost apart from the suite total.
+  assert.equal(s.session_start.measured.as_shipped.input_delta_tokens, 0);
+  assert.deepEqual(s.session_start.measured.first_turn_input_tokens, scenario.firstTurnInputs);
+  assert.equal(typeof s.meta.session_start_cost_usd, 'number');
 });
 
 test('--case plus --tag is resolved locally (AND) and sent as the matching single case', () => {
@@ -379,4 +389,144 @@ test('--case plus --tag is resolved locally (AND) and sent as the matching singl
 test('every committed case carries its case-<id> tag (multi-case selection relies on it)', async () => {
   const { discover } = await import('../lib/discover.mjs');
   for (const c of discover(path.join(EVALS_DIR, '..'))) assert.ok((c.data.tags ?? []).includes(`case-${c.id}`), c.name);
+});
+
+// B2b Task 0.3 (REQ-001 S1/S4, REQ-016 S1, REQ-020 S1): the runner retains a filtered, scrubbed nested bundle.
+const MINI = path.join(HERE, 'fixtures', 'nested', 'mini-tdd');
+const nestedScenario = () => ({ traceFile: path.join(MINI, 'trace.jsonl'), workspaceFrom: fixedWorkspace(), nested: { transcriptsDir: MINI, sessionId: 's-mini' } });
+
+test('stub nested scenario: the runner retains results/<ts>/traces/a-0/subagents/*.meta.json (tracer, REQ-001)', { skip }, () => {
+  const { res, out } = runWithStub(['--case', 'a', '--runs', '1', '--plugin-ref', 'v3.4.0'], nestedScenario());
+  assert.equal(res.status, 0, res.stdout + res.stderr);
+  const sub = path.join(out, 'traces', 'a-0', 'subagents');
+  assert.deepEqual(fs.readdirSync(sub).filter((f) => f.endsWith('.meta.json')).sort(), ['agent-aimpl.meta.json', 'agent-aorch.meta.json']);
+});
+
+test('the retained bundle holds trace, user/assistant-only transcripts, meta, mock calls and capture.json; the kept dir is gone; no email or host path survives (REQ-001 S1/S4, REQ-016 S1, REQ-020 S1)', { skip }, () => {
+  const { res, out } = runWithStub(['--case', 'a', '--runs', '1', '--plugin-ref', 'v3.4.0'], nestedScenario());
+  assert.equal(res.status, 0, res.stdout + res.stderr);
+  const dir = path.join(out, 'traces', 'a-0');
+  const files = fs.readdirSync(dir, { recursive: true }).filter((f) => fs.statSync(path.join(dir, f)).isFile()).sort();
+  assert.deepEqual(files, ['capture.json', 'subagents/agent-aimpl.jsonl', 'subagents/agent-aimpl.meta.json', 'subagents/agent-aorch.jsonl', 'subagents/agent-aorch.meta.json', 'trace.jsonl']);
+  for (const f of files.filter((x) => x.endsWith('.jsonl') && x.startsWith('subagents/'))) {
+    const types = fs.readFileSync(path.join(dir, f), 'utf8').trim().split('\n').map((l) => JSON.parse(l).type);
+    assert.ok(types.every((t) => t === 'user' || t === 'assistant'), `${f}: ${types}`);
+  }
+  const all = files.map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
+  for (const needle of ['session_context', '@example.invalid', '/Use' + 'rs/']) assert.ok(!all.includes(needle), `bundle contains ${needle}`);
+  const capture = JSON.parse(fs.readFileSync(path.join(dir, 'capture.json'), 'utf8'));
+  assert.equal(capture.status, 'complete');
+  const m = JSON.parse(fs.readFileSync(path.join(out, 'runs', 'a-0.json'), 'utf8'));
+  assert.equal(m.nested_capture.status, 'complete');
+  assert.equal(m.tdd.applicable, true, m.tdd.reason);
+  assert.equal(fs.existsSync(m.artifacts_dir.kept_dir), false, 'kept temp dir removed');
+});
+
+test('grading the scrubbed bundle equals the in-run grading (scrub keeps in-run paths intact)', { skip }, async () => {
+  const { res, out } = runWithStub(['--case', 'a', '--runs', '1', '--plugin-ref', 'v3.4.0'], nestedScenario());
+  assert.equal(res.status, 0, res.stdout + res.stderr);
+  const { analyzeTrace } = await import('../analyze.mjs');
+  const { loadBundle } = await import('../lib/nested.mjs');
+  const dir = path.join(out, 'traces', 'a-0');
+  const a = analyzeTrace(fs.readFileSync(path.join(dir, 'trace.jsonl'), 'utf8'), { caseName: 'a-e2e-bugfix-slugify', bundle: loadBundle(dir) });
+  const m = JSON.parse(fs.readFileSync(path.join(out, 'runs', 'a-0.json'), 'utf8'));
+  for (const k of ['tdd', 'tool_use', 'artifacts', 'nested_capture']) assert.deepEqual(a[k], m[k], k);
+});
+
+// B2b Task 3.5 (REQ-013 S2, design D8): the --gate baseline comes from config.gateBaseline.
+const withGateBaseline = (gateBaseline) => {
+  const cfg = JSON.parse(fs.readFileSync(path.join(HERE, '..', 'config.json'), 'utf8'));
+  const file = path.join(tmp('aiflow-cfg-'), 'config.json');
+  fs.writeFileSync(file, JSON.stringify({ ...cfg, gateBaseline }));
+  return file;
+};
+
+test('--gate resolves its baseline from config.gateBaseline, not a hard-coded name (tracer, REQ-013)', () => {
+  const dir = tmp('aiflow-bl-');
+  fs.copyFileSync(path.join(HERE, 'fixtures', 'aggregate', 'baseline-min.json'), path.join(dir, 'other-sonnet.json'));
+  const { r, plan } = dry(['--gate'], { AIFLOW_EVAL_BASELINES_DIR: dir, AIFLOW_EVAL_MODEL: 'sonnet', AIFLOW_EVAL_CONFIG: withGateBaseline({ default: 'other-{model}.json' }) });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(plan.compare, path.join(dir, 'other-sonnet.json'));
+});
+
+test('--gate: a model key beats the default; --compare overrides both (REQ-013 S2)', () => {
+  const dir = tmp('aiflow-bl-');
+  for (const f of ['v4-sonnet.json', 'v3.4.0-sonnet.json']) fs.copyFileSync(path.join(HERE, 'fixtures', 'aggregate', 'baseline-min.json'), path.join(dir, f));
+  const env = { AIFLOW_EVAL_BASELINES_DIR: dir, AIFLOW_EVAL_MODEL: 'sonnet', AIFLOW_EVAL_CONFIG: withGateBaseline({ sonnet: 'v4-sonnet.json', default: 'v3.4.0-{model}.json' }) };
+  assert.equal(dry(['--gate'], env).plan.compare, path.join(dir, 'v4-sonnet.json'));
+  const explicit = path.join(dir, 'v3.4.0-sonnet.json');
+  assert.equal(dry(['--gate', '--compare', explicit], env).plan.compare, explicit);
+});
+
+test('--gate whose configured baseline file is missing exits 3 naming it', () => {
+  const { r } = dry(['--gate'], { AIFLOW_EVAL_BASELINES_DIR: tmp('aiflow-bl-'), AIFLOW_EVAL_MODEL: 'sonnet', AIFLOW_EVAL_CONFIG: withGateBaseline({ default: 'nope-{model}.json' }) });
+  assert.equal(r.status, 3);
+  assert.match(r.stderr, /baseline not found: .*nope-sonnet\.json/);
+});
+
+test('--allow-env-mismatch is accepted and reaches the plan (needed when the CLI differs from the baseline env)', () => {
+  const dir = tmp('aiflow-bl-');
+  seedGateBaselines(dir);
+  const { r, plan } = dry(['--gate', '--allow-env-mismatch'], { AIFLOW_EVAL_BASELINES_DIR: dir, AIFLOW_EVAL_MODEL: 'sonnet' });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(plan.allow_env_mismatch, true);
+});
+
+// B2b Task 3.6 (design D9): --gate / --promote run the nested canary after preflight; --skip-nested-canary skips it.
+test('--gate with a CLI that leaves no subagent transcripts stops at the nested canary after one retry: exit 3 with guidance, nothing else spawned', () => {
+  const dir = tmp('aiflow-bl-');
+  seedGateBaselines(dir);
+  const { res, argv } = runWithStub(['--gate'], { traceFile: TRACE }, { AIFLOW_EVAL_BASELINES_DIR: dir });
+  assert.equal(res.status, 3, res.stdout + res.stderr);
+  assert.equal(argv.length, 2, 'only the canary ran (once, then one retry)');
+  assert.match(res.stderr, /preflight: FAIL nested-canary: nested capture canary failed after 2 attempts: attempt 1: no subagent transcripts[^;]*; attempt 2: no subagent transcripts/);
+  assert.match(res.stderr, /--skip-nested-canary/);
+});
+
+test('--skip-nested-canary is accepted and reaches the plan', () => {
+  const dir = tmp('aiflow-bl-');
+  seedGateBaselines(dir);
+  assert.equal(dry(['--gate', '--skip-nested-canary'], { AIFLOW_EVAL_BASELINES_DIR: dir, AIFLOW_EVAL_MODEL: 'sonnet' }).plan.skip_nested_canary, true);
+});
+
+// B2b Task 4.1 (REQ-015 S1-S3, REQ-020 S1): end-to-end stub integration over the delegated-e2e fixture.
+const E2E_FIX = path.join(HERE, 'fixtures', 'nested', 'delegated-e2e');
+const e2eScenario = (transcriptsDir = E2E_FIX) => ({ traceFile: path.join(transcriptsDir, 'trace.jsonl'), workspaceFrom: fixedWorkspace(), nested: { transcriptsDir, sessionId: 's-e2e' } });
+const NO_API_KEY = { ANTHROPIC_API_KEY: null };
+
+test('e2e stub (delegated-e2e, no ANTHROPIC_API_KEY): capture complete, TDD applicable, every run has a capture status, summary counts it, meta.observability set, no kept dir left (REQ-015 S1/S3, REQ-020)', { skip }, () => {
+  const { res, out } = runWithStub(['--case', 'a', '--runs', '2', '--plugin-ref', 'v3.4.0'], e2eScenario(), NO_API_KEY);
+  assert.equal(res.status, 0, res.stdout + res.stderr);
+  const runs = fs.readdirSync(path.join(out, 'runs')).map((f) => JSON.parse(fs.readFileSync(path.join(out, 'runs', f), 'utf8')));
+  assert.equal(runs.length, 2);
+  for (const m of runs) {
+    assert.equal(m.nested_capture.status, 'complete', JSON.stringify(m.nested_capture));
+    assert.equal(m.tdd.applicable, true, m.tdd.reason);
+    assert.equal(fs.existsSync(m.artifacts_dir.kept_dir), false, 'kept temp dir removed');
+  }
+  const summary = JSON.parse(fs.readFileSync(path.join(out, 'summary.json'), 'utf8'));
+  assert.deepEqual(summary.cases.a.nested_capture, { complete: 2, partial: 0, failed: 0, not_applicable: 0 });
+  assert.deepEqual(summary.meta.observability, { nested_capture: 'transcripts', analyzer: 'b2b' });
+});
+
+test('negative: e2e stub with the planner transcript deleted reports capture partial naming planner (REQ-015 S2)', { skip }, async () => {
+  const { mutateBundle } = await import('./helpers.mjs');
+  const { res, out } = runWithStub(['--case', 'a', '--runs', '1', '--plugin-ref', 'v3.4.0'], e2eScenario(mutateBundle(E2E_FIX, { drop: 'planner' })), NO_API_KEY);
+  assert.equal(res.status, 0, res.stdout + res.stderr);
+  const m = JSON.parse(fs.readFileSync(path.join(out, 'runs', 'a-0.json'), 'utf8'));
+  assert.equal(m.nested_capture.status, 'partial');
+  assert.match(m.nested_capture.reason, /planner/);
+  const summary = JSON.parse(fs.readFileSync(path.join(out, 'summary.json'), 'utf8'));
+  assert.equal(summary.cases.a.nested_capture.partial, 1);
+});
+
+// B2b Task 4.4 (REQ-013 S1): the sonnet gate compares with the promoted v4.0.0-alpha.2 baseline by default.
+test('--gate --model sonnet resolves compare to the committed baselines/v4.0.0-alpha.2-sonnet.json, which validates (REQ-013 S1)', async () => {
+  const { plan, r } = dry(['--gate', '--model', 'sonnet']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(plan.compare, path.join(EVALS_DIR, 'baselines', 'v4.0.0-alpha.2-sonnet.json'));
+  const { loadSchema, validate } = await import('../lib/schema.mjs');
+  const b = JSON.parse(fs.readFileSync(plan.compare, 'utf8'));
+  assert.deepEqual(validate(loadSchema('baseline'), b), []);
+  assert.equal(b.meta.label, 'v4.0.0-alpha.2');
 });

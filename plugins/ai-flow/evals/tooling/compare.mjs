@@ -17,6 +17,9 @@ const show = (v) => (isStat(v) ? String(v.mean) : v === null || v === undefined 
 
 function compareStat(cs, metric, b, c, { better, threshold }) {
   const r = { case: cs, metric, baseline: show(b), candidate: show(c), delta: '', status: 'n/a' };
+  // REQ-014 S1: a metric one side does not record at all (e.g. self_delegation in a v3.4.0 baseline) is never flagged.
+  if (b === undefined && c !== undefined) r.status = 'n/a (baseline)';
+  else if (c === undefined && b !== undefined) r.status = 'n/a (candidate)';
   if (!isStat(b) || !isStat(c)) return r;
   const delta = round(c.mean - b.mean);
   const worse = better === 'higher' ? -delta : delta;
@@ -64,7 +67,29 @@ export function compare(baseline, candidate, { absTolerance = 0, allowEnvMismatc
     }
   }
   const regressions = rows.filter((r) => r.status === 'regression').length;
-  return { rows, regressions, envMismatch: mismatch, exitCode: regressions ? 1 : 0 };
+  return { rows, regressions, envMismatch: mismatch, notes: notesFor(baseline, candidate), outliers: outliers(baseline, candidate), exitCode: regressions ? 1 : 0 };
+}
+
+/** D8: a baseline promoted before nested capture graded delegated runs' TDD/artifacts/tool-use as n/a. */
+function notesFor(baseline, candidate) {
+  if (baseline.meta?.observability || !candidate.meta?.observability) return [];
+  return ['baseline predates nested capture (no meta.observability): its delegated-run TDD, artifact and tool-use grades were n/a (not observable), so those cells compare as n/a'];
+}
+
+/** Informational metrics (D-2) shown per run when the candidate is worse than the baseline by more than 1 sd (REQ-010 S2). */
+export const PER_RUN_METRICS = ['tokens_total', 'cost_usd', 'wall_time_s'];
+
+function outliers(baseline, candidate) {
+  const out = [];
+  for (const [cs, c] of Object.entries(candidate.cases ?? {}).sort()) {
+    const b = baseline.cases?.[cs];
+    if (!b || !Array.isArray(c.runs)) continue;
+    for (const m of PER_RUN_METRICS) {
+      if (!isStat(b[m]) || !isStat(c[m]) || !(c[m].mean - b[m].mean > b[m].stdev)) continue;
+      out.push({ case: cs, metric: m, baseline: b[m], values: c.runs.map((r) => r[m] ?? null) });
+    }
+  }
+  return out;
 }
 
 const signed = (d) => (typeof d === 'number' && d > 0 ? `+${d}` : String(d));
@@ -73,6 +98,17 @@ export function formatTable(rows, { markdown = false } = {}) {
   const lines = rows.map((r) => HEADER.map((h) => (h === 'delta' ? signed(r.delta) : String(r[h] ?? ''))));
   if (markdown) return [HEADER, HEADER.map(() => '---'), ...lines].map((c) => `| ${c.join(' | ')} |`).join('\n');
   return [HEADER, ...lines].map((c) => c.join(' | ')).join('\n');
+}
+
+/** Table, notes and (markdown) the per-run block for informational outliers (REQ-010 S2). */
+export function formatReport(res, { markdown = false } = {}) {
+  const parts = [formatTable(res.rows, { markdown })];
+  for (const n of res.notes ?? []) parts.push(`note: ${n}`);
+  if (markdown && res.outliers?.length) {
+    parts.push(['### Per-run detail (informational metric worse than baseline by more than 1 sd)', '', '| case | metric | runs (candidate) | baseline mean (sd) |', '| --- | --- | --- | --- |',
+      ...res.outliers.map((o) => `| ${o.case} | ${o.metric} | ${o.values.join(', ')} | ${o.baseline.mean} (${o.baseline.stdev}) |`)].join('\n'));
+  }
+  return parts.join('\n\n');
 }
 
 export function main(argv = process.argv.slice(2)) {
@@ -85,7 +121,7 @@ export function main(argv = process.argv.slice(2)) {
     return res.exitCode;
   }
   for (const m of res.envMismatch) console.error(`compare: warning: ${m} (allowed)`);
-  console.log(formatTable(res.rows, { markdown: argv.includes('--markdown') }));
+  console.log(formatReport(res, { markdown: argv.includes('--markdown') }));
   console.log(`\nregressions: ${res.regressions}`);
   if (get('--json')) fs.writeFileSync(get('--json'), JSON.stringify(res, null, 2));
   return res.exitCode;

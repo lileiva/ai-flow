@@ -126,3 +126,86 @@ test('preflight (no flags) exits 3 when the claude CLI is too old and names the 
   assert.equal(res.status, 3, res.stdout + res.stderr);
   assert.match(res.stderr, /2\.1\.301/);
 });
+
+// B2b Task 3.6 (design D9): a nested-capture canary before a paid gate.
+const PROBE3 = path.join(HERE, 'fixtures', 'nested', 'probe-depth3');
+const E6 = 'mocks: memx: the harness answered 2 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)';
+const canaryScenario = (over = {}) => scenario({ traceFile: path.join(PROBE3, 'trace.jsonl'), nested: { transcriptsDir: PROBE3, sessionId: 's-probe' }, error: E6, ...over });
+
+test('the nested canary runs the probe plugin through the CLI and reports check "nested-canary" (tracer, D9)', async () => {
+  const { runNestedCanaryCheck } = await import('../preflight.mjs');
+  const sc = canaryScenario();
+  const r = await runNestedCanaryCheck({ env: stubEnv(sc) });
+  assert.equal(r.check, 'nested-canary');
+  assert.equal(r.ok, true, r.message);
+  const argv = fs.readFileSync(sc.log, 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  assert.equal(argv.length, 1);
+  assert.deepEqual(argv[0].slice(0, 2), ['plugin', 'eval']);
+  assert.equal(argv[0][argv[0].indexOf('--model') + 1], 'haiku');
+});
+
+test('the canary passes only with transcripts at depths 1, 2 and 3, the depth-3 Write merged, and W5 reconciled', async () => {
+  const { nestedCanary } = await import('../preflight.mjs');
+  const ok = await nestedCanary({ env: stubEnv(canaryScenario()) });
+  assert.deepEqual({ ok: ok.ok, depths: ok.depths, leaf_write: ok.leaf_write, run_error_class: ok.run_error_class }, { ok: true, depths: [1, 2, 3], leaf_write: true, run_error_class: 'nested_mock_accounting' });
+  const { mutateBundle } = await import('./helpers.mjs');
+  const noLeaf = await nestedCanary({ env: stubEnv(canaryScenario({ nested: { transcriptsDir: mutateBundle(PROBE3, { drop: 'leaf' }) } })) });
+  assert.equal(noLeaf.ok, false);
+  assert.match(noLeaf.reason, /depth 3/);
+  const unreconciled = await nestedCanary({ env: stubEnv(canaryScenario({ error: E6.replace('answered 2', 'answered 7') })) });
+  assert.equal(unreconciled.ok, false);
+  assert.match(unreconciled.reason, /W5/);
+});
+
+test('no transcripts from the CLI: the canary fails with guidance', async () => {
+  const { runNestedCanaryCheck } = await import('../preflight.mjs');
+  const r = await runNestedCanaryCheck({ env: stubEnv(canaryScenario({ nested: undefined })) });
+  assert.equal(r.ok, false);
+  assert.match(r.message, /no subagent transcripts/);
+  assert.match(r.message, /--skip-nested-canary/);
+});
+
+// B2b rework: the first alpha.2 gate attempt exited 3 because the haiku outer agent did not launch the middle one
+// (found depths 1). The canary retries once with a fresh run before failing, and records every attempt.
+const seqCanary = (results) => { let i = 0; const calls = []; return { calls, canary: async (args) => { calls.push(args); return results[i++]; } }; };
+const PASS = { ok: true, reason: null, depths: [1, 2, 3], leaf_write: true, run_error_class: null, costUsd: 0.01 };
+const FAIL = { ok: false, reason: 'no transcript at depth 2, 3 (found depths 1)', depths: [1], leaf_write: false, run_error_class: null, costUsd: 0.01 };
+
+test('the nested canary retries once after a failure: fail then pass is ok, with both attempts recorded', async () => {
+  const { runNestedCanaryCheck } = await import('../preflight.mjs');
+  const s = seqCanary([FAIL, PASS]);
+  const r = await runNestedCanaryCheck({ env: {}, canary: s.canary });
+  assert.equal(s.calls.length, 2);
+  assert.equal(r.ok, true, r.message);
+  assert.deepEqual(r.attempts.map((a) => ({ ok: a.ok, reason: a.reason })), [{ ok: false, reason: FAIL.reason }, { ok: true, reason: null }]);
+  assert.match(r.message, /attempt 2 of 2/);
+  assert.match(r.message, /found depths 1/);
+});
+
+test('the nested canary fails after two failed attempts and records both; a first pass does not retry', async () => {
+  const { runNestedCanaryCheck } = await import('../preflight.mjs');
+  const s = seqCanary([FAIL, { ...FAIL, reason: 'the depth-3 Write is not in the merged stream' }]);
+  const r = await runNestedCanaryCheck({ env: {}, canary: s.canary });
+  assert.equal(s.calls.length, 2);
+  assert.equal(r.ok, false);
+  assert.equal(r.attempts.length, 2);
+  assert.match(r.message, /2 attempts/);
+  assert.match(r.message, /depth-3 Write/);
+  assert.match(r.message, /--skip-nested-canary/);
+  const once = seqCanary([PASS, FAIL]);
+  const r1 = await runNestedCanaryCheck({ env: {}, canary: once.canary });
+  assert.equal(once.calls.length, 1);
+  assert.equal(r1.ok, true);
+  assert.equal(r1.attempts.length, 1);
+});
+
+test('the probe-nested templates are never discovered as an eval case (seeded: a plain prompt.md would be)', async () => {
+  const { discover } = await import('../lib/discover.mjs');
+  const { PLUGIN_DIR } = await import('../lib/paths.mjs');
+  assert.ok(fs.existsSync(path.join(HERE, '..', 'probe-nested', 'prompt.md.tmpl')));
+  assert.ok(!discover(PLUGIN_DIR).some((c) => c.dir.includes('probe-nested')));
+  const fake = tmpDir('aiflow-disc-');
+  fs.mkdirSync(path.join(fake, 'evals', 'tooling', 'probe-nested'), { recursive: true });
+  fs.writeFileSync(path.join(fake, 'evals', 'tooling', 'probe-nested', 'prompt.md'), '---\n---\nx');
+  assert.equal(discover(fake).length, 1, 'seeded negative: a non-.tmpl prompt.md is a case');
+});

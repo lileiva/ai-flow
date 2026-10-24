@@ -55,6 +55,29 @@ test('negative: the audit flags a check whose negative test does not exist', () 
   assert.deepEqual(missingNegatives(fake, () => "test('negative: something else', () => {});"), ["REQ-999 x: no test 'negative: nothing' in f.test.mjs"]);
 });
 
+// ---- B2b evals checks (REQ-015, REQ-017): check id -> [test file relative to the plugin root, negative test title] ----
+const B2B_CHECKS = {
+  'B2b nested-capture partial': ['evals/tooling/test/nested-capture.test.mjs', 'one transcript missing (planner): capture partial, missing names the launch, its launcher and depth, reason names planner (REQ-002 S2)'],
+  'B2b nested-capture failed': ['evals/tooling/test/nested-capture.test.mjs', 'every transcript unparseable: capture failed with a parse error reason (REQ-002 S3)'],
+  'B2b e2e stub partial': ['evals/tooling/test/run.test.mjs', 'negative: e2e stub with the planner transcript deleted reports capture partial naming planner (REQ-015 S2)'],
+  'B2b applyCapture prefix': ['evals/tooling/test/nested-capture.test.mjs', 'failed capture: tdd, artifacts and tool_use are n/a with "capture failed:" and na_cause capture (REQ-005 S1)'],
+  'B2b self_delegation': ['evals/tooling/test/tooluse.test.mjs', 'self_delegation: orchestrator (depth 1) launching ai-flow:orchestrator is counted at depth 2 (REQ-007 S2)'],
+  'B2b run_error class': ['evals/tooling/test/run-error.test.mjs', 'counts that do not reconcile (5 reported, 2 found): unexplained with a reason, failure_reason stays run-error (REQ-008 S2)'],
+  'B2b W5 truncated mock input': ['evals/tooling/test/run-error.test.mjs', 'negative: a truncated string input that is not a prefix of any transcript call stays unexplained'],
+  'B2b regrade run_error': ['evals/tooling/test/regrade.test.mjs', 'negative: regrade of a W5 error that does not reconcile (5 reported) stays unexplained with failure_reason run-error; a clean run keeps run_error null'],
+  'B2b promote partial guard': ['evals/tooling/test/promote.test.mjs', 'one run with partial capture is refused naming the case and run (REQ-011 S4, R3)'],
+  'B2b promote version guard': ['evals/tooling/test/promote.test.mjs', 'version mismatch: --plugin-ref v3.4.0 with label v4.0.0-alpha.2 is refused naming the version (REQ-011 S2)'],
+  'B2b promote drift guard': ['evals/tooling/test/promote.test.mjs', 'behaviour drift at the SHA is refused naming both hashes (REQ-011 S3)'],
+  'B2b raw budget': ['evals/tooling/test/promote.test.mjs', 'the raw dir stays within the 1 MB budget and holds no home path, email or session_context; a 2 MB metrics set is refused (REQ-016 S1, R4)'],
+  'B2b runtime-frozen': ['tests/structure/runtime-frozen.test.mjs', 'negative: a changed agent file moves behavior_hash away from the pinned alpha.2 hash'],
+  'B2b nested-canary': ['evals/tooling/test/preflight.test.mjs', 'no transcripts from the CLI: the canary fails with guidance'],
+  'B2b per-run outlier block': ['evals/tooling/test/compare.test.mjs', 'case d tokens more than 1 sd worse, driven by one run: the markdown lists its 3 per-run token values (REQ-010 S2)'],
+};
+
+test('every B2b evals check has a declared negative test (REQ-015)', () => {
+  assert.deepEqual(missingNegatives(B2B_CHECKS, (file) => fs.readFileSync(path.join(PLUGIN_ROOT, file), 'utf8')), []);
+});
+
 // ---- main untouched (REQ-022 S2) ----
 const git = (...args) => spawnSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8' });
 const B2_BASE = 'da103ba'; // v4/b2-hygiene was cut from v4/b1-evals here

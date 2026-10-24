@@ -107,5 +107,64 @@ test('metric directions live in config: rate metrics are higher-is-better, cost/
 test('summary.session_start.as_shipped comes from the runs (first non-harness run)', () => {
   const ss = { session_start: { hook_outcome: 'error', exit_code: 126, stdout_chars: 0, injected_tokens_est: 0 } };
   const s = summarize([run(0, 1, true, { harness_error: true }), run(1, 1, true, ss)], META);
-  assert.deepEqual(s.session_start, { as_shipped: { hook_outcome: 'error', exit_code: 126, injected_tokens: 0 } });
+  assert.deepEqual(s.session_start, { as_shipped: { hook_outcome: 'error', exit_code: 126, injected_tokens: 0, injected_tokens_est_chars4: 0 } }); // B2b REQ-009: estimate labelled
+});
+
+// B2b Task 3.1 (REQ-002 S4, REQ-008 S4, REQ-010 S1, REQ-005, REQ-007; TG2).
+const capture = (status) => ({ status, expected: 2, captured: status === 'complete' ? 2 : 1, missing: [], orphans: [], inconsistent: [], reason: null });
+
+test('summarize on a new-format run reports cases.a.nested_capture (tracer)', () => {
+  const s = summarize([run(0, 100, true, { nested_capture: capture('complete') })], META);
+  assert.equal(s.cases.a.nested_capture.complete, 1);
+});
+
+const newRun = (i, status, extra = {}) => run(i, 100 * (i + 1), true, {
+  cli: { costUsd: i + 0.5, durationSeconds: 60 + i },
+  nested_capture: capture(status),
+  agent_tree: [{ tool_use_id: 'o', agent: 'ai-flow:orchestrator', depth: 1, launched_by: 'main' }, { tool_use_id: 'p', agent: 'ai-flow:planner', depth: 2, launched_by: 'o' }],
+  per_phase: { 'ai-flow:planner': { tokens_total: 10 }, main: { tokens_total: 5 } },
+  per_agent_tokens_transcript: { 'ai-flow:planner': 40 + i, main: 5 },
+  tool_use: { subagent_ask: { total: 0, by_agent: {} }, readonly_writes: { total: 0, by_agent: {} }, unknown_attribution: 0, self_delegation: { count: i, launches: [] } },
+  run_error: null,
+  ...extra,
+});
+
+test('nested_capture counts per case: complete, complete, partial (REQ-002 S4)', () => {
+  const s = summarize([newRun(0, 'complete'), newRun(1, 'complete'), newRun(2, 'partial')], META);
+  assert.deepEqual(s.cases.a.nested_capture, { complete: 2, partial: 1, failed: 0, not_applicable: 0 });
+});
+
+test('run_errors counts per class (REQ-008 S4)', () => {
+  const err = (cls) => ({ run_error: { message: 'm', class: cls, details: null, reason: null } });
+  const s = summarize([newRun(0, 'complete', err('nested_mock_accounting')), newRun(1, 'complete', err('nested_mock_accounting')), newRun(2, 'complete', err('unexplained'))], META);
+  assert.deepEqual(s.cases.a.run_errors, { nested_mock_accounting: 2, unexplained: 1 });
+});
+
+test('na_capture counts capture-caused n/a per grader, apart from intrinsic n/a (REQ-005)', () => {
+  const capNa = { applicable: false, pass: null, ratio: null, reason: 'capture failed: x', na_cause: 'capture' };
+  const s = summarize([
+    newRun(0, 'failed', { tdd: capNa, artifacts: { applicable: false, score: null, missing: [], na_cause: 'capture' }, tool_use: { subagent_ask: { total: 0, by_agent: {} }, readonly_writes: { total: 0, by_agent: {} }, unknown_attribution: 0, applicable: false, na_cause: 'capture', self_delegation: 'n/a' } }),
+    newRun(1, 'complete', { tdd: { applicable: false, pass: null, ratio: null, reason: 'no implementation changes', na_cause: 'intrinsic' } }),
+  ], META);
+  assert.deepEqual(s.cases.a.na_capture, { tdd: 1, artifacts: 1, tool_use: 1 });
+});
+
+test('runs[] lists every run with its informational values and capture status (REQ-010 S1, TG2)', () => {
+  const s = summarize([newRun(0, 'complete'), newRun(1, 'complete', { retried: 1 }), newRun(2, 'partial', { run_error: { message: 'm', class: 'unexplained', details: null, reason: 'r' } })], META);
+  assert.equal(s.cases.a.runs.length, 3);
+  assert.deepEqual(s.cases.a.runs[2], { run_index: 2, harness_error: false, tokens_total: 300, cost_usd: 2.5, wall_time_s: 62, per_agent_tokens: { 'ai-flow:planner': 10, main: 5 }, per_agent_tokens_transcript: { 'ai-flow:planner': 42, main: 5 }, max_depth: 2, agents_launched: 2, nested_capture: 'partial', run_error_class: 'unexplained', retried: 0 });
+  assert.equal(s.cases.a.runs[1].retried, 1);
+  assert.deepEqual(s.cases.a.per_agent_tokens_transcript['ai-flow:planner'], { mean: 41, stdev: 1 });
+});
+
+test('self_delegation per case: mean of the counts; n/a runs excluded (REQ-007)', () => {
+  const s = summarize([newRun(0, 'complete'), newRun(1, 'complete'), newRun(2, 'complete')], META);
+  assert.deepEqual(s.cases.a.self_delegation, { mean: 1, stdev: 1, n_applicable: 3 });
+});
+
+test('a new-format summary validates against the schema; old-format runs get none of the B2b fields', () => {
+  const s = summarize([newRun(0, 'complete'), newRun(1, 'partial')], META);
+  assert.deepEqual(validate(SUMMARY_SCHEMA, s), []);
+  const old = summarize([run(0, 100, true)], META);
+  for (const k of ['nested_capture', 'run_errors', 'na_capture', 'self_delegation', 'runs', 'per_agent_tokens_transcript']) assert.ok(!(k in old.cases.a), k);
 });

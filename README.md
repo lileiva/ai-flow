@@ -221,6 +221,15 @@ plugins/ai-flow/
   evals/                     # Offline-graded eval suite (see Evals)
 ```
 
+### Tests
+
+```bash
+node plugins/ai-flow/evals/tooling/prepare.mjs   # once (network): builds .eval-cache/ at the repo root
+bash plugins/ai-flow/tests/run.sh                # validate + structure + evals tooling, offline
+```
+
+Run `prepare.mjs` first. Without `.eval-cache/`, about 47 evals tooling tests skip and a few fail. `run.sh` then prints a note naming `prepare.mjs`, and the run can miss its executed-test floor (`MIN_EXECUTED`). The last line is always `executed: N passed: P failed: F`.
+
 ## Evals
 
 AI-Flow ships an offline-graded eval suite under `plugins/ai-flow/evals/` (since 4.0.0-alpha.1). It runs 5 cases through `claude plugin eval`, grades every run from its trace and workspace, and compares the result with a recorded baseline. The suite measures outcomes (hidden acceptance tests), TDD adherence, phase order, artifact completeness, tokens per phase, cost and wall time. Full details are in [`plugins/ai-flow/evals/README.md`](plugins/ai-flow/evals/README.md).

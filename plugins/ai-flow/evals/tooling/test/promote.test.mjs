@@ -144,3 +144,123 @@ test('promote scrubs local paths (home, macOS temp folders, claude-<uid>) from t
     assert.match(text, /\/tmp\/aiflow-eval-1\/plugins\/ai-flow/);
   }
 });
+
+// B2b Task 3.4 (REQ-011 S1-S5, REQ-009 S3/S4, REQ-016 S1; design D8, D13): alpha labels at SHA refs, raw nested-index.
+import { promoteGuards, RAW_BUDGET_BYTES } from '../promote.mjs';
+
+const GATE = '8029d9b';
+const ALPHA = 'v4.0.0-alpha.2';
+const ALPHA_HASH = 'a8db88f8f89b8ab7d8b3c6affcde3d771a97eeb033f08b2bbec9f6589bf64440';
+const alphaSummary = () => { const s = ok(); s.meta = { ...s.meta, plugin_version: '4.0.0-alpha.2', plugin_ref: GATE, plugin_sha: '8029d9b0', behavior_hash: ALPHA_HASH }; return s; };
+
+function resultsWithNested() {
+  const results = tmpDir('aiflow-results-');
+  fs.mkdirSync(path.join(results, 'runs'));
+  fs.writeFileSync(path.join(results, 'aggregate-result.json'), JSON.stringify({ cases: [] }));
+  const tree = [{ tool_use_id: 'o', agent: 'ai-flow:orchestrator', depth: 1, launched_by: 'main', source: 'transcript' }, { tool_use_id: 'p', agent: 'ai-flow:planner', depth: 2, launched_by: 'o', source: 'transcript' }];
+  for (const i of [0, 1, 2]) {
+    fs.writeFileSync(path.join(results, 'runs', `a-${i}.json`), JSON.stringify({ case: 'a-e2e', run_index: i, nested_capture: { status: 'complete', expected: 2, captured: 2, missing: [] }, agent_tree: tree, per_agent_tokens_transcript: { 'ai-flow:planner': 10, main: 1 }, tool_use: { self_delegation: { count: 0, launches: [] } }, error_raw: 'session_context for someone@example.invalid' }));
+    const b = path.join(results, 'traces', `a-${i}`, 'subagents');
+    fs.mkdirSync(b, { recursive: true });
+    fs.writeFileSync(path.join(b, 'agent-x.jsonl'), '{"type":"user"}\n');
+  }
+  return results;
+}
+
+test('a SHA ref with label v4.0.0-alpha.2, matching version and hash: baseline + raw {metrics.jsonl, aggregate, nested-index.jsonl, README} with label/ref/sha/hash in meta (REQ-011 S1)', () => {
+  const s = alphaSummary(); s.meta.results_dir = resultsWithNested();
+  const outDir = tmpDir('aiflow-promote-');
+  const file = promote(s, { version: ALPHA, outDir, expectedBehaviorHash: ALPHA_HASH });
+  assert.equal(file, path.join(outDir, `${ALPHA}-sonnet.json`));
+  const b = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.deepEqual([b.meta.label, b.meta.plugin_ref, b.meta.plugin_sha, b.meta.behavior_hash], [ALPHA, GATE, '8029d9b0', ALPHA_HASH]);
+  const raw = path.join(outDir, 'raw', `${ALPHA}-sonnet`);
+  assert.deepEqual(fs.readdirSync(raw).sort(), ['README.md', 'aggregate-result.json', 'metrics.jsonl', 'nested-index.jsonl']);
+  const idx = fs.readFileSync(path.join(raw, 'nested-index.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  assert.equal(idx.length, 3);
+  assert.deepEqual(Object.keys(idx[0]).sort(), ['agents', 'bundle_sha256', 'case', 'max_depth', 'nested_capture', 'per_agent_tokens_transcript', 'run_index', 'self_delegation']);
+  assert.deepEqual(idx[0].agents[1], { agent: 'ai-flow:planner', depth: 2, launched_by: 'o', source: 'transcript' });
+  assert.match(idx[0].bundle_sha256, /^[0-9a-f]{64}$/);
+});
+
+test('version mismatch: --plugin-ref v3.4.0 with label v4.0.0-alpha.2 is refused naming the version (REQ-011 S2)', () => {
+  assert.throws(() => promote(ok(), { version: ALPHA, outDir: tmpDir('aiflow-promote-'), expectedBehaviorHash: 'HASH-AT-v3.4.0' }), /plugin\.json version at v3\.4\.0 is 3\.4\.0, not 4\.0\.0-alpha\.2/);
+});
+
+test('behaviour drift at the SHA is refused naming both hashes (REQ-011 S3)', () => {
+  const s = alphaSummary(); s.meta.behavior_hash = 'drifted';
+  assert.throws(() => promote(s, { version: ALPHA, outDir: tmpDir('aiflow-promote-'), expectedBehaviorHash: ALPHA_HASH }), new RegExp(`behavior_hash drifted differs from ${GATE} \\(${ALPHA_HASH}\\)`));
+});
+
+test('one run with partial capture is refused naming the case and run (REQ-011 S4, R3)', () => {
+  const s = alphaSummary();
+  s.cases.a.nested_capture = { complete: 2, partial: 1, failed: 0, not_applicable: 0 };
+  s.cases.a.runs = [0, 1, 2].map((i) => ({ run_index: i, harness_error: false, tokens_total: 1, cost_usd: 1, wall_time_s: 1, nested_capture: i === 1 ? 'partial' : 'complete' }));
+  assert.throws(() => promote(s, { version: ALPHA, outDir: tmpDir('aiflow-promote-'), expectedBehaviorHash: ALPHA_HASH }), /case a run 1: nested capture partial/);
+});
+
+test('session_start.measured missing or failed is refused naming session_start (REQ-009 S3)', () => {
+  const none = alphaSummary(); delete none.session_start.measured;
+  assert.ok(promoteGuards(none, { version: ALPHA, expectedBehaviorHash: ALPHA_HASH }).some((r) => /session_start\.measured/.test(r)));
+  const err = alphaSummary(); err.session_start.measured = { error: 'variant full left no trace' };
+  assert.ok(promoteGuards(err, { version: ALPHA, expectedBehaviorHash: ALPHA_HASH }).some((r) => /session_start\.measured.*variant full left no trace/.test(r)));
+});
+
+test('v3.4.0 back-compat: --plugin-ref v3.4.0 --promote v3.4.0 passes the guards (REQ-011 S5)', () => {
+  assert.deepEqual(promoteGuards(ok(), { version: 'v3.4.0', expectedBehaviorHash: 'HASH-AT-v3.4.0' }), []);
+});
+
+test('a label that is not v<semver> is refused ("4.0.0", "vX")', () => {
+  for (const bad of ['4.0.0', 'vX']) assert.ok(promoteGuards(alphaSummary(), { version: bad, expectedBehaviorHash: ALPHA_HASH }).some((r) => /label/.test(r)), bad);
+});
+
+test('baseline.session_start.measured.as_shipped.input_delta_tokens equals the summary value (REQ-009 S4)', () => {
+  const s = alphaSummary(); s.session_start.measured.as_shipped.input_delta_tokens = 2890;
+  const b = JSON.parse(fs.readFileSync(promote(s, { version: ALPHA, outDir: tmpDir('aiflow-promote-'), expectedBehaviorHash: ALPHA_HASH }), 'utf8'));
+  assert.equal(b.session_start.measured.as_shipped.input_delta_tokens, 2890);
+});
+
+test('the raw dir stays within the 1 MB budget and holds no home path, email or session_context; a 2 MB metrics set is refused (REQ-016 S1, R4)', () => {
+  const s = alphaSummary(); s.meta.results_dir = resultsWithNested();
+  const outDir = tmpDir('aiflow-promote-');
+  promote(s, { version: ALPHA, outDir, expectedBehaviorHash: ALPHA_HASH });
+  const raw = path.join(outDir, 'raw', `${ALPHA}-sonnet`);
+  const files = fs.readdirSync(raw);
+  assert.ok(files.reduce((n, f) => n + fs.statSync(path.join(raw, f)).size, 0) <= RAW_BUDGET_BYTES);
+  for (const f of files) {
+    const t = fs.readFileSync(path.join(raw, f), 'utf8');
+    assert.ok(!/\/Users\/|@example\.invalid|session_context/.test(t), f);
+  }
+  const big = alphaSummary(); big.meta.results_dir = resultsWithNested();
+  fs.writeFileSync(path.join(big.meta.results_dir, 'runs', 'a-3.json'), JSON.stringify({ case: 'a', run_index: 3, pad: 'x'.repeat(2 * 1024 * 1024) }));
+  const out2 = tmpDir('aiflow-promote-');
+  assert.throws(() => promote(big, { version: ALPHA, outDir: out2, expectedBehaviorHash: ALPHA_HASH }), /over the 1 MB raw budget/);
+  assert.equal(fs.existsSync(path.join(out2, `${ALPHA}-sonnet.json`)), false, 'nothing is left behind');
+  assert.equal(fs.existsSync(path.join(out2, 'raw', `${ALPHA}-sonnet`)), false);
+});
+
+// B2b rework: promote from a $0 regrade dir. metrics.jsonl comes from the regraded runs (results_dir); the CLI's
+// aggregate-result.json and the bundle hashes come from the source gate dir (regraded_from); no local path in meta.
+test('promote from a regrade: metrics.jsonl from the regraded runs, aggregate and bundle hashes from regraded_from, regrade meta kept without local paths', () => {
+  const source = resultsWithNested();
+  const regraded = tmpDir('aiflow-regraded-');
+  fs.mkdirSync(path.join(regraded, 'runs'));
+  for (const f of fs.readdirSync(path.join(source, 'runs'))) {
+    const r = JSON.parse(fs.readFileSync(path.join(source, 'runs', f), 'utf8'));
+    fs.writeFileSync(path.join(regraded, 'runs', f), JSON.stringify({ ...r, tdd: { marker: 'regraded' } }));
+  }
+  const s = alphaSummary();
+  s.meta = { ...s.meta, results_dir: regraded, regraded_from: source, regraded_at: '2026-10-23T20:00:00.000Z', regrade_reason: 'W5 fix' };
+  const outDir = tmpDir('aiflow-promote-');
+  const b = JSON.parse(fs.readFileSync(promote(s, { version: ALPHA, outDir, expectedBehaviorHash: ALPHA_HASH }), 'utf8'));
+  assert.equal(b.meta.regraded_at, '2026-10-23T20:00:00.000Z');
+  assert.equal(b.meta.regrade_reason, 'W5 fix');
+  assert.equal(b.meta.regraded_from, path.basename(source));
+  assert.ok(!JSON.stringify(b.meta).includes(os.tmpdir()), JSON.stringify(b.meta));
+  const raw = path.join(outDir, 'raw', `${ALPHA}-sonnet`);
+  const metrics = fs.readFileSync(path.join(raw, 'metrics.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  assert.deepEqual(metrics.map((m) => m.tdd.marker), ['regraded', 'regraded', 'regraded']);
+  assert.ok(fs.existsSync(path.join(raw, 'aggregate-result.json')));
+  const idx = fs.readFileSync(path.join(raw, 'nested-index.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  for (const l of idx) assert.match(l.bundle_sha256 ?? '', /^[0-9a-f]{64}$/);
+});

@@ -11,8 +11,12 @@ import { CACHE_DIR, EVALS_DIR, TOOLING_DIR } from './lib/paths.mjs';
 import { utilizationWarning } from './lib/ratelimit.mjs';
 import { resolveNode26, sandboxNodeStrategy } from './lib/node-runtime.mjs';
 import { loadConfig } from './lib/config.mjs';
+import { loadKept, mergeNested, reconcileMocks } from './lib/nested.mjs';
+import { parseTrace } from './lib/trace.mjs';
+import { classifyRunError } from './lib/classify.mjs';
 
 const PROBE_TEMPLATES = path.join(TOOLING_DIR, 'probe');
+const NESTED_TEMPLATES = path.join(TOOLING_DIR, 'probe-nested');
 
 export const NODE_REMEDIES = `Node 26 is not usable inside the eval sandbox. Remedies, in order (nvm Node 26 only; no other installs):
   R1 sandbox read-allow: grant the eval run read access to the Node 26 install.
@@ -123,6 +127,87 @@ export async function probeSandboxNode({ env = process.env, strategy = { name: '
     result.tracePath = run?.tracePath;
   }
   return result;
+}
+
+/** Where each probe-nested template goes in the materialized plugin (the .tmpl suffix is dropped). */
+const NESTED_LAYOUT = {
+  'plugin.json.tmpl': '.claude-plugin/plugin.json',
+  'agents/outer.md.tmpl': 'agents/outer.md', 'agents/middle.md.tmpl': 'agents/middle.md', 'agents/leaf.md.tmpl': 'agents/leaf.md',
+  'prompt.md.tmpl': 'evals/nest/prompt.md', 'graders/ran.md.tmpl': 'evals/nest/graders/ran.md',
+  'mocks/memx/_server.md.tmpl': 'evals/mocks/memx/_server.md', 'mocks/memx/_tools.json.tmpl': 'evals/mocks/memx/_tools.json',
+};
+
+/** Materialize tooling/probe-nested into a temp plugin dir (B2b D9). */
+export function materializeNestedProbe() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aiflow-nested-probe-'));
+  for (const [src, dest] of Object.entries(NESTED_LAYOUT)) {
+    fs.mkdirSync(path.dirname(path.join(root, dest)), { recursive: true });
+    fs.copyFileSync(path.join(NESTED_TEMPLATES, src), path.join(root, dest));
+  }
+  return root;
+}
+
+const sessionIdOf = (lines) => lines.find((o) => o.type === 'system' && o.subtype === 'init')?.session_id ?? null;
+
+/**
+ * Nested-capture canary (B2b D9; paid: one haiku run, about $0.01). Runs probe-nested and checks what a gate relies
+ * on: transcripts for depths 1, 2 and 3 under the kept config dir, the depth-3 Write in the merged stream, and the
+ * CLI's W5 mock-accounting run-error (if any) reconciled with the transcripts.
+ * Returns { ok, reason, depths, leaf_write, run_error_class, costUsd }.
+ */
+export async function nestedCanary({ env = process.env, model = 'haiku' } = {}) {
+  const pluginDir = materializeNestedProbe();
+  const outDir = path.join(pluginDir, 'results');
+  fs.mkdirSync(outDir, { recursive: true });
+  const jsonPath = path.join(outDir, 'aggregate-result.json');
+  const args = ['plugin', 'eval', pluginDir, '--model', model, '--runs', '1', '--ablation', 'none', '--trust-plugin', '--no-publish',
+    '--keep-temp', '--threshold', '0', '--output-dir', outDir, '--allow-tools', 'Agent', 'ToolSearch', 'Write', 'Bash', 'Read', '--json', jsonPath];
+  const res = await spawnClaude(args, { env });
+  let aggregate = null;
+  try { aggregate = JSON.parse(fs.readFileSync(jsonPath, 'utf8')); } catch { /* reported below */ }
+  const run = aggregate?.cases?.[0]?.arms?.with?.[0];
+  const out = { ok: false, reason: null, depths: [], leaf_write: false, run_error_class: null, costUsd: aggregate?.costUsd ?? null };
+  try {
+    if (!run?.tracePath || !fs.existsSync(run.tracePath)) return { ...out, reason: `no trace (exit ${res.status}): ${run?.error ?? (res.stderr || '').slice(-500)}` };
+    const kept = path.dirname(path.dirname(run.tracePath));
+    const raw = parseTrace(fs.readFileSync(run.tracePath, 'utf8')).lines;
+    const bundle = loadKept(kept, sessionIdOf(raw));
+    const merged = mergeNested(raw, bundle);
+    out.depths = [...new Set(bundle.agents.map((a) => a.meta.spawnDepth))].sort((a, b) => a - b);
+    out.leaf_write = merged.lines.some((l) => l.agent_depth === 3 && l.type === 'assistant' && (l.message?.content ?? []).some((c) => c.type === 'tool_use' && c.name === 'Write'));
+    if (!bundle.agents.length) return { ...out, reason: `no subagent transcripts found at ${bundle.location}` };
+    const missingDepth = [1, 2, 3].filter((d) => !out.depths.includes(d));
+    if (missingDepth.length) return { ...out, reason: `no transcript at depth ${missingDepth.join(', ')} (found depths ${out.depths.join(', ') || 'none'})` };
+    if (!out.leaf_write) return { ...out, reason: 'the depth-3 Write is not in the merged stream' };
+    if (run.error) {
+      const re = classifyRunError(run.error, { nested_capture: merged.capture, mock_accounting: reconcileMocks(raw, merged.lines, { mockCalls: bundle.mockCalls, mockCallsFile: bundle.mock_calls_file }) });
+      out.run_error_class = re.class;
+      if (re.class !== 'nested_mock_accounting') return { ...out, reason: `W5 run-error not reconciled: ${re.reason}` };
+    }
+    return { ...out, ok: true };
+  } finally {
+    if (run?.tracePath) removeKeptTemp(path.dirname(path.dirname(run.tracePath)));
+    fs.rmSync(pluginDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The canary as a preflight check: { check: 'nested-canary', ok, message, result, attempts }. A failed attempt is
+ * retried once with a fresh run (the haiku outer agent occasionally does not launch the middle one); every attempt's
+ * { ok, reason, depths } is recorded and the message names the attempt count.
+ */
+export async function runNestedCanaryCheck({ env = process.env, canary = nestedCanary, maxAttempts = 2 } = {}) {
+  const attempts = [];
+  let r;
+  do {
+    r = await canary({ env });
+    attempts.push({ ok: r.ok, reason: r.reason ?? null, depths: r.depths ?? [], costUsd: r.costUsd ?? null });
+  } while (!r.ok && attempts.length < maxAttempts);
+  const earlier = attempts.slice(0, -1).map((a, i) => `attempt ${i + 1} failed: ${a.reason}`).join('; ');
+  const message = r.ok
+    ? `nested capture ok (depths ${r.depths.join(', ')}${r.run_error_class ? `, W5 ${r.run_error_class}` : ''}; attempt ${attempts.length} of ${maxAttempts}${earlier ? `; ${earlier}` : ''})`
+    : `nested capture canary failed after ${attempts.length} attempts: ${attempts.map((a, i) => `attempt ${i + 1}: ${a.reason}`).join('; ')}. The CLI may have changed where it writes subagent transcripts (expected <kept>/config/projects/<slug>/<session>/subagents/, see lib/nested.mjs keptSubagentsDir); fix that before a paid gate, or pass --skip-nested-canary to run without the check (nested capture may then be reported failed)`;
+  return { check: 'nested-canary', ok: r.ok, message, result: r, attempts };
 }
 
 export const MIN_CLAUDE = '2.1.301';
