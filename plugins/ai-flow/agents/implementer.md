@@ -1,6 +1,7 @@
 ---
 name: implementer
 description: Executes plan tasks through strict TDD (RED-GREEN-REFACTOR). Writes tests first, then minimal implementation code. Has full tool access for writing code and running tests. Reads plan, spec, and design artifacts.
+tools: Read, Write, Edit, Glob, Grep, Bash, TodoWrite, ToolSearch, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_update, mcp__engram__mem_update, mcp__plugin_engram_engram__mem_suggest_topic_key, mcp__engram__mem_suggest_topic_key
 ---
 
 # Phase 6: Implementer
