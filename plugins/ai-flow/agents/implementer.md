@@ -39,11 +39,9 @@ Design (REQUIRED):
 1. `mem_search(query: "flow/{change-name}/design", project: "{project-name}")` → get observation ID
 2. `mem_get_observation(id: {observation_id})` → read design
 
-## Batch Scoping
+## Scope
 
-The orchestrator tells you which batch to execute (e.g., "Execute Batch 0" or "Execute Batch 2"). Read the full plan but ONLY execute tasks belonging to the specified batch. Tasks are prefixed with their batch number (e.g., "Task 0.1", "Task 2.3").
-
-If no batch is specified, execute Batch 0 (the tracer bullet) only and report back. Batch 0 always runs first, before any other batch.
+Your scope is the one task in the launch prompt. Read the whole plan for context, but implement only that task, including its tracer and behavior sub-steps when it has them. Do not start other tasks; the coordinator launches one instance per task.
 
 ## Working a Task
 
@@ -61,13 +59,16 @@ Before committing, perform a two-stage check:
 
 If either check reveals issues, fix them and re-run tests before proceeding to commit.
 
-## Debugging Integration
+## Per-task loop
 
-If a test fails UNEXPECTEDLY on the way to GREEN:
-1. Do NOT immediately add more code
-2. Re-read the test and implementation
-3. If genuinely unexpected: invoke the `flow-debug` protocol
-4. If 3+ fix attempts fail: STOP and escalate to orchestrator
+1. Write the test, then run it before creating any production file, stub or export. A test that errors on a missing import is not red yet; the assertion that names the missing behaviour must be what fails.
+2. Write files with Write or Edit, and run tests in their own Bash call, so the failing output is a clean record.
+3. If a new test passes at once, prove it can fail: invert the expectation or stash the implementation, and do not edit src to force a failure.
+4. Make it green with the smallest change, run the full suite, refactor while green, then commit.
+
+## When you are stuck
+
+If a test fails unexpectedly, re-read the test and the code before adding more. After 3 failed fix attempts, stop and return status blocked with blocked_reason (what you tried, the failing output, your best hypothesis). The coordinator decides the next step; you do not launch other agents.
 
 ## Progress Tracking
 
@@ -79,15 +80,33 @@ Content: Task {batch.number}: {status}, Batch {n}: {state}, Overall: {n}/{total}
 
 ## Return Contract
 
+Return the shared envelope with status ok | partial | needs_input | blocked | error. Put the TDD record in `evidence.tdd_evidence`:
+
 ```json
 {
-  "status": "ok | warning | blocked | failed",
-  "executive_summary": "Batch {n} complete: {n}/{n} tasks done. All tests passing.",
+  "status": "ok",
+  "executive_summary": "Task {id} done: tests passing.",
   "artifacts": [{"name": "apply-progress", "topic_key": "flow/{change-name}/apply-progress"}],
-  "next_recommended": ["flow-apply (next batch)" | "flow-verify"],
-  "risks": ["any concerns or near-misses"]
+  "next_recommended": ["next task" | "flow-verify"],
+  "risks": [],
+  "evidence": {
+    "tdd_evidence": {
+      "task": "0.4",
+      "mode": "tdd | n/a",
+      "test_files": ["path/to/test"],
+      "red": {"command": "...", "failing": "the failing assertion line", "after_test_write": true},
+      "red_before_impl": true,
+      "green": {"summary": "N/N pass"},
+      "na_reason": "only when mode is n/a",
+      "verify_command": "only when mode is n/a"
+    }
+  }
 }
 ```
+
+Fields: task, mode, test_files, red.command, red.failing, red.after_test_write, red_before_impl, green.summary, na_reason, verify_command.
+
+When mode is n/a, give na_reason and verify_command instead of the red and green records. When status is blocked, add blocked_reason. If you need a decision from the user, return open_questions and do not ask the user yourself.
 
 ## Ecosystem Enhancement
 

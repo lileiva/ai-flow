@@ -695,10 +695,10 @@ test('flow-apply and flow-debug carry no TDD step list', () => {
   }
 });
 
-test('implementer keeps its role mechanics: batch scoping, tracer sub-steps, commit format, self-review, progress tracking', () => {
+test('implementer keeps its role mechanics: task scope, tracer sub-steps, commit format, self-review, progress tracking', () => {
   const impl = read('agents/implementer.md');
-  assert.deepEqual(missingHeadings(impl, [/Batch Scoping/, /Self-Review/i, /Progress Tracking/]), []);
-  assert.deepEqual(missingMentions(impl, [/tracer sub-step/i, /\(REQ-\{id\}, Scenario \{n\}\)/, /Batch 0[^.\n]*first|first[^.\n]*Batch 0/i]), []);
+  assert.deepEqual(missingHeadings(impl, [/^Scope$/, /Self-Review/i, /Progress Tracking/]), []);
+  assert.deepEqual(missingMentions(impl, [/tracer sub-step/i, /\(REQ-\{id\}, Scenario \{n\}\)/]), []);
 });
 
 // ---- planner TDD rule agrees with guide §10/§12 (TDD n/a for docs/config/prompt-only/mechanical tasks) ----
