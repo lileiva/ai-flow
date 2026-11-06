@@ -183,13 +183,7 @@ Dependencies between phases: spec and design can run in parallel (both depend on
 
 **`/ai-flow:flow-plan`**: launch the planner agent with the change name and project name; it reads spec and design from engram. **Human gate:** present the plan summary and ask the user to approve before apply.
 
-**`/ai-flow:flow-apply`**: launch implementer agents in batches.
-- Batch 0 (tracer bullet) runs first, alone.
-- Wait for human feedback after the tracer bullet.
-- Then execute the remaining batches.
-- Each agent reads plan, spec, and design from engram.
-- After each batch, update the user on progress.
-- After the final batch completes, launch the verify phase automatically; verification follows apply without a request from the user.
+**`/ai-flow:flow-apply`**: follow "Coordinating apply" below. Launch one implementer per task, not per batch.
 
 Workspace isolation: before launching the first apply batch, consider suggesting a git worktree to keep the main workspace clean during implementation. If `superpowers:using-git-worktrees` is available, reference that skill. Otherwise, suggest `git worktree add ../worktree-{change-name} -b apply/{change-name}` as a one-liner. This is optional. If the user declines or does not respond, proceed normally.
 
@@ -208,6 +202,12 @@ Workspace isolation: before launching the first apply batch, consider suggesting
 3. Launch the corresponding agent.
 
 **`/ai-flow:flow-debug`**: launch the debugger agent. It can run at any time and is not tied to the DAG.
+
+### Coordinating apply
+
+Apply runs one implementer instance per task, each launched fresh from the plan. A fresh instance keeps its context small and its test-first evidence checkable.
+
+Launch with the Agent tool: `subagent_type` `ai-flow:implementer`, `model` sonnet, `effort` medium. Raise to opus with effort high after a blocked return or an evidence miss, and never go below sonnet. A user instruction about model or effort overrides these defaults.
 
 ### Sub-Agent Launch Template
 

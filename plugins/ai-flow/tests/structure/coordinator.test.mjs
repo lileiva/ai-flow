@@ -56,3 +56,23 @@ test('negative: a copy that launches the orchestrator agent is flagged', () => {
   const bad = `${read(USING)}\nTo start, launch the orchestrator agent.\n`;
   assert.deepEqual(coordinatorRoleProblems(bad), ['launches the orchestrator agent']);
 });
+
+// Task 0.6: coordinating apply (REQ-003 S2, REQ-009 S2/S3, design D-4, D-8).
+/** The "Coordinating apply" section of using-ai-flow, up to the next heading of the same or higher level. */
+export function applySection(text) {
+  const m = text.match(/^(#{1,6})\s+Coordinating apply\s*$/m);
+  if (!m) return '';
+  const rest = text.slice(m.index + m[0].length);
+  const next = rest.search(new RegExp(`^#{1,${m[1].length}}\\s`, 'm'));
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+test('apply launch carries subagent_type ai-flow:implementer, model and effort', () => {
+  const s = applySection(read(USING));
+  assert.match(s, /subagent_type[^\n]*ai-flow:implementer/);
+  assert.match(s, /model[^\n]*sonnet/i);
+  assert.match(s, /effort[^\n]*medium/i);
+  assert.match(s, /opus/);
+  assert.match(s, /never[^\n]*below sonnet/i);
+  assert.match(s, /one (implementer )?instance per task/i);
+});
