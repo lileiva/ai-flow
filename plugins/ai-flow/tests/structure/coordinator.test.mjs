@@ -127,3 +127,38 @@ test('flow-apply has disable-model-invocation: true (REQ-008 S1)', () => {
   const { data } = parseFrontmatter(read(FLOW_APPLY));
   assert.equal(String(data['disable-model-invocation']), 'true');
 });
+
+const norm = (l) => l.toLowerCase().replace(/^\s*(\d+\.|[-*])\s*/, '').replace(/\s+/g, ' ').trim();
+
+/** Problems with a thin phase skill body (REQ-018 S1, REQ-008 S1). `agentText` is the agent file it must not duplicate. */
+export function thinSkillProblems(text, agentText) {
+  const { body } = parseFrontmatter(text);
+  const lines = body.split('\n').filter((l) => l.trim());
+  const p = [];
+  if (lines.length > 8) p.push(`body has ${lines.length} non-empty lines, over 8`);
+  if (!body.includes('ai-flow:using-ai-flow')) p.push('does not name ai-flow:using-ai-flow');
+  if (!/Coordinating apply/.test(body)) p.push('does not name the Coordinating apply section');
+  if (/orchestrator\s+MUST/i.test(body)) p.push('orchestrator MUST wording');
+  if (/OpenSpace/i.test(body)) p.push('OpenSpace block');
+  const agentLines = new Set(agentText.split('\n').map(norm).filter((l) => l.length > 20));
+  const shared = lines.map(norm).filter((l) => l.length > 20 && agentLines.has(l));
+  if (shared.length >= 4) p.push(`shares ${shared.length} lines with the agent`);
+  if (/Read and follow/i.test(body)) p.push('Read and follow wording');
+  return p;
+}
+
+test('flow-apply is a thin entry point (REQ-018 S1, REQ-008 S1)', () => {
+  assert.deepEqual(thinSkillProblems(read(FLOW_APPLY), read('agents/implementer.md')), []);
+});
+
+test('negative: a fat flow-apply with OpenSpace and orchestrator MUST is flagged', () => {
+  const bad = `---\nname: x\n---\n${Array.from({ length: 9 }, (_, i) => `line ${i}`).join('\n')}\nThe orchestrator MUST auto-launch verify.\n## OpenSpace Integration\nRead and follow the agent.\n`;
+  const p = thinSkillProblems(bad, '');
+  for (const re of [/over 8/, /using-ai-flow/, /Coordinating apply/, /orchestrator MUST/, /OpenSpace/, /Read and follow/]) assert.ok(p.some((x) => re.test(x)), String(re));
+});
+
+test('negative: a skill that copies four implementer lines is flagged', () => {
+  const agent = ['Read plan, spec and design from engram first', 'Execute each task test-first following the guide', 'Track progress in engram under the apply key', 'Return the evidence block with the envelope'].join('\n');
+  const bad = `---\nname: x\n---\nai-flow:using-ai-flow Coordinating apply\n${agent.split('\n').map((l, i) => `${i + 1}. ${l}`).join('\n')}\n`;
+  assert.ok(thinSkillProblems(bad, agent).some((x) => /shares 4 lines/.test(x)));
+});

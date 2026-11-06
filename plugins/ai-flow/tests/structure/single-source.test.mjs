@@ -162,6 +162,8 @@ test('phase map loads: 10 flow-* skills, each mapped to an existing agent', () =
 });
 
 const SKILL_AGENT = loadPhaseMap();
+// Thin user-only entry points (B4 D-2): the protocol lives in using-ai-flow; coordinator.test.mjs guards these.
+const MIGRATED = new Set(['flow-apply']);
 
 test('every flow-* skill has a mapped agent', () => {
   assert.deepEqual(phaseSkills.filter((s) => !SKILL_AGENT[s]), []);
@@ -176,7 +178,7 @@ function guardViolation(skillText, agent) {
   return null;
 }
 
-for (const skill of phaseSkills) {
+for (const skill of phaseSkills.filter((s) => !MIGRATED.has(s))) {
   const agent = SKILL_AGENT[skill];
   test(`phase skill opens with a self-delegation guard: ${skill} (ai-flow:${agent})`, () => {
     assert.equal(guardViolation(read(`skills/${skill}/SKILL.md`), agent), null);
@@ -192,7 +194,7 @@ test('negative: a phase skill without the guard (or with a guard for another age
   assert.match(guardViolation('---\nname: flow-x\n---\nIf you are the `ai-flow:x` agent, ignore this skill.\n', 'x'), /does not forbid/);
 });
 
-for (const skill of ['flow-apply', 'flow-debug']) {
+for (const skill of ['flow-apply', 'flow-debug'].filter((s) => !MIGRATED.has(s))) {
   test(`TDD guide references are READ_REFs: ${skill}`, () => {
     const lines = read(`skills/${skill}/SKILL.md`).split('\n').filter((l) => l.includes('tdd-protocol.md'));
     assert.ok(lines.length > 0, 'mentions the TDD guide');
@@ -688,7 +690,7 @@ test('non-TDD superpowers references are unchanged', () => {
   assert.deepEqual(found, NON_TDD_SUPERPOWERS);
 });
 
-for (const f of ['agents/implementer.md', 'agents/debugger.md', 'agents/planner.md', 'skills/flow-apply/SKILL.md', 'skills/flow-debug/SKILL.md']) {
+for (const f of ['agents/implementer.md', 'agents/debugger.md', 'agents/planner.md', 'skills/flow-apply/SKILL.md', 'skills/flow-debug/SKILL.md'].filter((f) => !MIGRATED.has(f.split('/')[1]))) {
   test(`${f} points at the TDD guide READ_REF`, () => {
     assert.ok(read(f).includes(TDD_REF));
   });

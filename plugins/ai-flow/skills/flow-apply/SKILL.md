@@ -9,27 +9,6 @@ metadata:
   auto_invoke: "Implementing planned tasks with TDD"
 ---
 
-If you are the `ai-flow:implementer` agent, ignore this skill: your agent definition is the protocol. Do not launch another agent for this phase.
+This is the user-only entry point for the apply phase. Coordination runs on the main thread.
 
-This phase is handled by the **implementer** agent.
-
-Delegate to the `implementer` agent with the change name, project name, and batch to execute. The agent will:
-1. Read plan, spec, and design from engram
-2. Execute each task test-first, following the TDD guide, and commit per task
-3. Track progress in engram under `flow/{change-name}/apply-progress`
-4. Escalate to debugger agent if 3+ fix attempts fail
-
-**Auto-verify:** After the final batch completes, the orchestrator MUST auto-launch `/ai-flow:flow-verify` without waiting for the user. Verification is not optional — it is the mandatory next step after apply.
-
-TDD: the implementer follows the guide at `${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md`.
-
-## OpenSpace Integration (optional)
-
-If the OpenSpace MCP server is connected, call `search_skills` before starting each task:
-- `query`: keywords from the task description
-- `source`: `"local"`
-- `limit`: `5`
-
-If a relevant pattern or recipe exists, use it as a starting point for the TDD cycle rather than reasoning from scratch. If OpenSpace is not connected or returns empty results, proceed normally — this step is additive, not blocking.
-
-The protocol lives in the `ai-flow:implementer` agent definition; launch it with the Agent tool (subagent_type `ai-flow:implementer`).
+Load `ai-flow:using-ai-flow` and follow its "Coordinating apply" section. It launches one `ai-flow:implementer` agent per task and runs the tracer gate.
