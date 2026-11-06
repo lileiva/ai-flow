@@ -84,8 +84,11 @@ test('S2: a shortened hook in a temp copy gives a lower hook_chars', () => {
   const copy = path.join(tmpDir('aiflow-ss-short-'), 'plugin');
   fs.cpSync(PLUGIN_DIR, copy, { recursive: true, filter: (src) => !src.includes(`${path.sep}evals${path.sep}`) });
   const full = hookChars(copy);
-  const skill = path.join(copy, 'skills', 'using-ai-flow', 'SKILL.md');
-  fs.writeFileSync(skill, fs.readFileSync(skill, 'utf8').slice(0, 500));
+  const hook = path.join(copy, 'hooks', 'session-start');
+  const src = fs.readFileSync(hook, 'utf8');
+  const shorter = src.replace(/^pointer=".*"$/m, 'pointer="AI-Flow is installed."');
+  assert.notEqual(shorter, src, 'pointer line rewritten');
+  fs.writeFileSync(hook, shorter);
   assert.ok(hookChars(copy) < full, `${hookChars(copy)} !< ${full}`);
 });
 

@@ -121,3 +121,70 @@ test('negative: the old backslash-n concatenation is reported as a violation', (
   const v = warningLineViolations(contextOf(runHook({ root })));
   assert.ok(v.some((m) => m.includes('literal backslash-n')), JSON.stringify(v));
 });
+
+// ---- B4 (REQ-012, REQ-022): the hook is a pointer, not the skill body ----
+
+const POINTER = 'ai-flow:using-ai-flow';
+const SKILL_REL = path.join('skills', 'using-ai-flow', 'SKILL.md');
+
+test('hook context names ai-flow:using-ai-flow and is a pointer (REQ-012 S1)', () => {
+  const ctx = contextOf(runHook({ env: depsPresentEnv() }));
+  assert.ok(ctx.includes(POINTER), 'context names the skill');
+  assert.ok(ctx.length <= 900, `pointer is ${ctx.length} chars, budget 900`);
+  assert.ok(!ctx.includes('EXTREMELY_IMPORTANT'), 'no EXTREMELY_IMPORTANT wrapper');
+});
+
+test('deps present: context is at most 900 chars (REQ-012 S1, R5)', () => {
+  const ctx = contextOf(runHook({ env: depsPresentEnv() }));
+  assert.ok(ctx.length <= 900, `${ctx.length} chars`);
+});
+
+test('both deps missing: context is at most 2,400 chars (REQ-012 S1, R5)', () => {
+  const ctx = contextOf(runHook());
+  assert.ok(ctx.length <= 2400, `${ctx.length} chars`);
+});
+
+/** Body lines of the skill after its title (frontmatter and headings aside). */
+function skillBodyLines() {
+  const text = fs.readFileSync(path.join(PLUGIN_ROOT, SKILL_REL), 'utf8');
+  return text
+    .replace(/^---\n[\s\S]*?\n---\n/, '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 20)
+    .slice(1);
+}
+
+test('no line of the using-ai-flow body appears in the context (REQ-012 S2)', () => {
+  const ctx = contextOf(runHook({ env: depsPresentEnv() }));
+  const leaked = skillBodyLines().filter((l) => ctx.includes(l));
+  assert.deepEqual(leaked, []);
+});
+
+test('negative: a hook that cats the skill leaks body lines', () => {
+  const root = pluginCopy();
+  const file = path.join(root, 'hooks', 'session-start');
+  const src = fs.readFileSync(file, 'utf8');
+  const leaky = src.replace(
+    'warnings=""',
+    'warnings="$(cat "$(dirname "$0")/../skills/using-ai-flow/SKILL.md" | tr -d \'"\\\\\' | tr \'\\n\' \' \')"',
+  );
+  assert.notEqual(leaky, src, 'fixture rewrite applied');
+  fs.writeFileSync(file, leaky);
+  const ctx = contextOf(runHook({ root, env: depsPresentEnv() }));
+  const body = skillBodyLines();
+  assert.ok(body.length > 0, 'skill has body lines');
+  assert.ok(ctx.length > 900 || body.some((l) => ctx.includes(l.replace(/"/g, ''))), 'leak is detectable');
+});
+
+test('hook source does not read skills/using-ai-flow/SKILL.md (REQ-022 S1)', () => {
+  const src = fs.readFileSync(path.join(PLUGIN_ROOT, 'hooks', 'session-start'), 'utf8');
+  assert.ok(!src.includes('skills/using-ai-flow/SKILL.md'), 'no skill read in the hook');
+});
+
+test('CLAUDE_PLUGIN_ROOT unset: pointer present in additional_context (REQ-012)', () => {
+  const res = runHook({ env: { ...depsPresentEnv(), CLAUDE_PLUGIN_ROOT: undefined } });
+  const out = JSON.parse(res.stdout);
+  assert.ok(out.additional_context.includes(POINTER));
+  assert.ok(out.additional_context.length <= 900);
+});
