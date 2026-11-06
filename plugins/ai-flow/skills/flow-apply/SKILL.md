@@ -1,6 +1,7 @@
 ---
 name: flow-apply
 description: Execute plan tasks through strict TDD (RED-GREEN-REFACTOR). Writes tests first, then minimal implementation. Tracer bullet executes first. Two-stage review per task.
+disable-model-invocation: true
 metadata:
   author: ai-workflow
   version: "1.0"

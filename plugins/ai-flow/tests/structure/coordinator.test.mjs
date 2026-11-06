@@ -119,3 +119,11 @@ test('apply records evidence under a per-task key, not the shared apply-progress
   assert.match(s, /backup/i);
   assert.match(s, /upsert|overwrit/i);
 });
+
+// Task 0.7: thin flow-apply entry point (REQ-008 S1, REQ-018 S1, design D-2).
+const FLOW_APPLY = 'skills/flow-apply/SKILL.md';
+
+test('flow-apply has disable-model-invocation: true (REQ-008 S1)', () => {
+  const { data } = parseFrontmatter(read(FLOW_APPLY));
+  assert.equal(String(data['disable-model-invocation']), 'true');
+});
