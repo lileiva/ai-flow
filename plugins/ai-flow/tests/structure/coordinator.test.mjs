@@ -76,3 +76,46 @@ test('apply launch carries subagent_type ai-flow:implementer, model and effort',
   assert.match(s, /never[^\n]*below sonnet/i);
   assert.match(s, /one (implementer )?instance per task/i);
 });
+
+const PACK_PLACEHOLDERS = [/Project/, /Change/, /Repo/, /Task id/i, /plan key/i, /scenarios?\/decisions|cited scenarios/i, /test command/i, /Completed tasks/i, /TDD mode/i, /Return the tdd_evidence block/i];
+const BATCH_WORDING = [/at the end/i, /after each batch/i, /all batches/i, /Execute Batches/i];
+
+/** Problems with the apply task pack and the evidence check. */
+export function applyPackProblems(text) {
+  const s = applySection(text);
+  const p = [];
+  for (const re of PACK_PLACEHOLDERS) if (!re.test(s)) p.push(`task pack lacks ${re}`);
+  for (const re of BATCH_WORDING) if (re.test(s)) p.push(`batch-style wording ${re}`);
+  for (const f of ['test_files', 'red.failing', 'red.after_test_write', 'red_before_impl', 'green.summary', 'verify_command']) {
+    if (!s.includes(f)) p.push(`evidence check lacks ${f}`);
+  }
+  if (!/mode[^\n]*n\/a[^\n]*reason/i.test(s)) p.push('evidence check lacks n/a mode reason');
+  if (!/re-establish RED/i.test(s) || !/one (routing )?step up/i.test(s)) p.push('no single relaunch one step up');
+  if (!/second miss[^\n]*warning[^\n]*(next )?gate/i.test(s)) p.push('second miss is not a warning at the next gate');
+  if (!/tracer[^\n]*gate|gate[^\n]*tracer/i.test(s)) p.push('batch 0 tracer gate missing');
+  return p;
+}
+
+test('apply task pack, evidence check and tracer gate are present (REQ-009 S2/S3)', () => {
+  assert.deepEqual(applyPackProblems(read(USING)), []);
+});
+
+test('negative: a pack that runs tests "at the end" is flagged', () => {
+  const bad = read(USING).replace(/(### Coordinating apply\n)/, '$1\nRun `npm test` at the end.\n');
+  assert.ok(applyPackProblems(bad).includes('batch-style wording /at the end/i'));
+});
+
+test('apply is per-task: no batch-launch wording remains in using-ai-flow (Task 0.5 leftovers)', () => {
+  const t = read(USING);
+  assert.doesNotMatch(t, /launch implementer agents in batches/i);
+  assert.doesNotMatch(t, /TDD implementation in batches/i);
+  assert.doesNotMatch(t, /execute the remaining batches/i);
+});
+
+test('apply records evidence under a per-task key, not the shared apply-progress key', () => {
+  const s = applySection(read(USING));
+  assert.match(s, /flow\/\{change(-name)?\}\/apply-evidence-\{task_id\}/);
+  assert.match(s, /handback/i);
+  assert.match(s, /backup/i);
+  assert.match(s, /upsert|overwrit/i);
+});

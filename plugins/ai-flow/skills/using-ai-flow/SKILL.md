@@ -45,7 +45,7 @@ AI-Flow is an 8-phase workflow for planning and implementing changes with rigor.
 | 3. Spec | Requirements and scenarios (parallel with Design) | `flow-spec` |
 | 4. Design | Technical design and architecture decisions | `flow-design` |
 | 5. Plan | Task breakdown with tracer bullet emphasis | `flow-plan` |
-| 6. Apply | TDD implementation in batches | `flow-apply` |
+| 6. Apply | TDD implementation, one task per implementer | `flow-apply` |
 | 7. Verify | Prove implementation matches specs | `flow-verify` |
 | 8. Archive | Archive artifacts and complete the change | `flow-archive` |
 
@@ -208,6 +208,24 @@ Workspace isolation: before launching the first apply batch, consider suggesting
 Apply runs one implementer instance per task, each launched fresh from the plan. A fresh instance keeps its context small and its test-first evidence checkable.
 
 Launch with the Agent tool: `subagent_type` `ai-flow:implementer`, `model` sonnet, `effort` medium. Raise to opus with effort high after a blocked return or an evidence miss, and never go below sonnet. A user instruction about model or effort overrides these defaults.
+
+Task pack. Each launch prompt covers exactly one task and carries:
+- Project: the engram `project` name.
+- Change: the change name.
+- Repo: the repository path and branch.
+- Task id: for example 0.6, with the plan key (`flow/{change}/plan`, plus its part keys when the plan is split).
+- Cited scenarios and decisions: the spec scenarios and design decisions listed in that task.
+- Test command: the unit command named in the task, and the full-suite command to run before the commit.
+- Completed tasks: the ids already done, so the instance does not redo them.
+- TDD mode: `tdd`, or `n/a` for a task the plan marks as not testable first.
+- The commit message from the task.
+- "Return the tdd_evidence block" together with the return envelope.
+
+Evidence storage. The engram `topic_key` upserts, so a single apply-progress key is overwritten by each per-task implementer. Each task's implementer therefore saves its tdd_evidence to `flow/{change}/apply-evidence-{task_id}`. Read the evidence from the handback first, and use that key as the backup when the handback lacks it.
+
+Evidence check after each task. Mode `tdd` needs test_files, red.failing, red.after_test_write, red_before_impl and green.summary. Mode `n/a` needs na_reason and verify_command. On a miss, relaunch the task once with the instruction "re-establish RED", one routing step up (sonnet to opus, medium to high). A second miss is recorded as a warning and shown at the next gate.
+
+The batch 0 tracer gate follows the last tracer task: present what was built and the test results, and wait for the user's answer before launching tasks from later batches.
 
 ### Sub-Agent Launch Template
 
