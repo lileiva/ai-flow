@@ -63,7 +63,7 @@ function initializerRowProblems(text) {
   return problems;
 }
 
-for (const [label, read] of [['README.md', () => readRepo('README.md')], ['agents/orchestrator.md', () => readPlugin('agents/orchestrator.md')]]) {
+for (const [label, read] of [['README.md', () => readRepo('README.md')], ['skills/using-ai-flow/SKILL.md', () => readPlugin('skills/using-ai-flow/SKILL.md')]]) {
   test(`${label}: initializer row says it writes .ai-flow.json and is not Read-only`, () => {
     assert.deepEqual(initializerRowProblems(read()), []);
   });

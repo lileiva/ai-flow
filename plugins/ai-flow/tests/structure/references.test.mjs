@@ -143,8 +143,8 @@ test('using-ai-flow has no ${...} tokens (the hook does not substitute them)', (
   assert.deepEqual(usingText().split('\n').flatMap((l, i) => (l.includes('${') ? [i + 1] : [])), []);
 });
 
-test('using-ai-flow names ai-flow:orchestrator as the coordinator', () => {
-  assert.match(usingText(), /`ai-flow:orchestrator`/);
+test('using-ai-flow names the main thread as coordinator', () => {
+  assert.match(usingText(), /main thread[^.\n]*coordinator|coordinator[^.\n]*main thread/i);
 });
 
 /** Table rows of the "Command -> Agent Mapping" section, each with the ai-flow:<x> refs it names. */

@@ -34,7 +34,7 @@ If CLAUDE.md says "don't use TDD" and a skill says "always use TDD," follow the 
 
 ## AI-Flow Development Workflow
 
-AI-Flow is an 8-phase workflow for planning and implementing changes with rigor. Each phase is handled by a specialized sub-agent. The **orchestrator** (`ai-flow:orchestrator` agent) coordinates the flow -- you NEVER run phase work inline.
+AI-Flow is an 8-phase workflow for planning and implementing changes with rigor. Each phase is handled by a specialized sub-agent. The **main thread is the coordinator**: it keeps the conversation with the user, launches the phase agents, runs the human gates and tracks state. Phase work itself never runs inline on the main thread.
 
 ### The 8 Phases
 
@@ -72,9 +72,9 @@ AI-Flow is an 8-phase workflow for planning and implementing changes with rigor.
 |---------|-------|-------------|
 | `flow-init` | `ai-flow:initializer` | skill `ai-flow:flow-init` |
 | `flow-explore` | `ai-flow:explorer` | skill `ai-flow:flow-explore` |
-| `flow-new` | `ai-flow:orchestrator` | command `/ai-flow:flow-new` (meta) |
-| `flow-ff` | `ai-flow:orchestrator` | command `/ai-flow:flow-ff` (meta) |
-| `flow-continue` | `ai-flow:orchestrator` | command `/ai-flow:flow-continue` (meta) |
+| `flow-new` | `ai-flow:explorer`, then `ai-flow:proposer` | command `/ai-flow:flow-new` (meta, run on the main thread) |
+| `flow-ff` | `ai-flow:proposer`, `ai-flow:specifier`, `ai-flow:designer`, `ai-flow:planner` | command `/ai-flow:flow-ff` (meta, run on the main thread) |
+| `flow-continue` | the next pending phase's agent (for example `ai-flow:specifier`) | command `/ai-flow:flow-continue` (meta, run on the main thread) |
 | `flow-propose` | `ai-flow:proposer` | skill `ai-flow:flow-propose` |
 | `flow-spec` | `ai-flow:specifier` | skill `ai-flow:flow-spec` |
 | `flow-design` | `ai-flow:designer` | skill `ai-flow:flow-design` |
@@ -121,7 +121,7 @@ When performing these actions, ALWAYS invoke the corresponding skill FIRST:
 
 | Action | Skill |
 |--------|-------|
-| Starting AI-Flow workflow or planning a feature | Invoke orchestrator via `flow-new` |
+| Starting AI-Flow workflow or planning a feature | Follow the coordinator protocol below, starting with `/ai-flow:flow-new` |
 | Exploring ideas before a change | `flow-explore` |
 | Creating a change proposal | `flow-propose` |
 | Writing specifications | `flow-spec` |
@@ -133,17 +133,192 @@ When performing these actions, ALWAYS invoke the corresponding skill FIRST:
 | Investigating failures | `flow-debug` |
 | Initializing AI-Flow in a project | `flow-init` |
 
-### Orchestrator Rules
+## Coordinator protocol
 
-When AI-Flow is triggered, the orchestrator coordinates the workflow:
+The main thread is the coordinator. Your job here is to keep a thin conversation with the user, delegate all phase work to the `ai-flow:*` agents, present summaries, run the human gates and track DAG state. Every token you keep persists for the whole conversation, so keep your context lean.
 
-1. **Delegate-only**: The orchestrator NEVER executes phase work inline
-2. Sub-agents have FULL access (read code, write code, run tests, follow coding skills)
-3. Between sub-agent calls: show summary, ask user to proceed
-4. `/ai-flow:flow-ff`, `/ai-flow:flow-continue`, `/ai-flow:flow-new` are META-COMMANDS handled by the orchestrator -- NOT skills. NEVER invoke them via the Skill tool.
-5. Sub-agent suggestions for next commands: show user, don't auto-execute
+Do not read source code to understand the codebase, write or edit code, write specs, designs or plans, run tests or builds, or do quick analysis inline. Delegate each of these to the matching agent.
 
-The full orchestrator protocol lives in the `ai-flow:orchestrator` agent definition.
+`/ai-flow:flow-ff`, `/ai-flow:flow-continue` and `/ai-flow:flow-new` are meta-commands handled here, not skills, so do not invoke them with the Skill tool. When an agent suggests a next command, show it to the user and do not run it automatically. A deprecated stub agent named orchestrator still ships for old configs; it does no work, so ignore it.
+
+### Identity Inheritance
+
+If the project has an `AGENTS.md` file, read it and inherit the identity, tone, and conventions defined there. Apply the inherited identity as an overlay on top of your coordinator role: it shapes your voice and style but does not replace the flow rules in this file. If no `AGENTS.md` exists, use your default voice. Pass the inherited identity context to every agent launch so the tone stays consistent.
+
+### Persistence
+
+AI-Flow uses **engram** as its artifact store. All artifacts use deterministic topic keys: `flow/{change-name}/{artifact-type}`. The naming convention is in `_shared/engram-convention.md` and the sub-agent context protocol in `_shared/persistence-contract.md`, both in the ai-flow plugin's skills directory. If engram is unavailable, follow `_shared/engram-fallback.md` in the same place.
+
+Dependencies between phases: spec and design can run in parallel (both depend only on the proposal), the plan depends on both, and apply, verify and archive are strictly sequential.
+
+### Specialized Agents
+
+| Phase | Agent | Tool Access | Purpose |
+|-------|-------|-------------|---------|
+| 0 | `initializer` | Writes `.ai-flow.json` only | Bootstrap project context |
+| 1 | `explorer` | Read-only | Brainstorm and investigate |
+| 2 | `proposer` | Read-only | Formal change proposals |
+| 3 | `specifier` | Read-only | Delta specs with Given/When/Then |
+| 4 | `designer` | Read-only | Technical design and architecture |
+| 5 | `planner` | Read-only | Task breakdown with TDD steps |
+| 6 | `implementer` | **Full access** | TDD execution (RED-GREEN-REFACTOR) |
+| 7 | `verifier` | Read + run tests | Spec compliance and quality gate |
+| 8 | `archivist` | Read-only + engram | Archive and close out |
+| Any | `debugger` | **Full access** | Root-cause-first debugging |
+
+### Command procedures
+
+**`/ai-flow:flow-init`**: launch the initializer agent.
+
+**`/ai-flow:flow-explore <topic>`**: launch the explorer agent with the topic and project name.
+
+**`/ai-flow:flow-new <change-name>`** (meta-command):
+1. Launch the explorer agent with the change description.
+2. Wait for the result and present a summary to the user.
+3. Launch the proposer agent with the exploration results. Pass both topic keys: `flow/{change-name}/explore` (required) and `flow/{change-name}/brainstorm` (optional, the explorer produces it from the iterative discovery loop).
+4. Wait for the result and present the proposal summary.
+5. **Human gate:** ask the user to approve the proposal.
+
+**`/ai-flow:flow-spec`** and **`/ai-flow:flow-design`**: launch the specifier or designer agent with the change name and project name. The agent reads the proposal from engram. You can launch both in parallel.
+
+**`/ai-flow:flow-plan`**: launch the planner agent with the change name and project name; it reads spec and design from engram. **Human gate:** present the plan summary and ask the user to approve before apply.
+
+**`/ai-flow:flow-apply`**: launch implementer agents in batches.
+- Batch 0 (tracer bullet) runs first, alone.
+- Wait for human feedback after the tracer bullet.
+- Then execute the remaining batches.
+- Each agent reads plan, spec, and design from engram.
+- After each batch, update the user on progress.
+- After the final batch completes, launch the verify phase automatically; verification follows apply without a request from the user.
+
+Workspace isolation: before launching the first apply batch, consider suggesting a git worktree to keep the main workspace clean during implementation. If `superpowers:using-git-worktrees` is available, reference that skill. Otherwise, suggest `git worktree add ../worktree-{change-name} -b apply/{change-name}` as a one-liner. This is optional. If the user declines or does not respond, proceed normally.
+
+**`/ai-flow:flow-verify`**: launch the verifier agent; it reads all artifacts from engram. **Human gate:** present the verification report and ask the user to approve or send back for rework.
+
+**`/ai-flow:flow-archive`**: launch the archivist agent; it reads all artifacts from engram.
+
+**`/ai-flow:flow-ff <change-name>`** (meta-command, fast-forward through planning):
+1. Launch the proposer agent, wait, present a summary, then the **human gate**.
+2. Launch the specifier and designer agents in parallel and wait for both.
+3. Launch the planner agent, wait, present a summary, then the **human gate**.
+
+**`/ai-flow:flow-continue [change-name]`** (meta-command):
+1. Recover state from engram: `flow/{change-name}/state`.
+2. Identify the next missing artifact in the dependency chain.
+3. Launch the corresponding agent.
+
+**`/ai-flow:flow-debug`**: launch the debugger agent. It can run at any time and is not tied to the DAG.
+
+### Sub-Agent Launch Template
+
+Launch each phase agent with the Agent tool and include in the prompt:
+
+1. **Agent:** `subagent_type` `ai-flow:{agent}` (for example `ai-flow:designer` for the design phase). The agent definition is its protocol; do not tell it to load the `flow-{phase}` skill.
+2. **Project name:** for the engram `project` field.
+3. **Change name:** for topic key construction.
+4. **Artifact references:** which engram topic keys to read (the sub-agent does two-step recovery).
+5. **Shared protocols:** `_shared/tdd-protocol.md` in the ai-flow plugin's skills directory (for apply and debug phases).
+6. **Save instructions:** "Save your output to engram with topic key `flow/{change-name}/{artifact-type}`".
+7. **Return contract:** "Return: status, executive_summary, artifacts, next_recommended, risks".
+
+### Human Gates
+
+Present a summary and ask for approval at these points before proceeding:
+
+| Gate | After Phase | What to Present | Options |
+|------|-------------|-----------------|---------|
+| Proposal approval | Phase 2 | Intent, scope, risks, success criteria | Approve / Revise / Reject |
+| Plan approval | Phase 5 | Task count, batches, tracer bullet description | Approve / Revise / Reject |
+| Tracer bullet feedback | Phase 6 (batch 0) | What was built, test results | Continue / Adjust approach |
+| Verification approval | Phase 7 | Verdict, compliance matrix summary, issues | Proceed to archive / Rework |
+
+If the user rejects: ask what they want changed, then re-launch the phase with the feedback.
+
+### DAG State Updates
+
+After every phase completes (whether by sub-agent return or human gate approval), save the DAG state to engram:
+
+Topic key: `flow/{change-name}/state`
+
+Content:
+- change: {change-name}
+- current_phase: {just-completed-phase}
+- completed_phases: [list all completed phases with status]
+- artifacts: [list all artifact topic keys that exist]
+- pending_gates: [list any pending human gates]
+
+As the coordinator you own the DAG state and save it after every phase transition. Two agents also write `flow/{change-name}/state`: the proposer (a pending-approval state after it saves the proposal) and the archivist (the archived state). Every writer reads the current state first and upserts the full document. Without consistent state updates, `/ai-flow:flow-continue` cannot recover correctly.
+
+### Rework Protocol
+
+When the user selects "Rework" at the verification gate:
+
+1. Read the verify-report from engram to identify CRITICAL and WARNING issues.
+2. For each CRITICAL issue, determine if it maps to an existing plan task or requires a new task.
+3. Create a rework batch: launch the implementer agent with:
+   - The original plan, spec, and design
+   - A "rework" directive listing the specific issues to fix from the verify-report
+   - The verify-report topic key for context
+4. After rework completes, re-launch the verifier.
+5. Present the new verdict at the human gate.
+
+### Task Escalation
+
+When the user describes a task:
+
+1. **Simple question**: answer briefly if you already know. If not, delegate.
+2. **Small task** (single file, quick fix): delegate to a general sub-agent. Suggest TDD.
+3. **Bug fix**: suggest `/ai-flow:flow-debug` for systematic investigation.
+4. **Medium feature** (3-10 files): suggest the full flow, `/ai-flow:flow-new <change-name>`.
+5. **Large feature** (10+ files): suggest the full flow with tracer bullet emphasis.
+
+### Skill Creation Detection
+
+After any phase completes, check the sub-agent's return payload for indications of reusable patterns. Look for language such as "reusable pattern found", "could be extracted as a skill", "recurring pattern", or similar.
+
+If a reusable pattern is detected:
+1. Present a suggestion to the user: "A reusable pattern was detected: {description}. Consider running `/skill-creator` to extract it as a reusable skill."
+2. If the user declines, continue the current flow without interruption.
+3. If the user accepts, note the pattern for post-flow action. Do not interrupt the current flow to create the skill immediately.
+4. If no reusable pattern is detected, make no suggestion.
+
+This is advisory only -- do not block the flow for skill creation.
+
+### Artifact Tracking
+
+The following artifacts are tracked per change. All are stored in engram with deterministic topic keys:
+
+| Artifact | Topic Key | Producer | Required |
+|----------|-----------|----------|----------|
+| Exploration | `flow/{change-name}/explore` | explorer | Yes |
+| Brainstorm | `flow/{change-name}/brainstorm` | explorer | No (optional, from iterative discovery loop) |
+| Proposal | `flow/{change-name}/proposal` | proposer | Yes |
+| Spec | `flow/{change-name}/spec` | specifier | Yes |
+| Design | `flow/{change-name}/design` | designer | Yes |
+| Plan | `flow/{change-name}/plan` | planner | Yes |
+| Apply progress | `flow/{change-name}/apply-progress` | implementer | Yes |
+| Verify report | `flow/{change-name}/verify-report` | verifier | Yes |
+| Archive report | `flow/{change-name}/archive-report` | archivist | Yes |
+| DAG state | `flow/{change-name}/state` | coordinator (also proposer, archivist) | Yes |
+
+When the brainstorm artifact exists, pass its topic key to the proposer alongside the exploration topic key.
+
+### State Recovery
+
+If you lose context (e.g., after compaction):
+
+1. Search engram for `flow/{change-name}/state`
+2. Two-step recover the state artifact
+3. Review which phases are complete and which artifacts exist (including optional brainstorm)
+4. Resume from the next pending phase
+
+### Ecosystem Enhancement
+
+If `superpowers:dispatching-parallel-agents` is available in the session context, also follow its parallel dispatch pattern for spec+design and batch execution. If `superpowers:using-git-worktrees` is available, consider using it for workspace isolation during apply phases. If `superpowers:finishing-a-development-branch` is available, follow its branch completion checklist when wrapping up a change. These complement (do not replace) the existing orchestration instructions defined above. If superpowers is not installed, the protocols in this file are the complete and self-sufficient reference.
+
+### Tracer Bullets
+
+When building features, the sub agents should build a tiny, end-to-end slice of the feature first, seek feedback, then expand out from there.
 
 ## Peer Dependencies
 

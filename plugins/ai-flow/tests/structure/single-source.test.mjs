@@ -127,10 +127,9 @@ function section(text, re) {
 // ---- required sections (REQ-003 S2) ----
 
 const REQUIRED_SECTIONS = {
-  'skills/using-ai-flow/SKILL.md': [/^Instruction Priority$/, /^Flow Commands$/, /Agent Mapping/, /^Dependency Graph$/, /^Auto-invoke/, /^Orchestrator Rules$/, /^Peer Dependencies$/],
+  'skills/using-ai-flow/SKILL.md': [/Skill Creation Detection/, /Identity Inheritance/, /Artifact Tracking/, /^Instruction Priority$/, /^Flow Commands$/, /Agent Mapping/, /^Dependency Graph$/, /^Auto-invoke/, /^Coordinator protocol$/, /^Peer Dependencies$/],
   'skills/_shared/persistence-contract.md': [/Artifact Store Mode/, /Fallback Mode: `none`/],
   'agents/explorer.md': [/Interactive Requirements Gathering/, /Readiness Gate/, /Refinement Round/],
-  'agents/orchestrator.md': [/Skill Creation Detection/, /Identity Inheritance/, /Artifact Tracking/],
   'agents/debugger.md': [/Root Cause Investigation/],
 };
 
@@ -211,12 +210,12 @@ function launchTemplateViolations(orchestratorText) {
   if (/Skill file:/i.test(t)) v.push('template tells the agent which skill file to load');
   if (/Read and follow .*flow-[a-z{}]+\/SKILL\.md/.test(t)) v.push('template tells the agent to read a phase SKILL.md');
   if (!/subagent_type/.test(t) || !t.includes('`ai-flow:{agent}`')) v.push('template does not launch by subagent_type `ai-flow:{agent}`');
-  if (!t.includes('${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md')) v.push('shared protocol is not the tdd-protocol READ_REF');
+  if (!t.includes('${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md') && !/`_shared\/tdd-protocol\.md` in the ai-flow plugin/.test(t)) v.push('shared protocol is not the tdd-protocol READ_REF or plain-path reference');
   return v;
 }
 
 test('orchestrator launch template: agent by subagent_type, no skill file, TDD guide as READ_REF', () => {
-  assert.deepEqual(launchTemplateViolations(read('agents/orchestrator.md')), []);
+  assert.deepEqual(launchTemplateViolations(read('skills/using-ai-flow/SKILL.md')), []);
 });
 
 test('negative: a launch template that hands the agent a skill file is flagged', () => {
@@ -224,7 +223,7 @@ test('negative: a launch template that hands the agent a skill file is flagged',
   assert.deepEqual(launchTemplateViolations(bad), [
     'template tells the agent which skill file to load',
     'template does not launch by subagent_type `ai-flow:{agent}`',
-    'shared protocol is not the tdd-protocol READ_REF',
+    'shared protocol is not the tdd-protocol READ_REF or plain-path reference',
   ]);
 });
 
@@ -248,7 +247,8 @@ test('negative: missingMentions reports each absent pattern', () => {
 
 // Every agent points at the one engram-fallback file (REQ-009 S2/S3, REQ-028). Replaces the 9-agent inline-note check.
 const FALLBACK_REF = '${CLAUDE_PLUGIN_ROOT}/skills/_shared/engram-fallback.md';
-for (const file of agentFiles) {
+// The deprecated orchestrator stub (R2) is never launched, so it carries no fallback pointer.
+for (const file of agentFiles.filter((f) => f !== 'orchestrator.md')) {
   test(`engram fallback pointer: agents/${file} references engram-fallback.md exactly once`, () => {
     assert.equal(read(`agents/${file}`).split('\n').filter((l) => l.includes(FALLBACK_REF)).length, 1);
   });
@@ -284,17 +284,17 @@ test('proposer treats the brainstorm as optional and handles it missing', () => 
 });
 
 test('orchestrator suggests (never forces) skill creation for reusable patterns', () => {
-  const s = section(read('agents/orchestrator.md'), /Skill Creation Detection/);
+  const s = section(read('skills/using-ai-flow/SKILL.md'), /Skill Creation Detection/);
   assert.deepEqual(missingMentions(s, [/reusable pattern/i, /skill-creator/, /suggest/i]), []);
 });
 
 test('orchestrator identity inheritance is a conditional AGENTS.md overlay', () => {
-  const s = section(read('agents/orchestrator.md'), /Identity Inheritance/);
+  const s = section(read('skills/using-ai-flow/SKILL.md'), /Identity Inheritance/);
   assert.deepEqual(missingMentions(s, [/AGENTS\.md/, /if.*exists|if one exists|if present/i, /overlay|on top of|in addition|complement/i]), []);
 });
 
 test('orchestrator suggests worktrees as optional, with a git worktree add fallback', () => {
-  const o = read('agents/orchestrator.md');
+  const o = read('skills/using-ai-flow/SKILL.md');
   assert.deepEqual(missingMentions(o, [/superpowers:using-git-worktrees/, /git worktree add/, /worktree[\s\S]{0,400}(optional|suggest|never required|if available|consider)/i]), []);
 });
 
@@ -303,7 +303,6 @@ const ECOSYSTEM = {
   debugger: /superpowers:systematic-debugging/,
   verifier: /superpowers:verification-before-completion/,
   explorer: /superpowers:brainstorming/,
-  orchestrator: /superpowers:dispatching-parallel-agents/,
 };
 for (const [agent, skillRe] of Object.entries(ECOSYSTEM)) {
   test(`ecosystem enhancement: agents/${agent}.md names its superpowers skill and stays self-sufficient without it`, () => {
@@ -312,6 +311,12 @@ for (const [agent, skillRe] of Object.entries(ECOSYSTEM)) {
     assert.deepEqual(missingMentions(s, [skillRe, /otherwise|not installed|not available|self-sufficient/i]), []);
   });
 }
+
+test('ecosystem enhancement: using-ai-flow (the coordinator) names its superpowers skill and stays self-sufficient without it', () => {
+  const s = section(read('skills/using-ai-flow/SKILL.md'), /Ecosystem Enhancement/);
+  assert.ok(s, 'has an Ecosystem Enhancement section');
+  assert.deepEqual(missingMentions(s, [/superpowers:dispatching-parallel-agents/, /otherwise|not installed|not available|self-sufficient/i]), []);
+});
 
 test('negative: section() scopes a check to one heading', () => {
   const t = '# A\n## Ecosystem Enhancement\nuse superpowers:x\n## Other\nnot installed\n';
@@ -371,14 +376,14 @@ function stateWriterProblems(text, sectionRe) {
   const s = section(text, sectionRe);
   const p = [];
   if (!s) return [`no section ${sectionRe}`];
-  for (const w of ['orchestrator', 'proposer', 'archivist']) if (!new RegExp(`\\b${w}\\b`).test(s)) p.push(`state section does not name the ${w}`);
+  for (const w of ['(orchestrator|coordinator)', 'proposer', 'archivist']) if (!new RegExp(`\\b${w}\\b`).test(s)) p.push(`state section does not name the ${w}`);
   if (/sub-agents do not save state/i.test(text)) p.push('says sub-agents do not save state');
   if (/maintained only in the orchestrator's conversation/i.test(text)) p.push("says state lives only in the orchestrator's conversation");
   return p;
 }
 
 test('orchestrator.md names the orchestrator, proposer and archivist as state writers', () => {
-  assert.deepEqual(stateWriterProblems(read('agents/orchestrator.md'), /DAG State Updates/), []);
+  assert.deepEqual(stateWriterProblems(read('skills/using-ai-flow/SKILL.md'), /DAG State Updates/), []);
 });
 
 test('persistence-contract.md names the same state writers and drops the conversation-only claim', () => {
@@ -386,8 +391,8 @@ test('persistence-contract.md names the same state writers and drops the convers
 });
 
 test('Artifact Tracking: the DAG state row lists the proposer and archivist too', () => {
-  const row = topicKeyRows(section(read('agents/orchestrator.md'), /Artifact Tracking/)).find((r) => r.type === 'state');
-  assert.match(row.rest, /orchestrator[^|]*proposer[^|]*archivist/);
+  const row = topicKeyRows(section(read('skills/using-ai-flow/SKILL.md'), /Artifact Tracking/)).find((r) => r.type === 'state');
+  assert.match(row.rest, /(orchestrator|coordinator)[^|]*proposer[^|]*archivist/);
 });
 
 test('negative: a state section that omits the archivist (and keeps the stale sentence) is flagged', () => {
@@ -423,7 +428,7 @@ function topicKeyProblems(orchestratorText, conventionText, readAgent) {
   for (const row of topicKeyRows(section(orchestratorText, /Artifact Tracking/))) {
     if (!conv.has(row.type)) problems.push(`${row.type}: not in engram-convention`);
     // The producer cell names one agent, optionally followed by "(also <agent>, <agent>)".
-    for (const producer of row.rest.split('|')[0].match(/[a-z]+/g).filter((w) => w !== 'also')) {
+    for (const producer of row.rest.split('|')[0].match(/[a-z]+/g).filter((w) => w !== 'also' && w !== 'coordinator')) {
       const text = readAgent(producer);
       if (text === null) problems.push(`${row.type}: producer '${producer}' has no agent file`);
       else if (!text.includes(`flow/{change-name}/${row.type}`)) problems.push(`${row.type}: agents/${producer}.md never mentions its key`);
@@ -435,9 +440,9 @@ function topicKeyProblems(orchestratorText, conventionText, readAgent) {
 const readAgentOrNull = (name) => (fs.existsSync(path.join(PLUGIN_ROOT, 'agents', `${name}.md`)) ? read(`agents/${name}.md`) : null);
 
 test('topic keys: every tracked artifact is in the engram convention and its producer mentions its key', () => {
-  const tracked = topicKeyRows(section(read('agents/orchestrator.md'), /Artifact Tracking/));
+  const tracked = topicKeyRows(section(read('skills/using-ai-flow/SKILL.md'), /Artifact Tracking/));
   assert.ok(tracked.length >= 10, `orchestrator tracks ${tracked.length} artifacts`);
-  assert.deepEqual(topicKeyProblems(read('agents/orchestrator.md'), read('skills/_shared/engram-convention.md'), readAgentOrNull), []);
+  assert.deepEqual(topicKeyProblems(read('skills/using-ai-flow/SKILL.md'), read('skills/_shared/engram-convention.md'), readAgentOrNull), []);
 });
 
 test('negative: topic-key check flags a type missing from the convention and a silent producer', () => {
@@ -670,8 +675,8 @@ const NON_TDD_SUPERPOWERS = {
   'agents/debugger.md': ['superpowers:systematic-debugging'],
   'agents/explorer.md': ['superpowers:brainstorming'],
   'agents/implementer.md': ['superpowers:dispatching-parallel-agents'],
-  'agents/orchestrator.md': ['superpowers:dispatching-parallel-agents', 'superpowers:finishing-a-development-branch', 'superpowers:using-git-worktrees'],
   'agents/verifier.md': ['superpowers:verification-before-completion'],
+  'skills/using-ai-flow/SKILL.md': ['superpowers:dispatching-parallel-agents', 'superpowers:finishing-a-development-branch', 'superpowers:using-git-worktrees'],
 };
 
 test('non-TDD superpowers references are unchanged', () => {
