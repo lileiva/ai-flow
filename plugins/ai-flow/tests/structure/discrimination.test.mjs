@@ -69,7 +69,7 @@ const B2B_CHECKS = {
   'B2b promote version guard': ['evals/tooling/test/promote.test.mjs', 'version mismatch: --plugin-ref v3.4.0 with label v4.0.0-alpha.2 is refused naming the version (REQ-011 S2)'],
   'B2b promote drift guard': ['evals/tooling/test/promote.test.mjs', 'behaviour drift at the SHA is refused naming both hashes (REQ-011 S3)'],
   'B2b raw budget': ['evals/tooling/test/promote.test.mjs', 'the raw dir stays within the 1 MB budget and holds no home path, email or session_context; a 2 MB metrics set is refused (REQ-016 S1, R4)'],
-  'B2b runtime-frozen': ['tests/structure/runtime-frozen.test.mjs', 'negative: a changed agent file moves behavior_hash away from the pinned alpha.2 hash'],
+  'B2b runtime-frozen': ['tests/structure/runtime-frozen.test.mjs', 'negative: a changed agent file moves behavior_hash away from its own unchanged hash'],
   'B2b nested-canary': ['evals/tooling/test/preflight.test.mjs', 'no transcripts from the CLI: the canary fails with guidance'],
   'B2b per-run outlier block': ['evals/tooling/test/compare.test.mjs', 'case d tokens more than 1 sd worse, driven by one run: the markdown lists its 3 per-run token values (REQ-010 S2)'],
 };
