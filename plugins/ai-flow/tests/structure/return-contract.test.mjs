@@ -263,3 +263,40 @@ test('negative: a planner copy without the per-task RED spec is flagged (REQ-009
 test('negative: a planner copy without the Connected Pairs headings is flagged', () => {
   assert.ok(checkPlanner(PLANNER.replace(/^## Connected Pairs Registry/m, '## Pairs')).some((m) => /Connected Pairs heading/.test(m)));
 });
+
+// Verifier: reads tdd_evidence per task, evidence-based verdict, envelope v2 (REQ-009 S3, REQ-011, REQ-004 S2, REQ-017 S1).
+const VERIFIER = fs.readFileSync(path.join(PLUGIN_ROOT, 'agents/verifier.md'), 'utf8');
+
+export function checkVerifier(text) {
+  const p = [];
+  const ret = section(text, 'Return Contract');
+  if (/AskUserQuestion/.test(text)) p.push('mentions AskUserQuestion (subagents never ask the user)');
+  if (!/open_questions/.test(ret) || !/persistence-contract\.md/.test(ret)) p.push('Return section lacks open_questions or the shared envelope');
+  if (!/needs_input/.test(text) || !/blocking/.test(text)) p.push('no needs_input return with blocking questions');
+  if (!/tdd_evidence/.test(text) || !/apply-evidence-\{task_id\}/.test(text)) p.push('does not read tdd_evidence per task from apply-evidence-{task_id}');
+  if (!/tasks? (that )?(is |are )?missing (its |their )?tdd_evidence|missing tdd_evidence/i.test(text)) p.push('does not report tasks missing tdd_evidence');
+  if (!/commands/.test(ret) || !/exit/.test(ret) || !/tdd_evidence_checked/.test(ret)) p.push('Return section lacks evidence {commands[{cmd, exit}], tdd_evidence_checked}');
+  if (!/evidence/.test(ret)) p.push('Return section lacks evidence');
+  return p;
+}
+
+test('return contract: agents/verifier.md mentions open_questions and the shared envelope (REQ-004 S2, REQ-017 S1)', () => {
+  assert.deepEqual(checkVerifier(VERIFIER).filter((m) => /Return section/.test(m)), []);
+});
+
+test('verifier reads tdd_evidence per task and reports tasks missing it (REQ-009 S3, REQ-011)', () => {
+  assert.deepEqual(checkVerifier(VERIFIER), []);
+});
+
+test('negative: a verifier copy that says "use AskUserQuestion" is flagged (REQ-004 S1)', () => {
+  assert.ok(checkVerifier(`${VERIFIER}\nUse AskUserQuestion to ask the user.\n`).some((m) => /AskUserQuestion/.test(m)));
+});
+
+test('negative: a verifier copy that does not read tdd_evidence is flagged (REQ-009 S3)', () => {
+  const bad = VERIFIER.replace(/apply-evidence-\{task_id\}/g, 'apply-progress');
+  assert.ok(checkVerifier(bad).some((m) => /per task/.test(m)));
+});
+
+test('negative: a verifier copy without tdd_evidence_checked in Return is flagged (REQ-009 S3)', () => {
+  assert.ok(checkVerifier(VERIFIER.replace(/tdd_evidence_checked/g, 'checked')).some((m) => /tdd_evidence_checked/.test(m)));
+});

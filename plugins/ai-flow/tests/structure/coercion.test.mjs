@@ -57,13 +57,18 @@ test('allowlist: an unused entry fails', () => {
 });
 
 // Rollout is scoped (R15). Each de-coercion task adds its files here; Task 4.1 replaces this with the full tree.
-const SCOPE = [HOOK_TARGET, 'skills/flow-apply/SKILL.md', 'agents/explorer.md', 'agents/proposer.md', 'agents/specifier.md', 'agents/designer.md', 'agents/planner.md'];
+const SCOPE = [HOOK_TARGET, 'skills/flow-apply/SKILL.md', 'agents/explorer.md', 'agents/proposer.md', 'agents/specifier.md', 'agents/designer.md', 'agents/planner.md', 'agents/verifier.md'];
 // Entries need {file, linePattern, reason}; an unused entry fails.
 const ALLOWLIST = [
   {
     file: 'agents/specifier.md',
     linePattern: /^- \*\*MUST \/ SHALL:\*\*/,
     reason: 'RFC 2119 keyword definition: MUST/SHALL is the vocabulary the specifier teaches for writing requirements, not an instruction to the agent',
+  },
+  {
+    file: 'agents/verifier.md',
+    linePattern: /CRITICAL/,
+    reason: 'severity label: CRITICAL / WARNING / SUGGESTION is the issue vocabulary of the verify report that the coordinator and archivist read, not pressure on the agent',
   },
 ];
 
@@ -96,12 +101,13 @@ const RULES = {
   verifier: {
     'do not modify source files': /do not modify source files/i,
     'verdict from evidence': /verdict[^.\n]*from evidence/i,
+    'fresh run for every check': /run every check fresh/i,
   },
 };
 const NO_WRITE_RULE = { 'do not create, edit or delete project files': /do not create, edit or delete project files/i };
 const READ_ONLY_RULE = { 'persist via engram or the shared fallback': /persist[^.\n]*engram[^.\n]*fallback/i };
 const NO_WRITE_AGENTS = ['explorer', 'designer', 'proposer', 'specifier', 'planner', 'archivist', 'verifier'];
-const RULES_SCOPE = ['implementer', 'explorer', 'proposer', 'specifier', 'designer', 'planner'];
+const RULES_SCOPE = ['implementer', 'explorer', 'proposer', 'specifier', 'designer', 'planner', 'verifier'];
 
 const rulesSection = (text) => /^## Rules\s*$([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(text)?.[1] ?? '';
 const rulesFor = (agent) => ({
