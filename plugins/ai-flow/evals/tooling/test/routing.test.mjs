@@ -50,6 +50,53 @@ test('empty model or effort strings do not count as routed', () => {
   assert.equal(coverage([launch('a', { subagent_type: 'ai-flow:planner', model: '', effort: 'high' })]), 0);
 });
 
+// Task 3.2 (REQ-013 S1, REQ-006 S2, REQ-008 S2). Informational metrics.
+const skill = (id, name, parent = null) => ({ type: 'assistant', parent_tool_use_id: parent, message: { id: `m-${id}`, role: 'assistant', content: [{ type: 'tool_use', id, name: 'Skill', input: { skill: name } }], usage: { input_tokens: 1, output_tokens: 1 } } });
+const routing = (lines) => analyzeTrace(toTrace(lines)).routing;
+
+test('coordinator-main fixture: no orchestrator delegation, no phase-skill loads (coordinator skills are not phase skills)', () => {
+  const r = analyzeTrace(read('coordinator-main')).routing;
+  assert.equal(r.orchestrator_delegation, 0);
+  assert.equal(r.main_phase_skill_loads, 0);
+  assert.equal(r.routing_coverage, 1);
+});
+
+test('an ai-flow:orchestrator launch gives orchestrator_delegation 1', () => {
+  assert.equal(routing([launch('o', { subagent_type: 'ai-flow:orchestrator' })]).orchestrator_delegation, 1);
+});
+
+test('an orchestrator launch nested at depth is still counted', () => {
+  const lines = [launch('a', { subagent_type: 'ai-flow:planner' }), launch('o', { subagent_type: 'ai-flow:orchestrator' }, 'a')];
+  assert.equal(routing(lines).orchestrator_delegation, 1);
+});
+
+test('a main Skill load of ai-flow:flow-apply gives main_phase_skill_loads 1', () => {
+  assert.equal(routing([skill('s', 'ai-flow:flow-apply')]).main_phase_skill_loads, 1);
+});
+
+test('Skill loads of using-ai-flow, coordinating-apply and coordinating-commands are not phase-skill loads', () => {
+  const lines = ['ai-flow:using-ai-flow', 'ai-flow:coordinating-apply', 'ai-flow:coordinating-commands'].map((n, i) => skill(`s${i}`, n));
+  assert.equal(routing(lines).main_phase_skill_loads, 0);
+});
+
+test('a phase-skill load inside a phase agent (not the coordinator) is not counted', () => {
+  const lines = [launch('a', { subagent_type: 'ai-flow:implementer' }), skill('s', 'ai-flow:flow-verify', 'a')];
+  assert.equal(routing(lines).main_phase_skill_loads, 0);
+});
+
+test('no lines: both counts are 0', () => {
+  const r = routing([]);
+  assert.equal(r.orchestrator_delegation, 0);
+  assert.equal(r.main_phase_skill_loads, 0);
+});
+
+const TRACER = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'results', '2026-11-06T16-36-46-574Z', 'traces', 'd-0', 'trace.jsonl');
+test('real tracer trace d-0: orchestrator_delegation 0, main_phase_skill_loads 0', { skip: fs.existsSync(TRACER) ? false : 'tracer bundle 2026-11-06T16-36-46-574Z not present' }, () => {
+  const r = analyzeTrace(fs.readFileSync(TRACER, 'utf8')).routing;
+  assert.equal(r.orchestrator_delegation, 0);
+  assert.equal(r.main_phase_skill_loads, 0);
+});
+
 test('analyzeTrace result has routing.routing_coverage', () => {
   const a = analyzeTrace(read('tdd-test-first'));
   assert.ok(a.routing, 'routing block present');
