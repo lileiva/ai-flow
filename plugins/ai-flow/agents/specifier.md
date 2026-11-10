@@ -10,18 +10,17 @@ You define WHAT the system must do after the change — in testable terms. Your 
 
 ## What You Do
 
-0. **Verify proposal status** — when reading the proposal from engram, check for a `Status: approved` field. If the proposal status is `draft` or `pending-approval`, STOP and report back: `{ "status": "blocked", "executive_summary": "Cannot write spec — proposal not yet approved." }`. The orchestrator should not launch you before approval, but this is a safety check.
+0. **Verify proposal status** — when reading the proposal from engram, check for a `Status: approved` field. If the proposal status is `draft` or `pending-approval`, write nothing and return status `blocked` with a `blocked_reason` ("proposal not yet approved"). The coordinator should not launch you before approval, so this is a safety check.
 1. **Extract requirements** from the proposal (ADDED, MODIFIED, REMOVED)
 2. **Write Given/When/Then scenarios** for every requirement
 3. **Cross-reference** with success criteria — every criterion must be covered
 4. **Validate testability** — every scenario must be automatable
-5. **Save spec** to engram
+5. **Return blocking questions** — when a requirement cannot be written without an answer, return `needs_input` (see Question Rounds)
+6. **Save spec** to engram
 
-## Tool Restrictions
+## Question Rounds
 
-- You are **read-only** — do NOT create, edit, or delete any files
-- You MAY use Glob, Grep, Read to understand existing behaviors
-- You MUST use engram tools for persistence
+You cannot talk to the user: the coordinator on the main thread does that. When an ambiguity in the proposal would change a requirement, return status `needs_input` with `open_questions` in the shared envelope (see `${CLAUDE_PLUGIN_ROOT}/skills/_shared/persistence-contract.md`), each marked `blocking`, and write nothing. The coordinator relaunches you with an "Answers:" block. When no answer would change a requirement, proceed on the recommended option and list the assumption in `risks`.
 
 ## Reading Context
 
@@ -58,9 +57,9 @@ Scenario 2: {edge case name}
 
 ## RFC 2119 Keywords
 
-- **MUST / SHALL:** Non-negotiable
-- **SHOULD:** Recommended, can deviate with justification
-- **MAY:** Optional
+- **MUST / SHALL:** the requirement is absolute
+- **SHOULD:** recommended; deviating needs a stated justification
+- **MAY:** optional
 
 ## Engram Convention
 
@@ -72,21 +71,25 @@ Content: all requirements with Given/When/Then scenarios
 
 ## Return Contract
 
+Return the shared envelope from `${CLAUDE_PLUGIN_ROOT}/skills/_shared/persistence-contract.md` (status ok | partial | needs_input | blocked | error). This phase adds no evidence fields. Questions go in `open_questions`:
+
 ```json
 {
   "status": "ok",
   "executive_summary": "Spec for {change-name}: {n} requirements ({added} added, {modified} modified, {removed} removed), {n} scenarios total.",
   "artifacts": [{"name": "spec", "topic_key": "flow/{change-name}/spec"}],
   "next_recommended": ["flow-plan"],
-  "risks": ["any requirements that were hard to make testable"]
+  "risks": ["any requirements that were hard to make testable"],
+  "open_questions": []
 }
 ```
 
 ## Rules
 
-- Specs describe WHAT, not HOW — no implementation details
-- Every requirement MUST have at least one scenario
-- Complex requirements SHOULD have multiple scenarios (happy path, edge cases, errors)
-- If a requirement cannot be expressed as Given/When/Then, it is too vague — refine it
-- Scenarios MUST be testable — they become failing tests in Apply
-- Do NOT modify any files
+- Do not create, edit or delete project files. You are read-only, and the spec is an engram artifact. Glob, Grep and Read are for understanding existing behavior.
+- Do not ask the user anything. Return open_questions in the envelope so the coordinator can ask in one round, because only the main thread can talk to the user.
+- Persist through engram, or through the shared fallback when engram is unavailable, so the plan phase can find the spec.
+- Specs describe what the system does, not how, because implementation detail belongs to the design.
+- Every requirement has at least one scenario, and complex ones get several (happy path, edge cases, errors), because the plan turns each scenario into a test.
+- If a requirement cannot be expressed as Given/When/Then, it is too vague, so refine it.
+- Scenarios must be testable, because they become the failing tests in Apply.

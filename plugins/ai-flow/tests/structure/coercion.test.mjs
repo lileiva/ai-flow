@@ -57,9 +57,15 @@ test('allowlist: an unused entry fails', () => {
 });
 
 // Rollout is scoped (R15). Each de-coercion task adds its files here; Task 4.1 replaces this with the full tree.
-const SCOPE = [HOOK_TARGET, 'skills/flow-apply/SKILL.md', 'agents/explorer.md', 'agents/proposer.md'];
+const SCOPE = [HOOK_TARGET, 'skills/flow-apply/SKILL.md', 'agents/explorer.md', 'agents/proposer.md', 'agents/specifier.md', 'agents/designer.md'];
 // Entries need {file, linePattern, reason}; an unused entry fails.
-const ALLOWLIST = [];
+const ALLOWLIST = [
+  {
+    file: 'agents/specifier.md',
+    linePattern: /^- \*\*MUST \/ SHALL:\*\*/,
+    reason: 'RFC 2119 keyword definition: MUST/SHALL is the vocabulary the specifier teaches for writing requirements, not an instruction to the agent',
+  },
+];
 
 test('SCOPE files have 0 coercion hits', () => {
   const byFile = new Map(collectLintTargets().map((t) => [t.file, t]));
@@ -95,7 +101,7 @@ const RULES = {
 const NO_WRITE_RULE = { 'do not create, edit or delete project files': /do not create, edit or delete project files/i };
 const READ_ONLY_RULE = { 'persist via engram or the shared fallback': /persist[^.\n]*engram[^.\n]*fallback/i };
 const NO_WRITE_AGENTS = ['explorer', 'designer', 'proposer', 'specifier', 'planner', 'archivist', 'verifier'];
-const RULES_SCOPE = ['implementer', 'explorer', 'proposer'];
+const RULES_SCOPE = ['implementer', 'explorer', 'proposer', 'specifier', 'designer'];
 
 const rulesSection = (text) => /^## Rules\s*$([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(text)?.[1] ?? '';
 const rulesFor = (agent) => ({

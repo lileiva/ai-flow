@@ -185,3 +185,39 @@ test('negative: a proposer copy that says "use AskUserQuestion" is flagged (REQ-
   const bad = `${PROPOSER}\nUse AskUserQuestion to ask the user.\n`;
   assert.ok(checkProposer(bad).some((m) => /AskUserQuestion/.test(m)));
 });
+
+// Specifier and designer: envelope v2, no questions to the user, no instruction to ask (REQ-004 S2, REQ-017 S1, REQ-011).
+const SPECIFIER = fs.readFileSync(path.join(PLUGIN_ROOT, 'agents/specifier.md'), 'utf8');
+const DESIGNER = fs.readFileSync(path.join(PLUGIN_ROOT, 'agents/designer.md'), 'utf8');
+
+export function checkSpecDesign(text, agent) {
+  const p = [];
+  const ret = section(text, 'Return Contract');
+  if (/AskUserQuestion/.test(text)) p.push('mentions AskUserQuestion (subagents never ask the user)');
+  if (!/open_questions/.test(ret) || !/persistence-contract\.md/.test(ret)) p.push('Return section lacks open_questions or the shared envelope');
+  if (!/needs_input/.test(text) || !/blocking/.test(text)) p.push('no needs_input return with blocking questions');
+  if (agent === 'specifier') {
+    if (!/RFC 2119/.test(text) || !/MUST \/ SHALL/.test(text)) p.push('RFC 2119 format guidance dropped');
+    if (!/blocked_reason/.test(text)) p.push('unapproved proposal does not return blocked with blocked_reason');
+  }
+  return p;
+}
+
+for (const [agent, text] of [['specifier', SPECIFIER], ['designer', DESIGNER]]) {
+  test(`return contract: agents/${agent}.md mentions open_questions and the shared envelope (REQ-004 S2, REQ-017 S1)`, () => {
+    assert.deepEqual(checkSpecDesign(text, agent).filter((m) => /Return section/.test(m)), []);
+  });
+
+  test(`${agent} returns needs_input for blocking questions and never asks the user (REQ-004 S1/S2, REQ-011)`, () => {
+    assert.deepEqual(checkSpecDesign(text, agent), []);
+  });
+
+  test(`negative: a ${agent} copy that says "use AskUserQuestion" is flagged (REQ-004 S1)`, () => {
+    assert.ok(checkSpecDesign(`${text}\nUse AskUserQuestion to ask the user.\n`, agent).some((m) => /AskUserQuestion/.test(m)));
+  });
+}
+
+test('negative: a specifier copy without the RFC 2119 guidance is flagged (REQ-010 allowlist)', () => {
+  const bad = SPECIFIER.replace(/RFC 2119/g, 'keyword').replace(/MUST \/ SHALL/g, 'must');
+  assert.ok(checkSpecDesign(bad, 'specifier').some((m) => /RFC 2119/.test(m)));
+});
