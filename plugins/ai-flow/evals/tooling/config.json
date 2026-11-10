@@ -121,6 +121,26 @@
     "self_delegation": {
       "better": "lower",
       "rate": false
+    },
+    "routing_coverage": {
+      "better": "higher",
+      "rate": true,
+      "informational": true
+    },
+    "orchestrator_delegation": {
+      "better": "lower",
+      "rate": false,
+      "informational": true
+    },
+    "main_phase_skill_loads": {
+      "better": "lower",
+      "rate": false,
+      "informational": true
+    },
+    "tdd_instance": {
+      "better": "higher",
+      "rate": true,
+      "informational": true
     }
   },
   "rateTolerance": 0.34,

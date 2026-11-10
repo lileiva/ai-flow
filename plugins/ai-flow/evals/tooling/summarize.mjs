@@ -74,6 +74,29 @@ function nestedFields(runs, ok) {
   };
 }
 
+/**
+ * B4 fields (REQ-013 S2), present only when a run carries them: routing metrics (n/a-aware stats) and tdd_instance
+ * as pass/n by implementer-instance ordinal (instances whose TDD is not applicable, pass null, are skipped).
+ */
+function routingFields(ok) {
+  const out = {};
+  if (ok.some((r) => r.routing)) {
+    const pick = (k) => describeApplicable(ok.map((r) => num(r.routing?.[k])));
+    for (const k of ['routing_coverage', 'orchestrator_delegation', 'main_phase_skill_loads']) out[k] = pick(k);
+  }
+  const withInst = ok.filter((r) => Array.isArray(r.tdd_instance?.by_index));
+  if (withInst.length) {
+    const max = Math.max(0, ...withInst.flatMap((r) => r.tdd_instance.by_index.map((x) => x.i)));
+    const by_index = [];
+    for (let i = 1; i <= max; i++) {
+      const graded = withInst.flatMap((r) => r.tdd_instance.by_index.filter((x) => x.i === i && typeof x.pass === 'boolean'));
+      if (graded.length) by_index.push({ i, pass: graded.filter((x) => x.pass).length, n: graded.length });
+    }
+    out.tdd_instance = { by_index };
+  }
+  return out;
+}
+
 function aggregateCase(runs) {
   const ok = runs.filter((r) => !r.harness_error);
   const harnessErrors = runs.length - ok.length;
@@ -95,6 +118,7 @@ function aggregateCase(runs) {
     subagent_ask: na(describeApplicable(ok.map((r) => toolCount(r, (t) => t?.subagent_ask?.total)))),
     readonly_writes: na(describeApplicable(ok.map((r) => toolCount(r, (t) => t?.readonly_writes?.total)))),
     per_phase_tokens: na(perPhaseTokens(ok)),
+    ...routingFields(ok),
     ...nestedFields(runs, ok),
   };
 }

@@ -13,9 +13,11 @@ import { loadConfig } from './lib/config.mjs';
 export const HEADER = ['case', 'metric', 'baseline', 'candidate', 'delta', 'status'];
 const round = (x) => Math.round(x * 1000) / 1000;
 const isStat = (v) => v && typeof v === 'object' && typeof v.mean === 'number';
-const show = (v) => (isStat(v) ? String(v.mean) : v === null || v === undefined ? '-' : String(v));
+const isInstances = (v) => v && typeof v === 'object' && Array.isArray(v.by_index);
+// tdd_instance is shown as pass/n by ordinal ("1:3/3 2:2/3"); it is not a stat, so it is never flagged.
+const show = (v) => (isStat(v) ? String(v.mean) : isInstances(v) ? v.by_index.map((x) => `${x.i}:${x.pass}/${x.n}`).join(' ') : v === null || v === undefined ? '-' : String(v));
 
-function compareStat(cs, metric, b, c, { better, threshold }) {
+function compareStat(cs, metric, b, c, { better, threshold, informational = false }) {
   const r = { case: cs, metric, baseline: show(b), candidate: show(c), delta: '', status: 'n/a' };
   // REQ-014 S1: a metric one side does not record at all (e.g. self_delegation in a v3.4.0 baseline) is never flagged.
   if (b === undefined && c !== undefined) r.status = 'n/a (baseline)';
@@ -25,7 +27,8 @@ function compareStat(cs, metric, b, c, { better, threshold }) {
   const worse = better === 'higher' ? -delta : delta;
   const limit = Math.max(b.stdev, threshold);
   r.delta = delta;
-  r.status = worse > 0 && worse > limit ? 'regression' : -worse > limit ? 'improvement' : 'ok';
+  // B4 (REQ-013 S2, R6/R12): informational metrics are shown, a worsening is labelled but never blocks.
+  r.status = worse > 0 && worse > limit ? (informational ? 'info: worse' : 'regression') : -worse > limit ? 'improvement' : 'ok';
   return r;
 }
 
@@ -63,7 +66,7 @@ export function compare(baseline, candidate, { absTolerance = 0, allowEnvMismatc
     }
     for (const [metric, spec, b, c] of metricEntries(baseline.cases[cs], candidate.cases[cs], config.metrics)) {
       const threshold = spec.rate ? config.rateTolerance : absTolerance;
-      rows.push(compareStat(cs, metric, b, c, { better: spec.better, threshold }));
+      rows.push(compareStat(cs, metric, b, c, { better: spec.better, threshold, informational: Boolean(spec.informational) }));
     }
   }
   const regressions = rows.filter((r) => r.status === 'regression').length;

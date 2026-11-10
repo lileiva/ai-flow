@@ -151,3 +151,52 @@ test('the committed v3.4.0-sonnet baseline still validates, and a new-format bas
   b.cases.a.nested_capture.complete = 'two';
   assert.ok(paths(validate(BASELINE_SCHEMA, b)).some((p) => p.startsWith('$.cases.a.nested_capture')));
 });
+
+// B4 Task 3.4 (REQ-013 S2): additive routing / tdd_instance fields; old files keep validating.
+function b4RunMetrics() {
+  const m = realRunMetrics();
+  m.routing = { routing_coverage: 0.5, launches: 2, unrouted: [{ id: 't2', agent: 'ai-flow:planner' }], orchestrator_delegation: 0, main_phase_skill_loads: 0 };
+  m.tdd_instance = { n: 2, pass: 1, by_index: [{ i: 1, instance: 'a1', pass: true, reason: null }, { i: 2, instance: 'a2', pass: false, reason: 'impl before red' }] };
+  return m;
+}
+
+test('B4: a run-metrics with routing and tdd_instance validates, also with null coverage and a null instance pass', () => {
+  assert.deepEqual(validate(RUN_SCHEMA, b4RunMetrics()), []);
+  const m = b4RunMetrics();
+  m.routing.routing_coverage = null;
+  m.tdd_instance.by_index[1].pass = null;
+  assert.deepEqual(validate(RUN_SCHEMA, m), []);
+});
+
+test('B4 seeded negatives: bogus types in routing and tdd_instance are rejected with their paths', () => {
+  const a = b4RunMetrics(); a.routing.routing_coverage = 'lots';
+  assert.ok(paths(validate(RUN_SCHEMA, a)).includes('$.routing.routing_coverage'));
+  const b = b4RunMetrics(); b.routing.orchestrator_delegation = 'one';
+  assert.ok(paths(validate(RUN_SCHEMA, b)).includes('$.routing.orchestrator_delegation'));
+  const c = b4RunMetrics(); c.tdd_instance.n = 'two';
+  assert.ok(paths(validate(RUN_SCHEMA, c)).includes('$.tdd_instance.n'));
+  const d = b4RunMetrics(); d.tdd_instance.by_index[0].pass = 'yes';
+  assert.ok(paths(validate(RUN_SCHEMA, d)).includes('$.tdd_instance.by_index[0].pass'));
+});
+
+test('B4: assembleRunMetrics carries routing and tdd_instance from the analysis', () => {
+  const caseName = 'a-e2e-bugfix-slugify';
+  const analysis = { ...analyzeTrace(REAL, { caseName }), routing: b4RunMetrics().routing, tdd_instance: b4RunMetrics().tdd_instance };
+  const m = assembleRunMetrics({ caseName, index: 0, run: CLI_RUN, analysis, outcome: OUTCOME });
+  assert.deepEqual(m.routing, analysis.routing);
+  assert.deepEqual(m.tdd_instance, analysis.tdd_instance);
+  assert.deepEqual(validate(RUN_SCHEMA, m), []);
+});
+
+test('B4: the committed v4.0.0-alpha.2-sonnet baseline still validates, and a baseline with the B4 case fields validates', () => {
+  const alpha = JSON.parse(fs.readFileSync(path.join(HERE, '..', '..', 'baselines', 'v4.0.0-alpha.2-sonnet.json'), 'utf8'));
+  assert.deepEqual(validate(BASELINE_SCHEMA, alpha), []);
+  const b = baseline();
+  Object.assign(b.cases.a, { routing_coverage: { mean: 1, stdev: 0, n_applicable: 2 }, orchestrator_delegation: 'n/a', main_phase_skill_loads: { mean: 0, stdev: 0, n_applicable: 3 },
+    tdd_instance: { by_index: [{ i: 1, pass: 3, n: 3 }, { i: 2, pass: 2, n: 3 }] } });
+  assert.deepEqual(validate(BASELINE_SCHEMA, b), []);
+  b.cases.a.tdd_instance.by_index[0].pass = 'three';
+  assert.ok(paths(validate(BASELINE_SCHEMA, b)).some((p) => p.startsWith('$.cases.a.tdd_instance')));
+  const c = baseline(); c.cases.a.routing_coverage = 'lots';
+  assert.ok(paths(validate(BASELINE_SCHEMA, c)).includes('$.cases.a.routing_coverage'));
+});

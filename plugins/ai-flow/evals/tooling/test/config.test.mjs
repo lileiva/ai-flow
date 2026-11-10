@@ -63,3 +63,20 @@ test('B2b: self_delegation is a lower-is-better count metric and gateBaseline.de
   assert.deepEqual(cfg.metrics.self_delegation, { better: 'lower', rate: false });
   assert.equal(cfg.gateBaseline.default.replace('{model}', 'sonnet'), 'v3.4.0-sonnet.json');
 });
+
+// B4 Task 3.4 (REQ-013 S2, R6, R12): the four B4 metrics are informational and stay out of the D-2 blocking set.
+const D2_BLOCKING = ['outcome_pass_rate', 'tdd_score', 'tdd_ratio', 'phase_order', 'artifact_completeness', 'tokens_total', 'cost_usd', 'wall_time_s', 'subagent_ask', 'readonly_writes', 'per_phase_tokens', 'self_delegation'];
+const B4_METRICS = ['routing_coverage', 'orchestrator_delegation', 'main_phase_skill_loads', 'tdd_instance'];
+
+test('B4: the four new metrics have a direction and are flagged informational', () => {
+  assert.deepEqual(cfg.metrics.routing_coverage, { better: 'higher', rate: true, informational: true });
+  assert.deepEqual(cfg.metrics.orchestrator_delegation, { better: 'lower', rate: false, informational: true });
+  assert.deepEqual(cfg.metrics.main_phase_skill_loads, { better: 'lower', rate: false, informational: true });
+  assert.deepEqual(cfg.metrics.tdd_instance, { better: 'higher', rate: true, informational: true });
+});
+
+test('B4: the blocking metric set (not informational) is unchanged from D-2 and excludes the B4 metrics', () => {
+  const blocking = Object.entries(cfg.metrics).filter(([, s]) => !s.informational).map(([k]) => k);
+  assert.deepEqual(blocking.sort(), [...D2_BLOCKING].sort());
+  for (const m of B4_METRICS) assert.ok(!blocking.includes(m), m);
+});

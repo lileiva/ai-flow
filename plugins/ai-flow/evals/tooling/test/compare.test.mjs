@@ -171,3 +171,42 @@ test('new-format vs new-format: self_delegation is compared like any lower-is-be
   c.cases.a.self_delegation = { mean: 2, stdev: 0, n_applicable: 3 };
   assert.equal(row(compare(newFormat(), c), 'a', 'self_delegation').status, 'regression');
 });
+
+// B4 Task 3.4 (REQ-013 S2, R6, R12): the new metrics are informational and never block.
+const ALPHA2 = () => JSON.parse(fs.readFileSync(path.join(HERE, '..', '..', 'baselines', 'v4.0.0-alpha.2-sonnet.json'), 'utf8'));
+const B4 = ['routing_coverage', 'orchestrator_delegation', 'main_phase_skill_loads', 'tdd_instance'];
+function b4Candidate(patch = {}) {
+  const c = structuredClone(ALPHA2());
+  for (const cs of Object.values(c.cases)) {
+    cs.routing_coverage = { mean: 1, stdev: 0, n_applicable: 3 };
+    cs.orchestrator_delegation = { mean: 0, stdev: 0, n_applicable: 3 };
+    cs.main_phase_skill_loads = { mean: 0, stdev: 0, n_applicable: 3 };
+    cs.tdd_instance = { by_index: [{ i: 1, pass: 3, n: 3 }, { i: 2, pass: 2, n: 3 }] };
+  }
+  Object.assign(c.cases.a, patch);
+  return c;
+}
+
+test('B4: compare(alpha.2 baseline, B4 candidate) shows "n/a (baseline)" for the four metrics and no regression', () => {
+  const res = compare(ALPHA2(), b4Candidate());
+  for (const m of B4) assert.equal(row(res, 'a', m).status, 'n/a (baseline)', m);
+  assert.equal(res.regressions, 0);
+  assert.equal(res.exitCode, 0);
+  assert.equal(row(res, 'a', 'tdd_instance').candidate, '1:3/3 2:2/3');
+});
+
+test('B4: an informational metric that got worse is reported but never counted as a regression', () => {
+  const b = b4Candidate();
+  const c = b4Candidate({ routing_coverage: { mean: 0, stdev: 0, n_applicable: 3 }, orchestrator_delegation: { mean: 5, stdev: 0, n_applicable: 3 } });
+  const res = compare(b, c);
+  assert.equal(row(res, 'a', 'routing_coverage').status, 'info: worse');
+  assert.equal(row(res, 'a', 'orchestrator_delegation').status, 'info: worse');
+  assert.equal(res.regressions, 0);
+  assert.equal(res.exitCode, 0);
+});
+
+test('B4 negative control: a blocking metric (self_delegation) with the same worsening still regresses', () => {
+  const b = b4Candidate({ self_delegation: { mean: 0, stdev: 0, n_applicable: 3 } });
+  const c = b4Candidate({ self_delegation: { mean: 5, stdev: 0, n_applicable: 3 } });
+  assert.equal(row(compare(b, c), 'a', 'self_delegation').status, 'regression');
+});

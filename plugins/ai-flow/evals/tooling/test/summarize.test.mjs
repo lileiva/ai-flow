@@ -168,3 +168,26 @@ test('a new-format summary validates against the schema; old-format runs get non
   const old = summarize([run(0, 100, true)], META);
   for (const k of ['nested_capture', 'run_errors', 'na_capture', 'self_delegation', 'runs', 'per_agent_tokens_transcript']) assert.ok(!(k in old.cases.a), k);
 });
+
+// B4 Task 3.4 (REQ-013 S2): routing metrics and per-instance TDD aggregate per case, informational.
+const routing = (cov, od = 0, sk = 0) => ({ routing_coverage: cov, launches: cov === null ? 0 : 2, unrouted: [], orchestrator_delegation: od, main_phase_skill_loads: sk });
+const inst = (...passes) => ({ n: passes.length, pass: passes.filter((p) => p === true).length, by_index: passes.map((p, k) => ({ i: k + 1, instance: `i${k}`, pass: p, reason: null })) });
+
+test('B4: summarize aggregates routing metrics per case, n/a-aware (null coverage is excluded)', () => {
+  const s = summarize([run(0, 100, true, { routing: routing(1, 0, 0) }), run(1, 100, true, { routing: routing(0.5, 1, 2) }), run(2, 100, true, { routing: routing(null) })], { ...META, runs_per_case: 3 });
+  assert.deepEqual(s.cases.a.routing_coverage, { mean: 0.75, stdev: 0.354, n_applicable: 2 });
+  assert.deepEqual(s.cases.a.orchestrator_delegation, { mean: 0.333, stdev: 0.577, n_applicable: 3 });
+  assert.deepEqual(s.cases.a.main_phase_skill_loads, { mean: 0.667, stdev: 1.155, n_applicable: 3 });
+});
+
+test('B4: summarize reports tdd_instance as pass/n by ordinal, skipping null (not applicable) instances', () => {
+  const s = summarize([run(0, 100, true, { tdd_instance: inst(true, true) }), run(1, 100, true, { tdd_instance: inst(true, false) }), run(2, 100, true, { tdd_instance: inst(true, null, true) })], { ...META, runs_per_case: 3 });
+  assert.deepEqual(s.cases.a.tdd_instance, { by_index: [{ i: 1, pass: 3, n: 3 }, { i: 2, pass: 1, n: 2 }, { i: 3, pass: 1, n: 1 }] });
+});
+
+test('B4: runs without the new fields add no B4 keys; a harness-error run is excluded from them', () => {
+  const old = summarize([run(0, 100, true)], META);
+  for (const k of ['routing_coverage', 'orchestrator_delegation', 'main_phase_skill_loads', 'tdd_instance']) assert.ok(!(k in old.cases.a), k);
+  const s = summarize([run(0, 100, true, { routing: routing(1) }), run(1, 100, false, { harness_error: true, routing: routing(0) })], META);
+  assert.deepEqual(s.cases.a.routing_coverage, { mean: 1, stdev: 0, n_applicable: 1 });
+});

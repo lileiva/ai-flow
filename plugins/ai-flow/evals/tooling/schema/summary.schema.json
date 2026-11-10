@@ -1,5 +1,5 @@
 {
-  "$comment": "Summary written by run.mjs to <out>/summary.json (REQ-015). Validated by lib/schema.mjs (subset). Supports type, required, properties, additionalProperties, items, enum, oneOf and local $ref. A stat is null when a case has no non-harness-error runs (n=0). B2b (additive, optional): cases[x].{nested_capture, run_errors, na_capture, self_delegation, runs}, session_start.measured, meta.{label, observability, session_start_cost_usd, regraded_from, regraded_at, regrade_reason}.",
+  "$comment": "Summary written by run.mjs to <out>/summary.json (REQ-015). Validated by lib/schema.mjs (subset). Supports type, required, properties, additionalProperties, items, enum, oneOf and local $ref. A stat is null when a case has no non-harness-error runs (n=0). B2b (additive, optional): cases[x].{nested_capture, run_errors, na_capture, self_delegation, runs}, session_start.measured, meta.{label, observability, session_start_cost_usd, regraded_from, regraded_at, regrade_reason}. B4 (additive, optional): cases[x].{routing_coverage, orchestrator_delegation, main_phase_skill_loads, tdd_instance} (REQ-013).",
   "type": "object",
   "required": [
     "schema_version",
@@ -335,6 +335,45 @@
             ],
             "additionalProperties": {
               "$ref": "#/definitions/stat"
+            }
+          },
+          "routing_coverage": {
+            "$ref": "#/definitions/stat_or_na"
+          },
+          "orchestrator_delegation": {
+            "$ref": "#/definitions/stat_or_na"
+          },
+          "main_phase_skill_loads": {
+            "$ref": "#/definitions/stat_or_na"
+          },
+          "tdd_instance": {
+            "type": "object",
+            "required": [
+              "by_index"
+            ],
+            "properties": {
+              "by_index": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "i",
+                    "pass",
+                    "n"
+                  ],
+                  "properties": {
+                    "i": {
+                      "type": "integer"
+                    },
+                    "pass": {
+                      "type": "integer"
+                    },
+                    "n": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
             }
           }
         }
