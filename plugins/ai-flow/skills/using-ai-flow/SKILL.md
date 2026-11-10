@@ -288,7 +288,10 @@ If the user rejects, ask what to change and re-launch the phase with the feedbac
 
 ### Handling returns
 
-Status `needs_input`: question round. Status `blocked`: debugger routing.
+Subagents never launch another phase agent and cannot ask the user, so they return `needs_input` or `blocked` and you route it.
+
+- `needs_input`: merge the blocking `open_questions` of the phase into one AskUserQuestion round (4 questions per call, recommended option first). Then relaunch the same agent type fresh with an "Answers:" block and the same artifact refs. Show non-blocking questions at the next gate. Unattended: take the recommended option and print `ASSUMED ANSWER: <id>`.
+- `blocked` from an implementer: launch `ai-flow:debugger` (opus/high) with the task id, the evidence and the apply-progress key. On debugger ok, launch a fresh implementer for that task one routing step up. If the debugger returns blocked, send a question to the user.
 
 ### DAG State Updates
 

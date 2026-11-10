@@ -330,3 +330,29 @@ test('using-ai-flow handles needs_input and blocked statuses', () => {
   assert.match(s, /needs_input/);
   assert.match(s, /blocked/);
 });
+
+/** Problems with the question round, blocked routing and the no-nesting rule (REQ-004 S3, REQ-005 S3). */
+export function returnHandlingProblems(text) {
+  const s = sectionOf(text, 'Handling returns');
+  const p = [];
+  if (!/blocking[^\n]*open_questions|open_questions[^\n]*blocking/i.test(s)) p.push('no rule for blocking open_questions');
+  if (!/merge[^\n]*one AskUserQuestion round/i.test(s)) p.push('questions are not merged into one AskUserQuestion round');
+  if (!/(4|four) (questions )?per call/i.test(s) || !/recommended option first/i.test(s)) p.push('no 4-per-call limit with the recommended option first');
+  if (!/relaunch[^\n]*same agent type[^\n]*fresh[^\n]*Answers:/i.test(s)) p.push('no fresh relaunch of the same agent type with an "Answers:" block');
+  if (!/non-blocking[^\n]*next gate/i.test(s)) p.push('non-blocking questions are not shown at the next gate');
+  if (!/unattended[^\n]*recommended[^\n]*ASSUMED ANSWER:/i.test(s)) p.push('no ASSUMED ANSWER line under the unattended policy');
+  if (!/blocked[^\n]*ai-flow:debugger[^\n]*opus[^\n]*high/i.test(s) || !/task id/i.test(s) || !/evidence/i.test(s) || !/apply-progress/i.test(s)) p.push('blocked does not launch ai-flow:debugger (opus/high) with task id, evidence and apply-progress key');
+  if (!/debugger[^\n]*ok[^\n]*fresh implementer[^\n]*one routing step up/i.test(s)) p.push('no fresh implementer one routing step up after debugger ok');
+  if (!/debugger[^\n]*blocked[^\n]*question to the user/i.test(s)) p.push('debugger blocked does not go to the user as a question');
+  if (!/no (sub-?agent|agent)[^\n]*launch[^\n]*(another )?phase agent|(sub-?agents?|agents?) (do not|never|must not) launch[^\n]*agent/i.test(text)) p.push('no rule that a subagent never launches another phase agent');
+  return p;
+}
+
+test('Handling returns: question round, blocked -> debugger, no nested launches (REQ-004 S3, REQ-005 S3)', () => {
+  assert.deepEqual(returnHandlingProblems(read(USING)), []);
+});
+
+test('negative: Handling returns without the question round or the debugger route is flagged', () => {
+  const bad = read(USING).replace(/### Handling returns[\s\S]*?(?=### DAG State Updates)/, '### Handling returns\n\nneeds_input and blocked: decide.\n\n');
+  assert.ok(returnHandlingProblems(bad).length >= 8);
+});
