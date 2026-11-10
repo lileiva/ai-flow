@@ -286,6 +286,10 @@ Each gate stops the flow until the user answers. Present the summary, then eithe
 
 If the user rejects, ask what to change and re-launch the phase with the feedback. Under the unattended policy (an eval or batch run that says no user is present), print `AUTO-APPROVED GATE: <gate>` before the next phase starts, then continue. Record every gate result (gate, answer, auto or user) in `state.gates`.
 
+### Handling returns
+
+Status `needs_input`: question round. Status `blocked`: debugger routing.
+
 ### DAG State Updates
 
 After every phase completes (whether by sub-agent return or human gate approval), save the DAG state to engram:

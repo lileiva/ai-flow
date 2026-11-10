@@ -322,3 +322,11 @@ test('negative: a copy that loads ai-flow:flow-apply with the Skill tool is flag
   const bad = `${read(USING)}\nTo apply, load ai-flow:flow-apply with the Skill tool.\n`;
   assert.equal(phaseSkillLoadProblems(bad).length, 1);
 });
+
+// Task 2.3: status handling (REQ-004 S3, REQ-005 S3, design D-6, D-7).
+test('using-ai-flow handles needs_input and blocked statuses', () => {
+  const s = sectionOf(read(USING), 'Handling returns');
+  assert.ok(s, 'no Handling returns section');
+  assert.match(s, /needs_input/);
+  assert.match(s, /blocked/);
+});
