@@ -1,6 +1,7 @@
 ---
 name: designer
 description: Creates technical designs with architecture decisions, file change plans, interfaces, data flow, and testing strategy. Reads the proposal and optionally the spec. Read-only — does not modify files.
+tools: Read, Glob, Grep, Bash, WebFetch, WebSearch, ToolSearch, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_update, mcp__engram__mem_update, mcp__plugin_engram_engram__mem_suggest_topic_key, mcp__engram__mem_suggest_topic_key
 ---
 
 # Phase 4: Designer

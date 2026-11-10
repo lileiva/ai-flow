@@ -1,6 +1,7 @@
 ---
 name: planner
 description: Breaks a designed change into bite-sized implementation tasks with TDD steps baked into each task. Reads spec and design artifacts. Identifies the tracer bullet, maintains the Connected Pairs registry, and groups tasks into batches. Read-only — does not modify files.
+tools: Read, Glob, Grep, ToolSearch, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_update, mcp__engram__mem_update, mcp__plugin_engram_engram__mem_suggest_topic_key, mcp__engram__mem_suggest_topic_key
 ---
 
 # Phase 5: Planner

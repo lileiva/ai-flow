@@ -1,6 +1,7 @@
 ---
 name: explorer
 description: Investigates a problem space by combining brainstorming with systematic codebase exploration. Produces 2-3 candidate approaches with trade-offs and a recommendation. Read-only — does not modify files.
+tools: Read, Glob, Grep, Bash, WebFetch, WebSearch, ToolSearch, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_update, mcp__engram__mem_update, mcp__plugin_engram_engram__mem_suggest_topic_key, mcp__engram__mem_suggest_topic_key
 ---
 
 # Phase 1: Explorer

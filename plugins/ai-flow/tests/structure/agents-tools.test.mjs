@@ -68,3 +68,61 @@ test('proposer tools include mcp__plugin_engram_engram__mem_save and ToolSearch 
   assert.ok(tools.includes('mcp__plugin_engram_engram__mem_save'), 'proposer missing mem_save');
   assert.ok(tools.includes('ToolSearch'), 'proposer missing ToolSearch');
 });
+
+// ---- Read-only agents allowlists (REQ-001 S2/S3/S4, design D-5) ----
+const WRITE_TOOLS = ['Write', 'Edit', 'NotebookEdit', 'MultiEdit'];
+const READ_ONLY_ROLES = {
+  explorer: { bash: true },
+  designer: { bash: true },
+  proposer: { bash: false },
+  specifier: { bash: false },
+  planner: { bash: false },
+  archivist: { bash: false },
+};
+const hasWrite = (tools) => WRITE_TOOLS.some((t) => tools.includes(t));
+
+/** Role-specific problems for a read-only agent; returns a list. */
+export function checkReadOnly(fm, role, { bash }) {
+  const p = [];
+  const tools = toolList(fm);
+  for (const w of WRITE_TOOLS) if (tools.includes(w)) p.push(`${role}: write tool ${w}`);
+  for (const t of ENGRAM_TOOLS) if (!tools.includes(t)) p.push(`${role}: missing ${t}`);
+  if (bash !== tools.includes('Bash')) p.push(`${role}: Bash ${bash ? 'missing' : 'present'}`);
+  return p;
+}
+
+for (const [role, opts] of Object.entries(READ_ONLY_ROLES)) {
+  test(`${role} read-only allowlist (REQ-001 S2/S3, D-5)`, () => {
+    assert.deepEqual(checkReadOnly(agentFm(role), role, opts), []);
+    assert.deepEqual(checkAgentTools(agentFm(role), role), []);
+  });
+}
+
+test('negative: a specifier copy plus Edit is reported (REQ-001 S2)', () => {
+  const fm = { ...agentFm('specifier'), tools: `${agentFm('specifier').tools}, Edit` };
+  assert.ok(checkReadOnly(fm, 'specifier', READ_ONLY_ROLES.specifier).some((m) => /Edit/.test(m)));
+});
+
+test('negative: a proposer copy without mem_save is reported (REQ-001 S3)', () => {
+  const tools = toolList(agentFm('proposer')).filter((t) => !t.endsWith('mem_save')).join(', ');
+  assert.ok(checkReadOnly({ tools }, 'proposer', READ_ONLY_ROLES.proposer).some((m) => /mem_save/.test(m)));
+});
+
+test('negative: Bash on a no-Bash role is reported (D-5)', () => {
+  const fm = { tools: `${agentFm('planner').tools}, Bash` };
+  assert.ok(checkReadOnly(fm, 'planner', READ_ONLY_ROLES.planner).some((m) => /Bash/.test(m)));
+});
+
+test('frontmatter write-less sets equal eval config readOnlyAgents/noWriteAgents (REQ-001 S4)', () => {
+  const cfg = JSON.parse(fs.readFileSync(path.join(PLUGIN_ROOT, 'evals/tooling/config.json'), 'utf8'));
+  // orchestrator.md is excluded: the deprecated stub (R2) is never launched, and adding it
+  // to the config would change eval grading.
+  const names = fs.readdirSync(path.join(PLUGIN_ROOT, 'agents'))
+    .map((f) => f.replace(/\.md$/, '')).filter((n) => n !== 'orchestrator')
+    // Agents without a tools key are covered by Task 1.3 (verifier, debugger, initializer).
+    .filter((n) => toolList(agentFm(n)).length > 0);
+  const noWrite = names.filter((n) => !hasWrite(toolList(agentFm(n))));
+  const readOnly = noWrite.filter((n) => /read-only/i.test(String(agentFm(n).description)));
+  assert.deepEqual(cfg.noWriteAgents.filter((n) => names.includes(n)).sort(), noWrite.sort());
+  assert.deepEqual([...cfg.readOnlyAgents].sort(), readOnly.sort());
+});
