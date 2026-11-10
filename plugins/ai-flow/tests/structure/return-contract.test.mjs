@@ -334,3 +334,39 @@ test('initializer does not claim a no-write rule: it writes .ai-flow.json (REQ-0
   assert.doesNotMatch(section(INITIALIZER, 'Rules'), /do not create, edit or delete project files/i);
   assert.match(section(INITIALIZER, 'Rules'), /\.ai-flow\.json/);
 });
+
+// Debugger: launched by the coordinator with a task id, blocked evidence and the apply-progress key; returns blocked, never escalated
+// (REQ-005 supports S3/S4, REQ-010, REQ-011, REQ-017 S1).
+const DEBUGGER = fs.readFileSync(path.join(PLUGIN_ROOT, 'agents/debugger.md'), 'utf8');
+
+export function checkDebugger(text) {
+  const p = checkEnvelopeAgent(text);
+  const inputs = section(text, 'Inputs');
+  for (const [label, re] of [['task id', /task id/i], ['blocked evidence', /blocked evidence|evidence/i], ['apply-progress key', /apply-progress/]]) {
+    if (!re.test(inputs)) p.push(`Inputs section does not name the ${label}`);
+  }
+  const ret = section(text, 'Return Contract');
+  if (!/blocked_reason/.test(ret) || !/escalat/i.test(text)) p.push('Return does not map escalation to status blocked with blocked_reason');
+  if (/"status":[^\n]*escalated/.test(ret)) p.push('Return still offers status escalated');
+  if (/\b(launch|spawn|start|invoke|delegate to)\b[^.\n]*\b(agent|implementer|subagent)\b/i.test(text.replace(/the coordinator launches[^.\n]*/gi, ''))) p.push('instructs the agent to launch other agents');
+  return p;
+}
+
+test('return contract: agents/debugger.md mentions open_questions, the shared envelope, its inputs and blocked mapping (REQ-005, REQ-017 S1)', () => {
+  assert.deepEqual(checkDebugger(DEBUGGER), []);
+});
+test('negative: a debugger copy that says "use AskUserQuestion" is flagged (REQ-004 S1)', () => {
+  assert.ok(checkDebugger(`${DEBUGGER}\nUse AskUserQuestion to ask the user.\n`).some((m) => /AskUserQuestion/.test(m)));
+});
+test('negative: a debugger copy whose Return ignores the shared envelope is flagged (REQ-017 S1)', () => {
+  assert.ok(checkDebugger(DEBUGGER.replace(/persistence-contract\.md/g, 'x.md')).some((m) => /Return section/.test(m)));
+});
+test('negative: a debugger copy without the apply-progress key in Inputs is flagged (REQ-005)', () => {
+  assert.ok(checkDebugger(DEBUGGER.replace(/apply-progress/g, 'progress')).some((m) => /apply-progress key/.test(m)));
+});
+test('negative: a debugger copy that returns status escalated is flagged (REQ-005)', () => {
+  assert.ok(checkDebugger(DEBUGGER.replace('"status": "ok"', '"status": "ok | escalated"')).some((m) => /escalated/.test(m)));
+});
+test('negative: a debugger copy that tells it to launch another agent is flagged (REQ-005)', () => {
+  assert.ok(checkDebugger(`${DEBUGGER}\nLaunch the implementer agent when the fix is done.\n`).some((m) => /launch other agents/.test(m)));
+});

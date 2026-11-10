@@ -57,7 +57,7 @@ test('allowlist: an unused entry fails', () => {
 });
 
 // Rollout is scoped (R15). Each de-coercion task adds its files here; Task 4.1 replaces this with the full tree.
-const SCOPE = [HOOK_TARGET, 'skills/flow-apply/SKILL.md', 'agents/explorer.md', 'agents/proposer.md', 'agents/specifier.md', 'agents/designer.md', 'agents/planner.md', 'agents/verifier.md', 'agents/archivist.md', 'agents/initializer.md'];
+const SCOPE = [HOOK_TARGET, 'skills/flow-apply/SKILL.md', 'agents/explorer.md', 'agents/proposer.md', 'agents/specifier.md', 'agents/designer.md', 'agents/planner.md', 'agents/verifier.md', 'agents/archivist.md', 'agents/initializer.md', 'agents/debugger.md'];
 // Entries need {file, linePattern, reason}; an unused entry fails.
 const ALLOWLIST = [
   {
@@ -102,6 +102,7 @@ const RULES = {
   debugger: {
     'root cause before fix': /root cause before (a |any )?fix/i,
     'reproduce with a failing test first': /reproduce[^.\n]*failing test first/i,
+    'return blocked after three failed fixes': /return (status )?blocked[^.\n]*(3|three) (failed )?(fix )?attempts/i,
   },
   verifier: {
     'do not modify source files': /do not modify source files/i,
@@ -120,7 +121,7 @@ const RULES = {
 const NO_WRITE_RULE = { 'do not create, edit or delete project files': /do not create, edit or delete project files/i };
 const READ_ONLY_RULE = { 'persist via engram or the shared fallback': /persist[^.\n]*engram[^.\n]*fallback/i };
 const NO_WRITE_AGENTS = ['explorer', 'designer', 'proposer', 'specifier', 'planner', 'archivist', 'verifier'];
-const RULES_SCOPE = ['implementer', 'explorer', 'proposer', 'specifier', 'designer', 'planner', 'verifier', 'archivist', 'initializer'];
+const RULES_SCOPE = ['implementer', 'explorer', 'proposer', 'specifier', 'designer', 'planner', 'verifier', 'archivist', 'initializer', 'debugger'];
 
 const rulesSection = (text) => /^## Rules\s*$([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(text)?.[1] ?? '';
 const rulesFor = (agent) => ({
