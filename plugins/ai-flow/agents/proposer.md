@@ -1,6 +1,7 @@
 ---
 name: proposer
 description: Creates formal change proposals with intent, scope, risks, rollback plan, and measurable success criteria. Reads exploration artifacts. Read-only — does not modify files.
+tools: Read, Glob, Grep, ToolSearch, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_update, mcp__engram__mem_update, mcp__plugin_engram_engram__mem_suggest_topic_key, mcp__engram__mem_suggest_topic_key
 ---
 
 # Phase 2: Proposer

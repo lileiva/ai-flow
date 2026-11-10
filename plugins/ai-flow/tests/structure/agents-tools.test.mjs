@@ -62,3 +62,9 @@ test('negative: unrestricted tools are reported', () => {
   assert.ok(checkAgentTools({}, 'x').length > 0);
   assert.ok(checkAgentTools({ tools: 'All tools' }, 'x').length > 0);
 });
+
+test('proposer tools include mcp__plugin_engram_engram__mem_save and ToolSearch (REQ-001 S3)', () => {
+  const tools = toolList(agentFm('proposer'));
+  assert.ok(tools.includes('mcp__plugin_engram_engram__mem_save'), 'proposer missing mem_save');
+  assert.ok(tools.includes('ToolSearch'), 'proposer missing ToolSearch');
+});
