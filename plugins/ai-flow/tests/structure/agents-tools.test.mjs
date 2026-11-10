@@ -113,16 +113,54 @@ test('negative: Bash on a no-Bash role is reported (D-5)', () => {
   assert.ok(checkReadOnly(fm, 'planner', READ_ONLY_ROLES.planner).some((m) => /Bash/.test(m)));
 });
 
+// ---- Verifier, debugger, initializer (REQ-001 S1/S2, design D-5) ----
+const BASE = ['Read', 'Glob', 'Grep'];
+const ROLE_TOOLS = {
+  verifier: [...BASE, 'Bash', ...ENGRAM_TOOLS],
+  debugger: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'TodoWrite', ...ENGRAM_TOOLS],
+  initializer: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', ...ENGRAM_TOOLS],
+};
+
+for (const [role, expected] of Object.entries(ROLE_TOOLS)) {
+  test(`${role} tools equal its role allowlist (REQ-001 S1/S2, D-5)`, () => {
+    assert.deepEqual([...toolList(agentFm(role))].sort(), [...expected].sort());
+    assert.deepEqual(checkAgentTools(agentFm(role), role), []);
+  });
+}
+
+test('debugger tools equal the implementer set (D-5)', () => {
+  assert.deepEqual([...toolList(agentFm('debugger'))].sort(), [...toolList(agentFm('implementer'))].sort());
+});
+
+test('verifier has no write tools (REQ-001 S2)', () => {
+  assert.ok(!hasWrite(toolList(agentFm('verifier'))));
+});
+
+test('initializer description does not claim read-only (REQ-001 S1)', () => {
+  assert.doesNotMatch(String(agentFm('initializer').description), /read-only/i);
+});
+
+test('every agent file, including the orchestrator stub, declares tools (REQ-001 S1)', () => {
+  const files = fs.readdirSync(path.join(PLUGIN_ROOT, 'agents')).filter((f) => f.endsWith('.md'));
+  assert.equal(files.length, 11);
+  for (const f of files) {
+    const n = f.replace(/\.md$/, '');
+    assert.ok(toolList(agentFm(n)).length > 0, `${n} has no tools`);
+  }
+});
+
+// Explicit sets (not derived from descriptions, which later de-coercion edits may reword).
+const EXPECTED_NO_WRITE = ['archivist', 'designer', 'explorer', 'planner', 'proposer', 'specifier', 'verifier'];
+const EXPECTED_READ_ONLY = ['archivist', 'designer', 'explorer', 'planner', 'proposer', 'specifier'];
+
 test('frontmatter write-less sets equal eval config readOnlyAgents/noWriteAgents (REQ-001 S4)', () => {
   const cfg = JSON.parse(fs.readFileSync(path.join(PLUGIN_ROOT, 'evals/tooling/config.json'), 'utf8'));
   // orchestrator.md is excluded: the deprecated stub (R2) is never launched, and adding it
   // to the config would change eval grading.
   const names = fs.readdirSync(path.join(PLUGIN_ROOT, 'agents'))
-    .map((f) => f.replace(/\.md$/, '')).filter((n) => n !== 'orchestrator')
-    // Agents without a tools key are covered by Task 1.3 (verifier, debugger, initializer).
-    .filter((n) => toolList(agentFm(n)).length > 0);
-  const noWrite = names.filter((n) => !hasWrite(toolList(agentFm(n))));
-  const readOnly = noWrite.filter((n) => /read-only/i.test(String(agentFm(n).description)));
-  assert.deepEqual(cfg.noWriteAgents.filter((n) => names.includes(n)).sort(), noWrite.sort());
-  assert.deepEqual([...cfg.readOnlyAgents].sort(), readOnly.sort());
+    .map((f) => f.replace(/\.md$/, '')).filter((n) => n !== 'orchestrator');
+  const noWrite = names.filter((n) => !hasWrite(toolList(agentFm(n)))).sort();
+  assert.deepEqual(noWrite, EXPECTED_NO_WRITE);
+  assert.deepEqual([...cfg.noWriteAgents].sort(), noWrite);
+  assert.deepEqual([...cfg.readOnlyAgents].sort(), EXPECTED_READ_ONLY);
 });

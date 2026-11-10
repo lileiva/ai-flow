@@ -1,6 +1,7 @@
 ---
 name: initializer
 description: Bootstraps AI-Flow in a new project. Detects tech stack, conventions, test runners, and persistence. Creates .ai-flow.json. Invoke when starting AI-Flow for the first time or when project context is missing.
+tools: Read, Write, Edit, Glob, Grep, Bash, ToolSearch, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_update, mcp__engram__mem_update, mcp__plugin_engram_engram__mem_suggest_topic_key, mcp__engram__mem_suggest_topic_key
 ---
 
 # Phase 0: Project Initializer

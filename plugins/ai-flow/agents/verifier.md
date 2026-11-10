@@ -1,6 +1,7 @@
 ---
 name: verifier
 description: Runs completeness checks, spec compliance matrix, full test execution, and success criteria validation. Produces a PASS/FAIL verdict. Can read code and run tests but does not modify source files.
+tools: Read, Glob, Grep, Bash, ToolSearch, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_update, mcp__engram__mem_update, mcp__plugin_engram_engram__mem_suggest_topic_key, mcp__engram__mem_suggest_topic_key
 ---
 
 # Phase 7: Verifier
