@@ -157,3 +157,31 @@ test('negative: an explorer copy that says "use AskUserQuestion" is flagged (REQ
   const bad = `${EXPLORER}\nUse AskUserQuestion to ask the user.\n`;
   assert.ok(checkExplorer(bad).some((m) => /AskUserQuestion/.test(m)));
 });
+
+// Proposer: blocking questions come back before anything is written (REQ-004 S1/S2, REQ-017 S1, REQ-021 S1, design D-6).
+const PROPOSER = fs.readFileSync(path.join(PLUGIN_ROOT, 'agents/proposer.md'), 'utf8');
+
+export function checkProposer(text) {
+  const p = [];
+  const ret = section(text, 'Return Contract');
+  if (/AskUserQuestion/.test(text)) p.push('mentions AskUserQuestion (subagents never ask the user)');
+  if (!/open_questions/.test(ret) || !/persistence-contract\.md/.test(ret)) p.push('Return section lacks open_questions or the shared envelope');
+  if (!/needs_input/.test(text) || !/blocking/.test(text)) p.push('no needs_input return with blocking questions');
+  if (!/before writing/i.test(text)) p.push('questions are not returned before writing the proposal');
+  if (!/recommended option/i.test(text)) p.push('no rule to proceed on the recommended option');
+  if (!/brainstorm[\s\S]{0,200}OPTIONAL|OPTIONAL[\s\S]{0,200}brainstorm/.test(text)) p.push('brainstorm is not optional');
+  return p;
+}
+
+test('return contract: agents/proposer.md mentions open_questions and the shared envelope (REQ-004 S2, REQ-017 S1)', () => {
+  assert.deepEqual(checkProposer(PROPOSER).filter((m) => /Return section/.test(m)), []);
+});
+
+test('proposer returns needs_input before writing when a question is blocking (REQ-004 S1, REQ-021 S1)', () => {
+  assert.deepEqual(checkProposer(PROPOSER), []);
+});
+
+test('negative: a proposer copy that says "use AskUserQuestion" is flagged (REQ-004 S1)', () => {
+  const bad = `${PROPOSER}\nUse AskUserQuestion to ask the user.\n`;
+  assert.ok(checkProposer(bad).some((m) => /AskUserQuestion/.test(m)));
+});
