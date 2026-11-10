@@ -22,11 +22,11 @@ The honest cost: each step feels slower; the feature usually lands sooner, with 
 
 Write one test for the next behaviour on your list (§3). Before running it, predict how it will fail. Then run it.
 
-It should fail on the assertion that names the missing behaviour, e.g. `expected 'EUR 10.00', got undefined`. An import error, a syntax error or `X is not defined` means you are not red yet: the test never got as far as asking its question. Add the minimal scaffold (an empty function, an export that returns nothing) until the assertion is what fails.
+It should fail on the assertion that names the missing behaviour, e.g. `expected 'EUR 10.00', got undefined`. An import error, a syntax error or `X is not defined` means you are not red yet: the test never got as far as asking its question. Run the test before you create any production file, stub or export, so the first failure shows the test loads and runs; only then add the minimal scaffold (an empty function, an export that returns nothing) until the assertion is what fails. Write the test file and run it in separate tool calls, so the run reports what you wrote.
 
 Why: the failure message proves the test checks what you think it checks. Without the run, you do not know whether it can fail at all.
 
-If it passes unexpectedly, find out why: the behaviour already exists (note it, pick the next test), the test is wrong (asserts on a stub, a tautology, the wrong object), or it is not running (wrong file, filtered out). To prove a test can fail, break the code temporarily and watch it go red.
+If it passes unexpectedly, find out why: the behaviour already exists (note it, pick the next test), the test is wrong (asserts on a stub, a tautology, the wrong object), or it is not running (wrong file, filtered out). To prove a test can fail, invert the expectation or stash the implementation and watch it go red; leave the source alone.
 
 ### GREEN: the smallest change that passes
 
@@ -151,7 +151,7 @@ Record each exemption in apply-progress as `TDD n/a: <reason>; verified by <comm
 
 | Symptom | Why it hurts | What to do |
 |---|---|---|
-| Test passes immediately | It may test nothing | Find out why (§2); break the code to prove it can fail |
+| Test passes immediately | It may test nothing | Find out why (§2); invert the expectation or stash the implementation to prove it can fail |
 | Test fails for the wrong reason (import, typo, setup) | The assertion has not failed yet | Scaffold until the assertion fails |
 | Several tests written before any green | Big steps, muddled failures | One failing test at a time; park the rest |
 | Big-bang GREEN | Untested paths, long debugging | Revert; smaller test; fake it or triangulate |
@@ -169,7 +169,7 @@ Record each exemption in apply-progress as `TDD n/a: <reason>; verified by <comm
 
 ## 12. Using this guide in ai-flow
 
-**Implementer**, per task: read the spec scenario, update the test list, run the loop with the plan's test command, log RED and GREEN evidence (§2), and self-review against every Given/When/Then before committing. A task with a tracer sub-step gets a full loop per sub-step. A `TDD n/a` task runs and records its verification command (§10).
+**Implementer**, per task: read the spec scenario, update the test list, run the loop with the plan's test command, log RED and GREEN evidence (§2), write test files with the editor tool rather than a shell heredoc, and self-review against every Given/When/Then before committing. A task with a tracer sub-step gets a full loop per sub-step. A `TDD n/a` task runs and records its verification command (§10).
 
 **Debugger:** root cause first. RED is the reproducing test (§9); characterize the surrounding code if it is untested; run the full suite after the fix.
 

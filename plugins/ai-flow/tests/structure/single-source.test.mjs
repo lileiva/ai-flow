@@ -706,3 +706,34 @@ test('negative: a planner with the old absolute TDD-steps rule is flagged', () =
     'does not say behaviour-changing tasks get TDD steps',
   ]);
 });
+
+// ---- TDD guide sentence swaps: run before scaffold, no src mutation, separate tool calls (REQ-011 S2, D-8) ----
+
+/** Problems with the guide's run-before-scaffold, mutation-proof and tool-call-split wording. */
+function tddSwapProblems(text) {
+  const p = [];
+  if (!/run (it|the (new )?test)[^.\n]*before[^.\n]*(creat|scaffold|writ)[^.\n]*(production file|stub|export)/i.test(tddSection(text, 2))) {
+    p.push('§2 does not say to run the new test before creating a production file, stub or export');
+  }
+  if (/temporarily/i.test(text) || /break (the|your) (code|implementation)/i.test(text)) p.push('guide still tells you to break the code temporarily');
+  if (!/invert the (expectation|assertion)[^.\n]*stash the implementation/i.test(text)) p.push('mutation proof is not "invert the expectation or stash the implementation"');
+  if (!/separate (tool|shell|bash) calls?/i.test(text)) p.push('no rule to write test files and run them in separate tool calls');
+  return p;
+}
+
+test('TDD guide §2 runs the new test before scaffolding a production file, stub or export (REQ-011 S2, D-8)', () => {
+  assert.deepEqual(tddSwapProblems(guide()).filter((x) => x.startsWith('§2')), []);
+});
+
+test('TDD guide has no "temporarily break" wording; the mutation proof inverts the expectation or stashes the implementation (REQ-011 S2, D-8)', () => {
+  assert.deepEqual(tddSwapProblems(guide()).filter((x) => /break|mutation/.test(x)), []);
+});
+
+test('TDD guide puts test writes and test runs in separate tool calls (REQ-011 S2, D-8)', () => {
+  assert.deepEqual(tddSwapProblems(guide()).filter((x) => /separate/.test(x)), []);
+});
+
+test('negative: the pre-swap guide wording is flagged by the sentence-swap check (REQ-011 S2)', () => {
+  const old = '## 2. The loop\n\nAdd the minimal scaffold (an empty function) first. To prove a test can fail, break the code temporarily and watch it go red.\n';
+  assert.equal(tddSwapProblems(old).length, 4);
+});
