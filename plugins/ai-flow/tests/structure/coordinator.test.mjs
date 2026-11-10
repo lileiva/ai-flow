@@ -162,3 +162,98 @@ test('negative: a skill that copies four implementer lines is flagged', () => {
   const bad = `---\nname: x\n---\nai-flow:using-ai-flow Coordinating apply\n${agent.split('\n').map((l, i) => `${i + 1}. ${l}`).join('\n')}\n`;
   assert.ok(thinSkillProblems(bad, agent).some((x) => /shares 4 lines/.test(x)));
 });
+
+// Task 2.1: routing table, escalation rule and launch template (REQ-003 S1/S2, REQ-002 S1, design D-4).
+const PHASES = ['init', 'explore', 'propose', 'spec', 'design', 'plan', 'apply', 'verify', 'archive', 'debug'];
+const MODELS = ['haiku', 'sonnet', 'opus'];
+const EFFORTS = ['low', 'medium', 'high', 'max'];
+/** D-4 defaults: phase -> [model, effort]. */
+const D4_DEFAULTS = { init: ['haiku', 'low'], explore: ['sonnet', 'medium'], propose: ['sonnet', 'medium'], spec: ['sonnet', 'medium'], design: ['sonnet', 'high'], plan: ['sonnet', 'medium'], apply: ['sonnet', 'medium'], verify: ['sonnet', 'medium'], archive: ['haiku', 'low'], debug: ['opus', 'high'] };
+
+/** Text of the section with the given heading, up to the next heading of the same or higher level. */
+export function sectionOf(text, title) {
+  const m = text.match(new RegExp(`^(#{1,6})\\s+${title}\\s*$`, 'm'));
+  if (!m) return '';
+  const rest = text.slice(m.index + m[0].length);
+  const next = rest.search(new RegExp(`^#{1,${m[1].length}}\\s`, 'm'));
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+/** Problems with the Routing table: a row per phase, model and effort from the allowed sets, D-4 defaults. */
+export function routingTableProblems(text) {
+  const s = sectionOf(text, 'Routing');
+  if (!s) return ['no Routing section'];
+  const rows = s.split('\n').filter((l) => l.trim().startsWith('|'));
+  const p = [];
+  for (const ph of PHASES) {
+    const row = rows.find((l) => new RegExp(`^\\|\\s*${ph}\\b`, 'i').test(l));
+    if (!row) { p.push(`no routing row for ${ph}`); continue; }
+    const m = row.match(/\b(haiku|sonnet|opus)\/(low|medium|high|max)\b/);
+    if (!m) { p.push(`row ${ph} lacks a model/effort default`); continue; }
+    if (!MODELS.includes(m[1]) || !EFFORTS.includes(m[2])) p.push(`row ${ph} has a model or effort outside the allowed sets`);
+    if (m[1] !== D4_DEFAULTS[ph][0] || m[2] !== D4_DEFAULTS[ph][1]) p.push(`row ${ph} default ${m[0]} differs from D-4`);
+  }
+  return p;
+}
+
+test('Routing table has a row per phase agent with D-4 defaults (REQ-003 S1)', () => {
+  assert.deepEqual(routingTableProblems(read(USING)), []);
+});
+
+test('negative: removing the verifier row fails the routing table check', () => {
+  const bad = read(USING).split('\n').filter((l) => !/^\|\s*verify\b/i.test(l)).join('\n');
+  assert.deepEqual(routingTableProblems(bad), ['no routing row for verify']);
+});
+
+/** Problems with the escalation rule inside Routing. */
+export function escalationProblems(text) {
+  const s = sectionOf(text, 'Routing');
+  const p = [];
+  if (!/apply[^\n]*(blocked|evidence)/i.test(s) && !/(blocked|evidence)[^\n]*apply/i.test(s)) p.push('escalation does not name apply raised after blocked or an evidence miss');
+  if (!/never[^\n]*below sonnet/i.test(s)) p.push('no "never lower apply below sonnet"');
+  if (!/user[^\n]*(instruction|override)[^\n]*(overrid|wins|takes)|overrid[^\n]*user|user instruction/i.test(s)) p.push('no user-instruction override');
+  return p;
+}
+
+test('escalation rule: raise apply after blocked or evidence miss, never below sonnet, user overrides (REQ-003 S2)', () => {
+  assert.deepEqual(escalationProblems(read(USING)), []);
+});
+
+test('negative: a Routing section without the below-sonnet rule is flagged', () => {
+  const bad = read(USING).replace(/never[^\n]*below sonnet[^\n]*/gi, 'lower it freely.');
+  assert.ok(escalationProblems(bad).some((x) => /below sonnet/.test(x)));
+});
+
+/** Problems with the launch template: subagent_type, model, effort, description, routing_log. */
+export function launchTemplateProblems(text) {
+  const s = sectionOf(text, 'Sub-Agent Launch Template');
+  if (!s) return ['no Sub-Agent Launch Template section'];
+  const p = [];
+  if (!/subagent_type[^\n]*ai-flow:\{agent\}/.test(s)) p.push('no subagent_type ai-flow:{agent}');
+  if (!/\bmodel\b/.test(s)) p.push('no model');
+  if (!/\beffort\b/.test(s)) p.push('no effort');
+  if (!/\bdescription\b/.test(s)) p.push('no description');
+  if (!/routing_log/.test(s) || !/phase[^\n]*model[^\n]*effort[^\n]*reason/.test(s)) p.push('does not append {phase, task?, model, effort, reason} to routing_log');
+  if (/Read and follow|flow-\{phase\}\/SKILL/.test(s.replace(/do not tell[^\n]*/i, ''))) p.push('tells the agent to read a skill file');
+  return p;
+}
+
+test('one launch template carries subagent_type, model, effort, description and logs the routing choice (REQ-003 S2)', () => {
+  assert.deepEqual(launchTemplateProblems(read(USING)), []);
+});
+
+test('negative: a template without effort and routing_log is flagged', () => {
+  const t = read(USING);
+  const m = t.match(/^### Sub-Agent Launch Template\s*$/m);
+  const bad = `${t.slice(0, m.index)}### Sub-Agent Launch Template\n\nLaunch with subagent_type \`ai-flow:{agent}\` and a model.\n`;
+  const p = launchTemplateProblems(bad);
+  assert.ok(p.some((x) => /effort/.test(x)) && p.some((x) => /routing_log/.test(x)));
+});
+
+test('no agent frontmatter pins model or effort (REQ-002 S1)', () => {
+  const dir = path.join(PLUGIN_ROOT, 'agents');
+  for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.md'))) {
+    const { data } = parseFrontmatter(fs.readFileSync(path.join(dir, f), 'utf8'));
+    assert.ok(!('model' in data) && !('effort' in data), `${f} pins model or effort`);
+  }
+});

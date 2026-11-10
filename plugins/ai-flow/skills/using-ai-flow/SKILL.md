@@ -227,17 +227,51 @@ Evidence check after each task. Mode `tdd` needs test_files, red.failing, red.af
 
 The batch 0 tracer gate follows the last tracer task: present what was built and the test results, and wait for the user's answer before launching tasks from later batches.
 
+### Routing
+
+Choose the model and effort for each launch from this table. The values are aliases and are set per launch, never in an agent's frontmatter, so the user keeps control of models.
+
+| Phase | Default | Raise to | When |
+|-------|---------|----------|------|
+| init | haiku/low | sonnet/medium | monorepo or unknown stack |
+| explore | sonnet/medium | opus/high | unfamiliar large codebase, cross-cutting change |
+| propose | sonnet/medium | sonnet/high | many open questions |
+| spec | sonnet/medium | sonnet/high | more than 8 requirements |
+| design | sonnet/high | opus/high | more than 10 files, concurrency, security, data migration |
+| plan | sonnet/medium | sonnet/high | more than 12 tasks |
+| apply (per task) | sonnet/medium | opus/high | after a blocked return or a failed evidence check on that task |
+| verify | sonnet/medium | sonnet/high | large change or a rework round |
+| archive | haiku/low | sonnet/low | archive report incomplete on the first try |
+| debug | opus/high | opus/max | second debug round |
+
+Start at the default and raise one step when the trigger applies. Apply is raised after a blocked return or an evidence miss, and is never lowered below sonnet, because weaker models skipped the test-first loop. A user instruction about model or effort overrides this table.
+
 ### Sub-Agent Launch Template
 
-Launch each phase agent with the Agent tool and include in the prompt:
+Launch each phase agent with the Agent tool, using the same fields for every phase:
 
-1. **Agent:** `subagent_type` `ai-flow:{agent}` (for example `ai-flow:designer` for the design phase). The agent definition is its protocol; do not tell it to load the `flow-{phase}` skill.
-2. **Project name:** for the engram `project` field.
-3. **Change name:** for topic key construction.
-4. **Artifact references:** which engram topic keys to read (the sub-agent does two-step recovery).
-5. **Shared protocols:** `_shared/tdd-protocol.md` in the ai-flow plugin's skills directory (for apply and debug phases).
-6. **Save instructions:** "Save your output to engram with topic key `flow/{change-name}/{artifact-type}`".
-7. **Return contract:** "Return: status, executive_summary, artifacts, next_recommended, risks".
+1. **Agent:** `subagent_type` `ai-flow:{agent}` (for example `ai-flow:designer`). The agent definition is its protocol, so do not tell it to load a skill file.
+2. **Model and effort:** `model` and `effort` from Routing.
+3. **Description:** a short label such as "{phase}: {change-name}".
+4. **Project and change:** the engram `project` name and the change name, for topic keys.
+5. **Artifacts to read:** the engram topic keys for the phase (below). The agent does two-step recovery.
+6. **Shared protocols:** `_shared/tdd-protocol.md` in the ai-flow plugin's skills directory, for apply and debug.
+7. **Save and return:** "Save your output to engram with topic key `flow/{change-name}/{artifact-type}`" and "Return the envelope from persistence-contract.md".
+
+After each launch, append `{phase, task?, model, effort, reason}` to state `routing_log`. The reason is "default" or the trigger that raised it.
+
+| Phase | Agent | Artifacts to read |
+|-------|-------|-------------------|
+| init | initializer | none (reads the repo) |
+| explore | explorer | none (change description from the user) |
+| propose | proposer | explore |
+| spec | specifier | proposal |
+| design | designer | proposal |
+| plan | planner | spec, design |
+| apply | implementer | plan, spec, design (task pack, see Coordinating apply) |
+| verify | verifier | proposal, spec, design, plan, apply-progress |
+| archive | archivist | all artifacts, state |
+| debug | debugger | failure evidence, apply-progress |
 
 ### Human Gates
 
