@@ -18,7 +18,15 @@ All AI-Flow artifacts use deterministic topic keys for engram persistence:
 | Archive report | `flow/{change-name}/archive-report` | `flow/auth-system/archive-report` |
 | DAG state | `flow/{change-name}/state` | `flow/auth-system/state` |
 
-Writers of the DAG state: the orchestrator (every phase transition), the proposer (pending approval) and the archivist (archived). Each reads the current state and upserts the full document.
+Writers of the DAG state: the coordinator (the main thread, at every phase transition), the proposer (pending approval) and the archivist (archived). Each reads the current state and upserts the full document.
+
+The state document carries, besides the phase fields: `gates` (map of gate name to approved, pending or rejected), `pending_questions` (open_questions awaiting a user answer) and `routing_log` (one entry per launch: phase, agent, model, effort, outcome).
+
+## Return Envelope
+
+Every sub-agent returns the envelope defined in `persistence-contract.md`; this is its field list, and the two documents must agree.
+
+Envelope fields: `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`, `open_questions`, `blocked_reason`, `evidence`.
 
 ## Two-Step Recovery (Mandatory)
 

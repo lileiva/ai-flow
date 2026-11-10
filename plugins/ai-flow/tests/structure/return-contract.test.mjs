@@ -63,3 +63,68 @@ test('negative: a copy that escalates to the debugger itself is reported', () =>
   const bad = IMPLEMENTER + '\nIf stuck, launch the debugger.\n';
   assert.ok(checkImplementer(bad).some((m) => /debugger/.test(m)));
 });
+
+// ---- Envelope v2 (REQ-017 S1, REQ-005 S1, REQ-004 S2; design D-10/D-11; plan R3) ----
+
+const ENVELOPE_FIELDS = ['status', 'executive_summary', 'artifacts', 'next_recommended', 'risks', 'open_questions', 'blocked_reason', 'evidence'];
+const STATUS_ENUM = ['ok', 'partial', 'needs_input', 'blocked', 'error'];
+const OPEN_QUESTION_FIELDS = ['id', 'question', 'why', 'options', 'recommended', 'blocking'];
+const STATE_FIELDS = ['gates', 'pending_questions', 'routing_log'];
+
+const CONTRACT = fs.readFileSync(path.join(PLUGIN_ROOT, 'skills/_shared/persistence-contract.md'), 'utf8');
+const CONVENTION = fs.readFileSync(path.join(PLUGIN_ROOT, 'skills/_shared/engram-convention.md'), 'utf8');
+
+/** The names on the line "Envelope fields: `a`, `b`, ..." of a doc. */
+const envelopeFieldList = (text) => {
+  const line = text.split('\n').find((l) => /^Envelope fields:/.test(l));
+  return line ? [...line.matchAll(/`([a-z_]+)`/g)].map((m) => m[1]) : [];
+};
+
+export function checkContract(text) {
+  const p = [];
+  const got = envelopeFieldList(text);
+  if (JSON.stringify(got) !== JSON.stringify(ENVELOPE_FIELDS)) p.push(`persistence-contract envelope fields are [${got}]`);
+  if (!new RegExp(`status\\W+${STATUS_ENUM.join('\\W+')}`).test(text)) p.push('status enum is not ok | partial | needs_input | blocked | error');
+  if (/\bwarning\b[^\n]*\bfailed\b|"ok \| warning/.test(text)) p.push('stale status enum (warning/failed)');
+  for (const f of OPEN_QUESTION_FIELDS) if (!new RegExp(`\\b${f}\\b`).test(text)) p.push(`open_questions shape lacks ${f}`);
+  if (!/blocked_reason[^\n]*(required|must)[^\n]*blocked|blocked[^\n]*blocked_reason[^\n]*required/i.test(text)) p.push('blocked_reason is not required when status is blocked');
+  if (!/evidence\.tdd_evidence/.test(text)) p.push('tdd_evidence location is not fixed at evidence.tdd_evidence');
+  if (!/not (in )?(a )?(markdown|prose)|never[^\n]*(markdown|prose)/i.test(text)) p.push('does not forbid tdd_evidence in prose or a markdown block');
+  if (/AskUserQuestion/.test(text)) p.push('mentions AskUserQuestion (subagents never ask the user)');
+  return p;
+}
+
+export function checkConvention(text) {
+  const p = [];
+  const got = envelopeFieldList(text);
+  if (JSON.stringify(got) !== JSON.stringify(ENVELOPE_FIELDS)) p.push(`engram-convention envelope fields are [${got}]`);
+  for (const f of STATE_FIELDS) if (!text.includes(f)) p.push(`state section lacks ${f}`);
+  for (const w of ['coordinator', 'proposer', 'archivist']) if (!new RegExp(`\\b${w}\\b`).test(text)) p.push(`state writers lack the ${w}`);
+  return p;
+}
+
+test('persistence-contract defines the v2 envelope with a single tdd_evidence location (REQ-017 S1, REQ-005 S1)', () => {
+  assert.deepEqual(checkContract(CONTRACT), []);
+});
+
+test('engram-convention lists the same envelope fields as persistence-contract (REQ-017 S1)', () => {
+  assert.deepEqual(envelopeFieldList(CONVENTION), envelopeFieldList(CONTRACT));
+  assert.deepEqual(envelopeFieldList(CONVENTION), ENVELOPE_FIELDS);
+});
+
+test('engram-convention state adds gates, pending_questions, routing_log and keeps the writers (REQ-004 S2)', () => {
+  assert.deepEqual(checkConvention(CONVENTION), []);
+});
+
+test('persistence-contract gives subagents no AskUserQuestion instruction (REQ-005 S1)', () => {
+  assert.ok(!/AskUserQuestion/.test(CONTRACT));
+});
+
+test('the implementer example puts tdd_evidence at evidence.tdd_evidence, matching the contract', () => {
+  assert.match(IMPLEMENTER, /evidence\.tdd_evidence/);
+});
+
+test('negative: a contract without blocked_reason fails', () => {
+  const bad = CONTRACT.replace(/blocked_reason/g, 'blocked_note');
+  assert.ok(checkContract(bad).some((m) => /blocked_reason|envelope fields/.test(m)));
+});

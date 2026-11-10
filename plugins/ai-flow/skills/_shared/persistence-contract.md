@@ -34,19 +34,32 @@ Every sub-agent prompt MUST include:
 4. Instructions to save the output artifact to engram
 5. The return contract (see below)
 
-## Sub-Agent Return Contract
+## Sub-Agent Return Contract (envelope v2)
 
-Every sub-agent returns:
+Every sub-agent returns one JSON object, as the last thing in its final message:
 
 ```json
 {
-  "status": "ok | warning | blocked | failed",
+  "status": "ok | partial | needs_input | blocked | error",
   "executive_summary": "Short, decision-grade summary",
   "artifacts": [{"name": "...", "topic_key": "..."}],
   "next_recommended": ["next-phase"],
-  "risks": ["optional risk list"]
+  "risks": ["optional risk list"],
+  "open_questions": [
+    {"id": "Q1", "question": "...", "why": "what depends on the answer", "options": ["2 to 4 choices"], "recommended": "one of the options", "blocking": true}
+  ],
+  "blocked_reason": "required when status is blocked",
+  "evidence": {}
 }
 ```
+
+Envelope fields: `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`, `open_questions`, `blocked_reason`, `evidence`.
+
+- `status`: ok (done), partial (done with caveats in risks), needs_input (cannot continue without a user decision, see open_questions), blocked (cannot continue, see blocked_reason), error (the phase failed).
+- `open_questions`: required and non-empty when status is needs_input, otherwise omitted or empty. Each item has id, question, why, options (2 to 4), recommended and blocking.
+- `blocked_reason`: required when status is blocked, otherwise omitted.
+- `evidence`: phase-specific object, omitted when the phase has none. The implementer's TDD record lives at `evidence.tdd_evidence` as a JSON object inside the envelope. It is never a markdown block or prose beside the envelope, so the coordinator reads it from one place.
+- Sub-agents never ask the user directly. They return open_questions and the coordinator asks.
 
 ## DAG State Persistence
 
@@ -65,14 +78,6 @@ artifacts:
 pending_gates:
   - {phase}: {gate-type}
 ```
-
-## Interactive Tools
-
-### AskUserQuestion
-
-`AskUserQuestion` is an interactive tool that presents structured, selectable questions in the terminal. It is used by the explorer and proposer agents to gather requirements and clarify scope interactively.
-
-**Fallback:** If `AskUserQuestion` is unavailable (tool not found in the session), agents should present questions as numbered options in their text output and ask the user to respond. This provides the same structured questioning flow without the interactive tool.
 
 ## Recovery After Context Loss
 
