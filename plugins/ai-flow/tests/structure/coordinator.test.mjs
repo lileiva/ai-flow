@@ -257,3 +257,68 @@ test('no agent frontmatter pins model or effort (REQ-002 S1)', () => {
     assert.ok(!('model' in data) && !('effort' in data), `${f} pins model or effort`);
   }
 });
+
+// Task 2.2: real gates, no phase work on the main thread, no phase-skill loads (REQ-006 S1, REQ-007 S1, REQ-008 S1, design D-1).
+const GATES = [/proposal/i, /plan/i, /tracer/i, /verif/i];
+
+/** Problems with the Human Gates section: four gates with options, a real wait, the unattended line, state.gates. */
+export function gateProblems(text) {
+  const s = sectionOf(text, 'Human Gates');
+  if (!s) return ['no Human Gates section'];
+  const rows = s.split('\n').filter((l) => l.trim().startsWith('|')).slice(2);
+  const p = [];
+  if (rows.length !== 4) p.push(`gates table has ${rows.length} rows, not 4`);
+  for (const re of GATES) {
+    const row = rows.find((l) => re.test(l.split('|')[1] ?? ''));
+    if (!row) p.push(`no gate row for ${re}`);
+    else if (!/\w[^|]*\/[^|]*\w\s*\|?\s*$/.test(row)) p.push(`gate ${re} lists no options`);
+  }
+  if (!/AskUserQuestion/.test(s) || !/end (your|the) turn/i.test(s)) p.push('gate does not say to ask via AskUserQuestion or end the turn');
+  if (!/wait[^\n]*answer|answer[^\n]*before/i.test(s) || !/later phase/i.test(s)) p.push('gate does not say to wait for the answer before launching a later phase');
+  if (!/AUTO-APPROVED GATE: <gate>/.test(s) || !/unattended/i.test(s)) p.push('no AUTO-APPROVED GATE line under the unattended policy');
+  if (!/state\.gates/.test(text)) p.push('gate results are not recorded in state.gates');
+  return p;
+}
+
+test('Human Gates: four gates with options that stop and wait for the user (REQ-007 S1)', () => {
+  assert.deepEqual(gateProblems(read(USING)), []);
+});
+
+test('negative: a Human Gates section without the wait rule is flagged', () => {
+  const t = read(USING);
+  const bad = t.replace("and wait for the user's answer before launching an agent of a later phase", 'and go on').replace(/AUTO-APPROVED GATE: <gate>/g, 'x');
+  const p = gateProblems(bad);
+  assert.ok(p.some((x) => /wait/.test(x)) && p.some((x) => /AUTO-APPROVED/.test(x)));
+});
+
+/** Problems with the coordinator doing phase work (REQ-006 S1). */
+export function noPhaseWorkProblems(text) {
+  const p = [];
+  if (!/(do not|never|does not)[^\n]*(write|edit)[^\n]*(project )?source[^\n]*test files/i.test(text)) p.push('no ban on writing project source or test files');
+  if (!/(do not|never|does not)[^\n]*author[^\n]*artifact|artifact[^\n]*(is|are) written by the (phase )?agent/i.test(text)) p.push('no ban on authoring phase artifacts');
+  return p;
+}
+
+test('the coordinator does no phase work: no source/test writes, no artifact authoring (REQ-006 S1)', () => {
+  assert.deepEqual(noPhaseWorkProblems(read(USING)), []);
+});
+
+/** Problems with instructions to load a flow-* phase skill through the Skill tool (REQ-008 S1). */
+export function phaseSkillLoadProblems(text) {
+  const p = [];
+  for (const l of text.split('\n')) {
+    if (/\b(do not|don't|never|not)\b/i.test(l)) continue;
+    if (/ai-flow:flow-\w+/.test(l) && /Skill tool/i.test(l)) p.push(`loads a phase skill with the Skill tool: ${l.trim()}`);
+  }
+  if (!/launch the phase agent/i.test(text)) p.push('does not say to launch the phase agent');
+  return p;
+}
+
+test('the coordinator launches phase agents and does not load phase skills (REQ-008 S1)', () => {
+  assert.deepEqual(phaseSkillLoadProblems(read(USING)), []);
+});
+
+test('negative: a copy that loads ai-flow:flow-apply with the Skill tool is flagged', () => {
+  const bad = `${read(USING)}\nTo apply, load ai-flow:flow-apply with the Skill tool.\n`;
+  assert.equal(phaseSkillLoadProblems(bad).length, 1);
+});

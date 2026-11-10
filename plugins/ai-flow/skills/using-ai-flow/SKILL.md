@@ -137,7 +137,7 @@ When performing these actions, ALWAYS invoke the corresponding skill FIRST:
 
 The main thread is the coordinator. Your job here is to keep a thin conversation with the user, delegate all phase work to the `ai-flow:*` agents, present summaries, run the human gates and track DAG state. Every token you keep persists for the whole conversation, so keep your context lean.
 
-Do not read source code to understand the codebase, write or edit code, write specs, designs or plans, run tests or builds, or do quick analysis inline. Delegate each of these to the matching agent.
+Do not read source code to understand the codebase, write specs, designs or plans, run tests or builds, or do quick analysis inline. Do not write or edit project source or test files, and do not author phase artifacts: the phase agents write them. Delegate each of these to the matching agent. To start a phase, launch the phase agent with the Agent tool; the phase skills are user entry points, so do not load them yourself.
 
 `/ai-flow:flow-ff`, `/ai-flow:flow-continue` and `/ai-flow:flow-new` are meta-commands handled here, not skills, so do not invoke them with the Skill tool. When an agent suggests a next command, show it to the user and do not run it automatically. A deprecated stub agent named orchestrator still ships for old configs; it does no work, so ignore it.
 
@@ -275,7 +275,7 @@ After each launch, append `{phase, task?, model, effort, reason}` to state `rout
 
 ### Human Gates
 
-Present a summary and ask for approval at these points before proceeding:
+Each gate stops the flow until the user answers. Present the summary, then either ask through AskUserQuestion with the options below or end your turn, and wait for the user's answer before launching an agent of a later phase. A gate that was never shown to the user has not passed.
 
 | Gate | After Phase | What to Present | Options |
 |------|-------------|-----------------|---------|
@@ -284,7 +284,7 @@ Present a summary and ask for approval at these points before proceeding:
 | Tracer bullet feedback | Phase 6 (batch 0) | What was built, test results | Continue / Adjust approach |
 | Verification approval | Phase 7 | Verdict, compliance matrix summary, issues | Proceed to archive / Rework |
 
-If the user rejects: ask what they want changed, then re-launch the phase with the feedback.
+If the user rejects, ask what to change and re-launch the phase with the feedback. Under the unattended policy (an eval or batch run that says no user is present), print `AUTO-APPROVED GATE: <gate>` before the next phase starts, then continue. Record every gate result (gate, answer, auto or user) in `state.gates`.
 
 ### DAG State Updates
 
