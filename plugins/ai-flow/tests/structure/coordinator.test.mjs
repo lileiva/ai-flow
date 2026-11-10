@@ -384,3 +384,33 @@ test('negative: Handling returns without the question round or the debugger rout
   const bad = read(USING).replace(/### Handling returns[\s\S]*?(?=### DAG State Updates)/, '### Handling returns\n\nneeds_input and blocked: decide.\n\n');
   assert.ok(returnHandlingProblems(bad).length >= 8);
 });
+
+// Task 2.5: commands load the coordinator first (REQ-006 S1, REQ-021 S1, REQ-004 S1, design D-2).
+const COMMANDS = ['flow-new', 'flow-ff', 'flow-continue'];
+
+/** Problems with a meta-command body: it must hand control to the coordinator before anything else. */
+export function commandProblems(text) {
+  const { body } = parseFrontmatter(text);
+  const lines = body.split('\n').filter((l) => l.trim());
+  const first = lines.find((l) => !l.startsWith('#')) ?? '';
+  const p = [];
+  if (!/ai-flow:using-ai-flow/.test(first) || !/already loaded/i.test(first)) p.push('first instruction does not load ai-flow:using-ai-flow (unless already loaded)');
+  if (!/main thread/i.test(first)) p.push('first instruction does not say to coordinate on the main thread');
+  if (/launch[^\n]*orchestrator/i.test(body)) p.push('launches the orchestrator');
+  const asks = lines.filter((l) => /AskUserQuestion/.test(l) && !/you \(the main thread\) ask/i.test(l));
+  if (asks.length) p.push(`AskUserQuestion outside coordinator-facing wording: ${asks.length} line(s)`);
+  return p;
+}
+
+for (const c of COMMANDS) {
+  test(`command loads the coordinator first: ${c} (REQ-006 S1, REQ-021 S1, REQ-004 S1)`, () => {
+    assert.deepEqual(commandProblems(read(`commands/${c}.md`)), []);
+  });
+}
+
+test('negative: a command that launches the orchestrator, skips the coordinator or tells subagents to ask is flagged', () => {
+  const bad = '---\ndescription: d\n---\n# X\n\nLaunch the orchestrator agent.\nThe explorer will use `AskUserQuestion` to ask.\n';
+  const p = commandProblems(bad);
+  for (const re of [/does not load/, /main thread/, /launches the orchestrator/, /AskUserQuestion outside/]) assert.ok(p.some((x) => re.test(x)), String(re));
+  assert.deepEqual(commandProblems('---\ndescription: d\n---\n# X\n\nLoad ai-flow:using-ai-flow (skip if already loaded) and coordinate on the main thread.\nWhen blocking, you (the main thread) ask through AskUserQuestion.\n'), []);
+});

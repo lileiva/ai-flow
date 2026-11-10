@@ -5,6 +5,8 @@ disable-model-invocation: true
 
 # Continue Change
 
+Load ai-flow:using-ai-flow (skip if it is already loaded) and coordinate on the main thread: you launch each phase agent yourself, and no agent launches another.
+
 Resume the change named "$ARGUMENTS" from the last completed phase.
 
 Execute these steps:
