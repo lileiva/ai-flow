@@ -28,7 +28,7 @@ const CHECKS = {
   'REQ-014 TDD guide coercion and budget': ['single-source.test.mjs', 'negative: a guide with a coercion phrase or over budget is flagged; a section without an example is not concrete'],
   'REQ-015 TDD single source': ['single-source.test.mjs', 'negative: an implementer copy with a headed RED step block is flagged'],
   'REQ-017 hook newlines': ['hook.test.mjs', 'negative: the old backslash-n concatenation is reported as a violation'],
-  'REQ-019 self-guard': ['single-source.test.mjs', 'negative: a phase skill without the guard (or with a guard for another agent) is flagged'],
+  'REQ-019 self-guard': ['coordinator.test.mjs', 'negative: a phase skill without disable-model-invocation, or with a copied explorer question list, is flagged'],
   'REQ-019 launch template': ['single-source.test.mjs', 'negative: a launch template that hands the agent a skill file is flagged'],
   'REQ-023 state writers': ['single-source.test.mjs', 'negative: a state section that omits the archivist (and keeps the stale sentence) is flagged'],
   'REQ-025 .ai-flow.json schema': ['docs.test.mjs', 'negative: an example without testRunner is flagged'],

@@ -1,6 +1,7 @@
 ---
 name: flow-design
 description: Create the technical design with architecture decisions, file change plans, interfaces, data flow, and testing strategy. Reads the proposal. Can run in parallel with flow-spec.
+disable-model-invocation: true
 metadata:
   author: ai-workflow
   version: "1.0"
@@ -8,16 +9,6 @@ metadata:
   auto_invoke: "Creating technical design"
 ---
 
-If you are the `ai-flow:designer` agent, ignore this skill: your agent definition is the protocol. Do not launch another agent for this phase.
+This is the user-only entry point for the design phase. Coordination runs on the main thread.
 
-This phase is handled by the **designer** agent.
-
-Delegate to the `designer` agent with the change name and project name. The agent will:
-1. Read the proposal (and spec if available) from engram
-2. Explore current architecture and existing patterns
-3. Define architecture decisions with rationale and alternatives
-4. Specify file changes (created, modified, deleted)
-5. Define interfaces, data flow, and testing strategy
-6. Save design to engram under `flow/{change-name}/design`
-
-The protocol lives in the `ai-flow:designer` agent definition; launch it with the Agent tool (subagent_type `ai-flow:designer`).
+Load `ai-flow:using-ai-flow` and follow the `design` row of its Routing table. It launches the `ai-flow:designer` agent with the Agent tool; the agent definition holds the protocol.

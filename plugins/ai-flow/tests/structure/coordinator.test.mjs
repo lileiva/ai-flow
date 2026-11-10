@@ -131,13 +131,16 @@ test('flow-apply has disable-model-invocation: true (REQ-008 S1)', () => {
 const norm = (l) => l.toLowerCase().replace(/^\s*(\d+\.|[-*])\s*/, '').replace(/\s+/g, ' ').trim();
 
 /** Problems with a thin phase skill body (REQ-018 S1, REQ-008 S1). `agentText` is the agent file it must not duplicate. */
-export function thinSkillProblems(text, agentText) {
+export function thinSkillProblems(text, agentText, phase = 'apply') {
   const { body } = parseFrontmatter(text);
   const lines = body.split('\n').filter((l) => l.trim());
   const p = [];
   if (lines.length > 8) p.push(`body has ${lines.length} non-empty lines, over 8`);
   if (!body.includes('ai-flow:using-ai-flow')) p.push('does not name ai-flow:using-ai-flow');
-  if (!/Coordinating apply/.test(body)) p.push('does not name the Coordinating apply section');
+  if (phase === 'apply') {
+    if (!/Coordinating apply/.test(body)) p.push('does not name the Coordinating apply section');
+  } else if (!new RegExp(`\\\`${phase}\\\` row`).test(body)) p.push(`does not name its \`${phase}\` row`);
+  if (/AskUserQuestion/.test(body)) p.push('AskUserQuestion wording');
   if (/orchestrator\s+MUST/i.test(body)) p.push('orchestrator MUST wording');
   if (/OpenSpace/i.test(body)) p.push('OpenSpace block');
   const agentLines = new Set(agentText.split('\n').map(norm).filter((l) => l.length > 20));
@@ -146,6 +149,31 @@ export function thinSkillProblems(text, agentText) {
   if (/Read and follow/i.test(body)) p.push('Read and follow wording');
   return p;
 }
+
+// Task 2.4: all 10 flow-* skills are thin, user-only entry points (REQ-008 S1, REQ-018 S1, REQ-021 S1, D-2).
+const PHASE_AGENT = { init: 'initializer', explore: 'explorer', propose: 'proposer', spec: 'specifier', design: 'designer', plan: 'planner', apply: 'implementer', verify: 'verifier', archive: 'archivist', debug: 'debugger' };
+
+/** Problems with the frontmatter of a user-only phase skill (REQ-008 S1). */
+export function userOnlyProblems(text) {
+  const { data } = parseFrontmatter(text);
+  return String(data['disable-model-invocation']) === 'true' ? [] : ['missing disable-model-invocation: true'];
+}
+
+for (const [phase, agent] of Object.entries(PHASE_AGENT)) {
+  const file = `skills/flow-${phase}/SKILL.md`;
+  test(`phase skill is user-only and thin: flow-${phase} (REQ-008 S1, REQ-018 S1)`, () => {
+    assert.deepEqual(userOnlyProblems(read(file)), []);
+    assert.deepEqual(thinSkillProblems(read(file), read(`agents/${agent}.md`), phase), []);
+    assert.match(read(file), new RegExp(`ai-flow:${agent}`), 'names its agent');
+  });
+}
+
+test('negative: a phase skill without disable-model-invocation, or with a copied explorer question list, is flagged', () => {
+  assert.deepEqual(userOnlyProblems('---\nname: flow-x\ndescription: d\n---\nbody\n'), ['missing disable-model-invocation: true']);
+  const bad = '---\nname: flow-explore\n---\nLoad ai-flow:using-ai-flow.\nAsk the user via AskUserQuestion.\nIf OpenSpace is connected, search.\n';
+  const p = thinSkillProblems(bad, '', 'explore');
+  for (const re of [/`explore` row/, /AskUserQuestion/, /OpenSpace/]) assert.ok(p.some((x) => re.test(x)), String(re));
+});
 
 test('flow-apply is a thin entry point (REQ-018 S1, REQ-008 S1)', () => {
   assert.deepEqual(thinSkillProblems(read(FLOW_APPLY), read('agents/implementer.md')), []);

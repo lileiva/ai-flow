@@ -163,44 +163,14 @@ test('phase map loads: 10 flow-* skills, each mapped to an existing agent', () =
 
 const SKILL_AGENT = loadPhaseMap();
 // Thin user-only entry points (B4 D-2): the protocol lives in using-ai-flow; coordinator.test.mjs guards these.
-const MIGRATED = new Set(['flow-apply']);
+const MIGRATED = new Set(phaseSkills);
 
 test('every flow-* skill has a mapped agent', () => {
   assert.deepEqual(phaseSkills.filter((s) => !SKILL_AGENT[s]), []);
 });
 
-/** null when the skill body opens with the self-guard for `agent` (REQ-019 S1, D2a), else the reason. */
-function guardViolation(skillText, agent) {
-  const body = skillText.replace(/^---\n[\s\S]*?\n---\n/, '');
-  const first = body.split('\n').find((l) => l.trim()) ?? '';
-  if (!first.includes(`If you are the \`ai-flow:${agent}\` agent`)) return `first body line is not the ai-flow:${agent} guard: '${first}'`;
-  if (!/do not launch another/i.test(first)) return 'guard does not forbid launching another agent for this phase';
-  return null;
-}
-
-for (const skill of phaseSkills.filter((s) => !MIGRATED.has(s))) {
-  const agent = SKILL_AGENT[skill];
-  test(`phase skill opens with a self-delegation guard: ${skill} (ai-flow:${agent})`, () => {
-    assert.equal(guardViolation(read(`skills/${skill}/SKILL.md`), agent), null);
-  });
-  test(`phase skill names its agent: ${skill} -> ai-flow:${agent}`, () => {
-    assert.match(read(`skills/${skill}/SKILL.md`), new RegExp(`launch[^\n]*\\(subagent_type \`ai-flow:${agent}\`\\)|subagent_type \`ai-flow:${agent}\``));
-  });
-}
-
-test('negative: a phase skill without the guard (or with a guard for another agent) is flagged', () => {
-  assert.match(guardViolation('---\nname: flow-x\n---\n\nThis phase is handled by the **x** agent.\n', 'x'), /not the ai-flow:x guard/);
-  assert.match(guardViolation('---\nname: flow-x\n---\nIf you are the `ai-flow:y` agent, ignore this skill. Do not launch another agent.\n', 'x'), /not the ai-flow:x guard/);
-  assert.match(guardViolation('---\nname: flow-x\n---\nIf you are the `ai-flow:x` agent, ignore this skill.\n', 'x'), /does not forbid/);
-});
-
-for (const skill of ['flow-apply', 'flow-debug'].filter((s) => !MIGRATED.has(s))) {
-  test(`TDD guide references are READ_REFs: ${skill}`, () => {
-    const lines = read(`skills/${skill}/SKILL.md`).split('\n').filter((l) => l.includes('tdd-protocol.md'));
-    assert.ok(lines.length > 0, 'mentions the TDD guide');
-    assert.deepEqual(lines.filter((l) => !l.includes('${CLAUDE_PLUGIN_ROOT}/skills/_shared/tdd-protocol.md')), []);
-  });
-}
+// Self-guard and READ_REF tests for phase skills were replaced in B4 Task 2.4: all 10 flow-* skills are thin user-only
+// entry points with no TDD guide reference; coordinator.test.mjs guards them ('phase skill is user-only and thin').
 
 // ---- orchestrator launches agents by type, never points them at phase skills (REQ-019 S2/S3, D2b) ----
 
@@ -277,8 +247,8 @@ test('explorer keeps its interactive discovery loop', () => {
   assert.deepEqual(missingMentions(read('agents/explorer.md'), [/AskUserQuestion/, /Ready to proceed/, /follow-up/, /refined problem statement/, /3 (refinement )?rounds|maximum of 3|max(imum)? 3/i]), []);
 });
 
-test('flow-explore summarizes the iterative discovery loop', () => {
-  assert.deepEqual(missingMentions(read('skills/flow-explore/SKILL.md'), [/iterative/i, /refinement/i, /readiness/i, /brainstorm/i]), []);
+test('explorer summarizes the iterative discovery loop', () => {
+  assert.deepEqual(missingMentions(read('agents/explorer.md'), [/iterative/i, /refinement/i, /readiness/i, /brainstorm/i]), []);
 });
 
 test('proposer treats the brainstorm as optional and handles it missing', () => {
