@@ -146,3 +146,21 @@ export function gradeTdd(events) {
   const reasons = [...implFirst, ...(criterionTwo ? [] : ['no failing run before green']), ...other];
   return { applicable: true, pass, ratio, reason: pass ? 'test-first with red before green' : reasons[0], impl_changes: changes, env_errors: envErrors };
 }
+
+/**
+ * tdd_instance (REQ-013 S1, REQ-009 S5): the TDD rule applied to each implementer instance's own event stream.
+ * An instance is one implementer launch (calls sharing a parent_tool_use_id whose agent type is `implementer`),
+ * numbered i = 1.. in order of first call. `pass` is gradeTdd's verdict for that stream alone (null when the
+ * instance changed no implementation file). Result: { n, pass, by_index: [{ i, instance, pass, reason }] }, where n
+ * counts implementer instances and pass counts those that passed.
+ */
+export function gradeInstances(calls, cwd, isImplementer) {
+  const ids = [];
+  for (const c of calls) if (c.instance !== 'main' && isImplementer(c.agent) && !ids.includes(c.instance)) ids.push(c.instance);
+  const events = tddEvents(calls, cwd);
+  const by_index = ids.map((instance, k) => {
+    const g = gradeTdd(events.filter((e) => e.instance === instance));
+    return { i: k + 1, instance, pass: g.applicable ? g.pass : null, reason: g.reason };
+  });
+  return { n: by_index.length, pass: by_index.filter((x) => x.pass === true).length, by_index };
+}

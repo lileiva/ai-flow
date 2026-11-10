@@ -203,3 +203,51 @@ test('bashWriteTargets: sed/perl without in-place (stdout, -n, -e, perl -I/-M) a
     "perl -Mlib=src -ne 'print' src/x.js",
   ]) assert.deepEqual(bashWriteTargets(cmd), [], cmd);
 });
+
+// Task 3.3 (REQ-013 S1 tdd_instance, REQ-009 S5 metric). Informational; input to the 5.1 hard gate "2nd instance >= 8/9".
+test('analyzeTrace exposes tdd_instance', () => {
+  const t = analyzeTrace(read('tdd-test-first')).tdd_instance;
+  assert.ok(t && typeof t === 'object', 'tdd_instance present');
+});
+
+test('two implementer instances, the 2nd impl-first, give {n:2, pass:1, by_index:[1 pass, 2 fail]}', () => {
+  const t = analyzeTrace(read('impl-per-task')).tdd_instance;
+  assert.equal(t.n, 2);
+  assert.equal(t.pass, 1);
+  assert.deepEqual(t.by_index.map((x) => [x.i, x.pass]), [[1, true], [2, false]]);
+});
+
+const call = (parent, id, name, input, result) => [
+  { type: 'assistant', parent_tool_use_id: parent, message: { id: `m-${id}`, role: 'assistant', content: [{ type: 'tool_use', id, name, input }], usage: { input_tokens: 1, output_tokens: 1 } } },
+  { type: 'user', parent_tool_use_id: parent, message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: result }] } },
+];
+const impl = (lines) => [
+  { type: 'system', subtype: 'init', cwd: '/w' },
+  { type: 'assistant', parent_tool_use_id: null, message: { id: 'm-ag', role: 'assistant', content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { subagent_type: 'ai-flow:implementer' } }], usage: { input_tokens: 1, output_tokens: 1 } } },
+  ...lines.flat(),
+];
+const gradeLines = (lines) => analyzeTrace(impl(lines).map((l) => JSON.stringify(l)).join('\n') + '\n').tdd_instance;
+
+test('a Bash heredoc that writes the test and runs it in one call counts as a test write before the red run', () => {
+  const t = gradeLines([
+    call('ag', 'b1', 'Bash', { command: "cat > test/c.test.js <<'EOF'\nx\nEOF\nnpx vitest run test/c.test.js" }, RED),
+    call('ag', 'w1', 'Write', { file_path: '/w/src/c.js', content: 'x' }, 'ok'),
+    call('ag', 'b2', 'Bash', { command: 'npx vitest run test/c.test.js' }, GREEN),
+  ]);
+  assert.deepEqual(t.by_index.map((x) => x.pass), [true]);
+});
+
+test('a Bash heredoc that writes the impl and runs the tests in one call is an impl write before the run, so it fails', () => {
+  const t = gradeLines([
+    call('ag', 'b1', 'Bash', { command: "cat > src/c.js <<'EOF'\nx\nEOF\nnpx vitest run test/c.test.js" }, RED),
+    call('ag', 'w1', 'Write', { file_path: '/w/test/c.test.js', content: 'x' }, 'ok'),
+    call('ag', 'b2', 'Bash', { command: 'npx vitest run test/c.test.js' }, GREEN),
+  ]);
+  assert.deepEqual(t.by_index.map((x) => x.pass), [false]);
+});
+
+test('no implementer instance gives n 0 and no by_index entries', () => {
+  const t = analyzeTrace(read('tdd-test-first').replace(/ai-flow:implementer/g, 'ai-flow:verifier')).tdd_instance;
+  assert.equal(t.n, 0);
+  assert.deepEqual(t.by_index, []);
+});

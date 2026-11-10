@@ -4,8 +4,7 @@
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { agentTranscriptTokens, attributionIndex, parseTrace, perPhase, runTokens, toolCalls, traceUnreliable } from './lib/trace.mjs';
-import { gradeTdd, tddEvents } from './lib/tdd.mjs';
-import { gradePhases, phaseMode } from './lib/phases.mjs';
+import { gradeInstances, gradeTdd, tddEvents } from './lib/tdd.mjs';import { gradePhases, phaseMode } from './lib/phases.mjs';
 import { gradeArtifacts } from './lib/artifacts.mjs';
 import { gradeToolUse } from './lib/tooluse.mjs';
 import { gradeRouting } from './lib/routing.mjs';
@@ -65,7 +64,7 @@ export function analyzeTrace(text, { caseName, config = loadConfig(), sentinels 
   const calls = toolCalls(lines, idx);
   const unreliable = traceUnreliable(lines.length, parseErrors);
   const tokens = runTokens(lines, { unreliable });
-  return applyCapture({ tokens, ...perPhase(lines, idx, tokens.total, { unreliable }), tdd: gradeTdd(tddEvents(calls, cwd)),
+  return applyCapture({ tokens, ...perPhase(lines, idx, tokens.total, { unreliable }), tdd: gradeTdd(tddEvents(calls, cwd)), tdd_instance: gradeInstances(calls, cwd, (a) => roles().shortName(a) === 'implementer'),
     phases: gradePhases(lines, config, { cwd, mode: phaseMode(caseName) }), artifacts: gradeArtifacts(calls, caseName),
     tool_use: gradeToolUse(calls, config, { cwd, tree: merged.tree }), routing: gradeRouting(lines),
     session_start: sessionStart(lines), env: runEnv(lines, [text, ...(bundle?.agents ?? []).map((ag) => stringsOf(ag.lines))].join('\n'), calls, { sentinels }), parse_errors: parseErrors,
