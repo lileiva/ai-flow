@@ -375,6 +375,10 @@ If you lose context (e.g., after compaction):
 
 If `superpowers:dispatching-parallel-agents` is available in the session context, also follow its parallel dispatch pattern for spec+design and batch execution. If `superpowers:using-git-worktrees` is available, consider using it for workspace isolation during apply phases. If `superpowers:finishing-a-development-branch` is available, follow its branch completion checklist when wrapping up a change. These complement (do not replace) the existing orchestration instructions defined above. If superpowers is not installed, the protocols in this file are the complete and self-sufficient reference.
 
+### Phase detail
+
+Before the first `ai-flow:implementer` or `ai-flow:debugger` launch in this conversation (apply, rework after the verify gate, blocked routing), load skill `ai-flow:coordinating-apply`.
+
 ### Tracer Bullets
 
 When building features, the sub agents should build a tiny, end-to-end slice of the feature first, seek feedback, then expand out from there.

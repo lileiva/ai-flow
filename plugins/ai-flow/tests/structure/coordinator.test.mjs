@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { PLUGIN_ROOT, parseFrontmatter } from '../lib/plugin-files.mjs';
+import { PLUGIN_ROOT, parseFrontmatter, resolveQualifiedRef } from '../lib/plugin-files.mjs';
 
 const read = (rel) => fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8');
 const USING = 'skills/using-ai-flow/SKILL.md';
@@ -413,4 +413,31 @@ test('negative: a command that launches the orchestrator, skips the coordinator 
   const p = commandProblems(bad);
   for (const re of [/does not load/, /main thread/, /launches the orchestrator/, /AskUserQuestion outside/]) assert.ok(p.some((x) => re.test(x)), String(re));
   assert.deepEqual(commandProblems('---\ndescription: d\n---\n# X\n\nLoad ai-flow:using-ai-flow (skip if already loaded) and coordinate on the main thread.\nWhen blocking, you (the main thread) ask through AskUserQuestion.\n'), []);
+});
+
+// Task 2.16: phase detail loads on demand from sibling skills (REQ-012 amendment A1, resolved decision R16).
+const APPLY_DETAIL = 'skills/coordinating-apply/SKILL.md';
+const COMMANDS_DETAIL = 'skills/coordinating-commands/SKILL.md';
+
+/** Problems with a coordinator detail skill: its name, model-invocable, and a SUBAGENT-STOP block (R16). */
+export function detailSkillProblems(text, name) {
+  const { data, body } = parseFrontmatter(text);
+  const p = [];
+  if (data.name !== name) p.push(`name is not ${name}`);
+  if (String(data['disable-model-invocation']) === 'true') p.push('disable-model-invocation: true blocks the coordinator Skill call');
+  if (!/<SUBAGENT-STOP>[\s\S]+<\/SUBAGENT-STOP>/.test(body)) p.push('no SUBAGENT-STOP block');
+  return p;
+}
+
+test('core points to ai-flow:coordinating-apply, which resolves to a model-invocable skill (REQ-012 A1, Connected Pair 14)', () => {
+  const s = sectionOf(read(USING), 'Phase detail');
+  assert.ok(s, 'no Phase detail section in the core');
+  assert.match(s, /ai-flow:coordinating-apply/);
+  assert.equal(resolveQualifiedRef('coordinating-apply'), 'skill');
+  assert.deepEqual(detailSkillProblems(read(APPLY_DETAIL), 'coordinating-apply'), []);
+});
+
+test('negative: a coordinating-apply copy with disable-model-invocation: true is flagged', () => {
+  const bad = read(APPLY_DETAIL).replace(/^---\n/, '---\ndisable-model-invocation: true\n');
+  assert.ok(detailSkillProblems(bad, 'coordinating-apply').some((x) => /disable-model-invocation/.test(x)));
 });
