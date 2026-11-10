@@ -128,3 +128,32 @@ test('negative: a contract without blocked_reason fails', () => {
   const bad = CONTRACT.replace(/blocked_reason/g, 'blocked_note');
   assert.ok(checkContract(bad).some((m) => /blocked_reason|envelope fields/.test(m)));
 });
+
+// Explorer: question rounds go through open_questions (REQ-004 S1/S2, REQ-017 S1, REQ-021 S1, design D-6).
+const EXPLORER = fs.readFileSync(path.join(PLUGIN_ROOT, 'agents/explorer.md'), 'utf8');
+
+export function checkExplorer(text) {
+  const p = [];
+  const ret = section(text, 'Return Contract');
+  if (/AskUserQuestion/.test(text)) p.push('mentions AskUserQuestion (subagents never ask the user)');
+  if (!/open_questions/.test(ret) || !/persistence-contract\.md/.test(ret)) p.push('Return section lacks open_questions or the shared envelope');
+  if (!/needs_input/.test(text) || !/blocking/.test(text)) p.push('no needs_input return with blocking questions');
+  if (!/quick scan/i.test(text)) p.push('questions do not follow a quick scan');
+  if (!/recommended option/i.test(text)) p.push('no rule to proceed on the recommended option');
+  if (!/readiness/i.test(text) || !/non-blocking|blocking[^\n]*false/i.test(text)) p.push('readiness question is not returned as an open question');
+  if (!/flow\/\{change-name\}\/brainstorm/.test(text)) p.push('brainstorm topic key missing');
+  return p;
+}
+
+test('return contract: agents/explorer.md mentions open_questions and the shared envelope (REQ-004 S2, REQ-017 S1)', () => {
+  assert.deepEqual(checkExplorer(EXPLORER).filter((m) => /Return section/.test(m)), []);
+});
+
+test('explorer returns approaches + a readiness question as open_questions (REQ-004 S1, REQ-021 S1)', () => {
+  assert.deepEqual(checkExplorer(EXPLORER), []);
+});
+
+test('negative: an explorer copy that says "use AskUserQuestion" is flagged (REQ-004 S1)', () => {
+  const bad = `${EXPLORER}\nUse AskUserQuestion to ask the user.\n`;
+  assert.ok(checkExplorer(bad).some((m) => /AskUserQuestion/.test(m)));
+});

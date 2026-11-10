@@ -131,7 +131,7 @@ const REQUIRED_SECTIONS = {
   'skills/coordinating-commands/SKILL.md': [/Command procedures/, /Artifact Tracking/],
   'skills/coordinating-apply/SKILL.md': [/Coordinating apply/, /Rework Protocol/, /Ecosystem Enhancement/],
   'skills/_shared/persistence-contract.md': [/Artifact Store Mode/, /Fallback Mode: `none`/],
-  'agents/explorer.md': [/Interactive Requirements Gathering/, /Readiness Gate/, /Refinement Round/],
+  'agents/explorer.md': [/Question Rounds/, /Readiness question/, /Refinement Round/],
   'agents/debugger.md': [/Root Cause Investigation/],
 };
 
@@ -245,8 +245,8 @@ test('negative: an agent copy that still carries the old fallback paragraph is f
   assert.deepEqual(fallbackDuplicates(['agents/x.md', 'skills/_shared/engram-fallback.md'], () => old), ['agents/x.md']);
 });
 
-test('explorer keeps its interactive discovery loop', () => {
-  assert.deepEqual(missingMentions(read('agents/explorer.md'), [/AskUserQuestion/, /Ready to proceed/, /follow-up/, /refined problem statement/, /3 (refinement )?rounds|maximum of 3|max(imum)? 3/i]), []);
+test('explorer returns approaches + a readiness question as open_questions', () => {
+  assert.deepEqual(missingMentions(read('agents/explorer.md'), [/open_questions/, /needs_input/, /Ready to proceed/, /refined problem statement/, /3 (refinement )?rounds|maximum of 3|max(imum)? 3/i]), []);
 });
 
 test('explorer summarizes the iterative discovery loop', () => {
