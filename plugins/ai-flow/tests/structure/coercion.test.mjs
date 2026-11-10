@@ -74,3 +74,52 @@ test('the project allowlist has no unused entries', () => {
   const targets = collectLintTargets().filter((t) => SCOPE.includes(t.file));
   assert.deepEqual(unusedAllowlistEntries(targets, ALLOWLIST), []);
 });
+
+// Rules survive (REQ-011 S1): de-coercing must not drop the hard rules. Each marker is looked up inside the
+// agent's "## Rules" section. Only agents in RULES_SCOPE are asserted now; each rewrite task adds its agent (R15).
+const SUBAGENT_RULES = { 'do not ask the user': /do not ask the user/i, 'return open_questions': /open_questions/i };
+const RULES = {
+  implementer: {
+    'failing test before code, per task': /failing test before (writing )?(any )?(the )?(production )?code/i,
+    'return blocked instead of guessing': /return (status )?blocked instead of guessing/i,
+  },
+  debugger: {
+    'root cause before fix': /root cause before (a |any )?fix/i,
+    'reproduce with a failing test first': /reproduce[^.\n]*failing test first/i,
+  },
+  verifier: {
+    'do not modify source files': /do not modify source files/i,
+    'verdict from evidence': /verdict[^.\n]*from evidence/i,
+  },
+};
+const NO_WRITE_RULE = { 'do not create, edit or delete project files': /do not create, edit or delete project files/i };
+const READ_ONLY_RULE = { 'persist via engram or the shared fallback': /persist[^.\n]*engram[^.\n]*fallback/i };
+const NO_WRITE_AGENTS = ['explorer', 'designer', 'proposer', 'specifier', 'planner', 'archivist', 'verifier'];
+const RULES_SCOPE = ['implementer'];
+
+const rulesSection = (text) => /^## Rules\s*$([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(text)?.[1] ?? '';
+const rulesFor = (agent) => ({
+  ...SUBAGENT_RULES,
+  ...(RULES[agent] ?? {}),
+  ...(NO_WRITE_AGENTS.includes(agent) ? NO_WRITE_RULE : {}),
+  ...(NO_WRITE_AGENTS.includes(agent) && agent !== 'verifier' ? READ_ONLY_RULE : {}),
+});
+/** Names of the required rules that the agent text does not state inside its Rules section. */
+const missingRules = (text, agent) => {
+  const section = rulesSection(text);
+  return Object.entries(rulesFor(agent)).filter(([, re]) => !re.test(section)).map(([name]) => name);
+};
+const agentText = (agent) => fs.readFileSync(path.join(PLUGIN_ROOT, 'agents', `${agent}.md`), 'utf8');
+
+for (const agent of RULES_SCOPE) {
+  for (const name of Object.keys(rulesFor(agent))) {
+    test(`rules survive: ${agent} states "${name}"`, () => {
+      assert.ok(!missingRules(agentText(agent), agent).includes(name));
+    });
+  }
+}
+
+test('negative: an implementer copy without the failing-test rule fails the rules check', () => {
+  const copy = agentText('implementer').split('\n').filter((l) => !/failing test before/i.test(l)).join('\n');
+  assert.ok(missingRules(copy, 'implementer').includes('failing test before code, per task'));
+});

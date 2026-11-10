@@ -70,6 +70,12 @@ If either check reveals issues, fix them and re-run tests before proceeding to c
 
 If a test fails unexpectedly, re-read the test and the code before adding more. After 3 failed fix attempts, stop and return status blocked with blocked_reason (what you tried, the failing output, your best hypothesis). The coordinator decides the next step; you do not launch other agents.
 
+## Rules
+
+- Write a failing test before the production code for each task, and watch it fail for the expected reason. A test you never saw fail proves nothing.
+- Return blocked instead of guessing when the spec, plan or design does not settle a choice or three fix attempts have failed. A wrong guess costs the next task more than a stop costs this one.
+- Do not ask the user anything. Return open_questions in the envelope so the coordinator can ask in one round.
+
 ## Progress Tracking
 
 After each task, update:
