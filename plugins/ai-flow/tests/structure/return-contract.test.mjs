@@ -221,3 +221,45 @@ test('negative: a specifier copy without the RFC 2119 guidance is flagged (REQ-0
   const bad = SPECIFIER.replace(/RFC 2119/g, 'keyword').replace(/MUST \/ SHALL/g, 'must');
   assert.ok(checkSpecDesign(bad, 'specifier').some((m) => /RFC 2119/.test(m)));
 });
+
+// Planner: per-task RED spec, no src mutation, envelope v2 (REQ-009, REQ-004 S2, REQ-011, REQ-017 S1).
+const PLANNER = fs.readFileSync(path.join(PLUGIN_ROOT, 'agents/planner.md'), 'utf8');
+
+export function checkPlanner(text) {
+  const p = [];
+  const ret = section(text, 'Return Contract');
+  if (/AskUserQuestion/.test(text)) p.push('mentions AskUserQuestion (subagents never ask the user)');
+  if (!/open_questions/.test(ret) || !/persistence-contract\.md/.test(ret)) p.push('Return section lacks open_questions or the shared envelope');
+  if (!/needs_input/.test(text) || !/blocking/.test(text)) p.push('no needs_input return with blocking questions');
+  if (!/each task (must |has to )?(name|state|carr)[^.\n]*test file[^.\n]*test command[^.\n]*expected (RED|failure)/i.test(text)) p.push('task format does not require test file, test command and expected RED message per task');
+  if (/temporarily break|mutation check|break (the )?(src|production|code)/i.test(text)) p.push('mentions breaking src to prove a test (mutation by editing src)');
+  for (const h of ['Connected Pairs Registry', 'How It Works', 'Registry Format', 'When a Task Has a Tracer Sub-Step']) {
+    if (!new RegExp(`^#+ ${h}`, 'm').test(text)) p.push(`Connected Pairs heading missing: ${h}`);
+  }
+  return p;
+}
+
+test('return contract: agents/planner.md mentions open_questions and the shared envelope (REQ-004 S2, REQ-017 S1)', () => {
+  assert.deepEqual(checkPlanner(PLANNER).filter((m) => /Return section/.test(m)), []);
+});
+
+test('planner requires test file, command and expected RED per task, and never mutates src (REQ-009, REQ-011)', () => {
+  assert.deepEqual(checkPlanner(PLANNER), []);
+});
+
+test('negative: a planner copy that says "use AskUserQuestion" is flagged (REQ-004 S1)', () => {
+  assert.ok(checkPlanner(`${PLANNER}\nUse AskUserQuestion to ask the user.\n`).some((m) => /AskUserQuestion/.test(m)));
+});
+
+test('negative: a planner copy that says "temporarily break the src" is flagged (REQ-011, D-8(3))', () => {
+  assert.ok(checkPlanner(`${PLANNER}\nTo prove the test, temporarily break the src.\n`).some((m) => /breaking src/.test(m)));
+});
+
+test('negative: a planner copy without the per-task RED spec is flagged (REQ-009)', () => {
+  const bad = PLANNER.replace(/test file[^.\n]*test command[^.\n]*expected (RED|failure)/gi, 'a test');
+  assert.ok(checkPlanner(bad).some((m) => /per task/.test(m)));
+});
+
+test('negative: a planner copy without the Connected Pairs headings is flagged', () => {
+  assert.ok(checkPlanner(PLANNER.replace(/^## Connected Pairs Registry/m, '## Pairs')).some((m) => /Connected Pairs heading/.test(m)));
+});
