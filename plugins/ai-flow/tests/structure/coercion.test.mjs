@@ -57,7 +57,11 @@ test('allowlist: an unused entry fails', () => {
 });
 
 // Rollout is scoped (R15). Each de-coercion task adds its files here; Task 4.1 replaces this with the full tree.
-const SCOPE = [HOOK_TARGET, 'skills/flow-apply/SKILL.md', 'agents/explorer.md', 'agents/proposer.md', 'agents/specifier.md', 'agents/designer.md', 'agents/planner.md', 'agents/verifier.md', 'agents/archivist.md', 'agents/initializer.md', 'agents/implementer.md', 'agents/debugger.md'];
+const SHARED_DOCS = ['persistence-contract', 'engram-convention', 'engram-fallback', 'tdd-protocol'].map((n) => `skills/_shared/${n}.md`);
+const PHASE_SKILLS = ['apply', 'archive', 'debug', 'design', 'explore', 'init', 'plan', 'propose', 'spec', 'verify'].map((n) => `skills/flow-${n}/SKILL.md`);
+const COORDINATOR_SKILLS = ['using-ai-flow', 'coordinating-apply', 'coordinating-commands'].map((n) => `skills/${n}/SKILL.md`);
+const COMMANDS = ['new', 'ff', 'continue'].map((n) => `commands/flow-${n}.md`);
+const SCOPE = [HOOK_TARGET, ...SHARED_DOCS, ...COORDINATOR_SKILLS, ...PHASE_SKILLS, ...COMMANDS, 'agents/explorer.md', 'agents/proposer.md', 'agents/specifier.md', 'agents/designer.md', 'agents/planner.md', 'agents/verifier.md', 'agents/archivist.md', 'agents/initializer.md', 'agents/implementer.md', 'agents/debugger.md'];
 // Entries need {file, linePattern, reason}; an unused entry fails.
 const ALLOWLIST = [
   {
@@ -75,6 +79,16 @@ const ALLOWLIST = [
     linePattern: /CRITICAL/,
     reason: 'severity label: CRITICAL names the verify-report issue class that blocks archiving; it is data from the report, not pressure on the agent',
   },
+  {
+    file: 'skills/coordinating-apply/SKILL.md',
+    linePattern: /CRITICAL/,
+    reason: 'severity label: CRITICAL / WARNING are the verify-report issue classes the rework step reads; they are data from the report, not pressure on the reader',
+  },
+  ...['using-ai-flow', 'coordinating-apply', 'coordinating-commands'].map((n) => ({
+    file: `skills/${n}/SKILL.md`,
+    linePattern: /SUBAGENT-STOP>/,
+    reason: 'marker tag: the SUBAGENT-STOP tag name is the guard that tests and subagents look for; it names a block, it is not pressure',
+  })),
 ];
 
 test('SCOPE files have 0 coercion hits', () => {

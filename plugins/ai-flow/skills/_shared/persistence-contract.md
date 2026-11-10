@@ -10,23 +10,23 @@ When engram is unavailable, AI-Flow runs in a degraded inline-only mode. The det
 
 ## Sub-Agent Context Protocol
 
-Sub-agents start with a fresh context. The orchestrator controls what context they receive.
+Sub-agents start with a fresh context. The coordinator controls what context they receive.
 
 ### Reading Artifacts
 
 | Context | Who Reads | How |
 |---------|-----------|-----|
-| Non-flow tasks | Orchestrator searches engram, passes summary in prompt | `mem_search` + `mem_get_observation` |
-| Flow phases with dependencies | Sub-agent reads directly from engram | Orchestrator passes topic keys, sub-agent does two-step recovery (see Two-Step Recovery in `engram-convention.md`) |
+| Non-flow tasks | Coordinator searches engram, passes summary in prompt | `mem_search` + `mem_get_observation` |
+| Flow phases with dependencies | Sub-agent reads directly from engram | Coordinator passes topic keys, sub-agent does two-step recovery (see Two-Step Recovery in `engram-convention.md`) |
 | Flow phases without dependencies | Nobody | Sub-agent starts fresh |
 
 ### Writing Artifacts
 
-Sub-agents ALWAYS write their own artifacts to engram via `mem_save`. They have the complete detail — if they wait for the orchestrator to save, nuance is lost.
+Sub-agents write their own artifacts to engram via `mem_save`, because they hold the complete detail and nuance is lost if the coordinator saves for them.
 
 ### Mandatory Instructions for Every Sub-Agent
 
-Every sub-agent prompt MUST include:
+Every sub-agent prompt includes:
 
 1. The project name (for engram `project` field)
 2. The change name (for topic key construction)
@@ -63,7 +63,7 @@ Envelope fields: `status`, `executive_summary`, `artifacts`, `next_recommended`,
 
 ## DAG State Persistence
 
-The orchestrator owns the DAG state and saves it after each phase transition. The proposer (pending-approval state, after saving the proposal) and the archivist (archived state) also write it. Every writer reads the current state first and upserts the full document:
+The coordinator owns the DAG state and saves it after each phase transition. The proposer (pending-approval state, after saving the proposal) and the archivist (archived state) also write it. Every writer reads the current state first and upserts the full document:
 
 Topic key: `flow/{change-name}/state`
 
@@ -81,7 +81,7 @@ pending_gates:
 
 ## Recovery After Context Loss
 
-If the orchestrator loses state (e.g., after context compaction):
+If the coordinator loses state (e.g., after context compaction):
 
 1. Search engram for `flow/{change-name}/state`
 2. Two-step recover the state artifact

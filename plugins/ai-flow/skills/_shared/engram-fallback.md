@@ -13,11 +13,11 @@ Any one of these signals means engram is unavailable:
 ## Sub-agents
 
 - Skip mem_search/mem_get_observation recovery and skip mem_save. Do not retry engram calls.
-- Use the artifact content the orchestrator passed inline in your launch prompt. If an upstream artifact you need is missing from the prompt, say so in `risks` and work with what you have.
-- Return every artifact you produce in full in the return payload, as `artifacts[].content` (keep `name` and the `topic_key` it would have had), so the orchestrator can hand it on.
+- Use the artifact content the coordinator passed inline in your launch prompt. If an upstream artifact you need is missing from the prompt, say so in `risks` and work with what you have.
+- Return every artifact you produce in full in the return payload, as `artifacts[].content` (keep `name` and the `topic_key` it would have had), so the coordinator can hand it on.
 - Add a risk: "engram unavailable: no multi-session continuity".
 
-## Orchestrator
+## Coordinator (main thread)
 
 - Warn the user once and recommend installing engram: https://github.com/gentleman-programming/engram (plugin `engram@engram`).
 - Pass the full content of every upstream artifact inline to every launch that needs it, instead of topic keys.

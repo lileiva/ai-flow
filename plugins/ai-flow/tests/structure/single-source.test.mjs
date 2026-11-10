@@ -322,25 +322,25 @@ function hookEngramUrl() {
 
 /** Content problems of an engram-fallback document. */
 function engramFallbackProblems(text, url) {
-  const p = missingHeadings(text, [/When it applies/i, /Sub-agents/i, /Orchestrator/i, /Limitations/i]).map((h) => `heading ${h}`);
+  const p = missingHeadings(text, [/When it applies/i, /Sub-agents/i, /Coordinator/i, /Limitations/i]).map((h) => `heading ${h}`);
   const applies = section(text, /When it applies/i);
   const sub = section(text, /Sub-agents/i);
-  const orch = section(text, /Orchestrator/i);
+  const coord = section(text, /Coordinator/i);
   p.push(...missingMentions(applies, [/engram not found/, /mem_\* tools[^.\n]*(absent|missing|not available)/i, /mem_\*[^.\n]*(errors?|fails?)/i]).map((m) => `detection ${m}`));
   p.push(...missingMentions(sub, [/skip[^.\n]*mem_search/i, /mem_get_observation/, /mem_save/, /inline[^.\n]*launch prompt|launch prompt[^.\n]*inline/i, /artifacts\[\]\.content/, /multi-session continuity/i]).map((m) => `sub-agents ${m}`));
-  p.push(...missingMentions(orch, [/inline/i, /every launch/i]).map((m) => `orchestrator ${m}`));
+  p.push(...missingMentions(coord, [/inline/i, /every launch/i]).map((m) => `coordinator ${m}`));
   if (!url || !text.includes(url)) p.push(`install URL ${url} missing`);
   return p;
 }
 
-test('engram-fallback.md: detection, sub-agent and orchestrator actions, limitations, hook install URL', () => {
+test('engram-fallback.md: detection, sub-agent and coordinator actions, limitations, hook install URL', () => {
   assert.ok(exists(ENGRAM_FALLBACK), `${ENGRAM_FALLBACK} exists`);
   assert.deepEqual(engramFallbackProblems(read(ENGRAM_FALLBACK), hookEngramUrl()), []);
 });
 
 test('negative: an engram-fallback doc without the orchestrator section or the hook URL is flagged', () => {
   const bad = '# Engram fallback\n## When it applies\n"engram not found"; mem_* tools are absent; a mem_* call errors.\n## Sub-agents\nSkip mem_search, mem_get_observation and mem_save. Use the artifacts passed inline in the launch prompt. Return artifacts[].content. Warn: no multi-session continuity.\n## Limitations\nLost on compaction.\n';
-  assert.deepEqual(engramFallbackProblems(bad, 'https://github.com/x/engram'), ['heading /Orchestrator/i', 'orchestrator /inline/i', 'orchestrator /every launch/i', 'install URL https://github.com/x/engram missing']);
+  assert.deepEqual(engramFallbackProblems(bad, 'https://github.com/x/engram'), ['heading /Coordinator/i', 'coordinator /inline/i', 'coordinator /every launch/i', 'install URL https://github.com/x/engram missing']);
 });
 
 // ---- state ownership: orchestrator, proposer and archivist write flow/{change}/state (REQ-023, D10) ----
