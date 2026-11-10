@@ -189,6 +189,7 @@ plugins/ai-flow/
   skills/
     using-ai-flow/SKILL.md   # Session entry point (injected by the hook)
     coordinating-apply/SKILL.md   # Coordinator detail for apply, loaded on demand
+    coordinating-commands/SKILL.md   # Coordinator detail for flow-new/ff/continue, loaded on demand
     flow-init/SKILL.md       # Phase 0: Project bootstrap
     flow-explore/SKILL.md    # Phase 1: Problem exploration
     flow-propose/SKILL.md    # Phase 2: Change proposal

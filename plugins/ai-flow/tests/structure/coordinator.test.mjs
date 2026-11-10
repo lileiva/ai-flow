@@ -1,6 +1,6 @@
 // Coordinator protocol lives on the main thread in skills/using-ai-flow; agents/orchestrator.md is a deprecated stub
 // (REQ-006 S1, design D-1, resolved decision R2).
-import { test } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,6 +9,8 @@ import { PLUGIN_ROOT, parseFrontmatter, resolveQualifiedRef } from '../lib/plugi
 const read = (rel) => fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8');
 const USING = 'skills/using-ai-flow/SKILL.md';
 const STUB = 'agents/orchestrator.md';
+const APPLY_DETAIL = 'skills/coordinating-apply/SKILL.md';
+const COMMANDS_DETAIL = 'skills/coordinating-commands/SKILL.md';
 
 /** Problems with the deprecated orchestrator stub (R2). */
 export function stubProblems(text) {
@@ -32,11 +34,16 @@ test('negative: a full-size orchestrator with Agent in tools is not a stub', () 
   assert.equal(stubProblems(bad).length, 4);
 });
 
-const SECTIONS = [/DAG/, /Flow Commands/, /Human Gates/, /State/, /Rework/, /Task Escalation/, /Launch Template/];
+const CORE_SECTIONS = [/DAG/, /Flow Commands/, /Human Gates/, /State/, /Task Escalation/, /Launch Template/];
 
 test('using-ai-flow holds the coordinator sections', () => {
   const hs = [...read(USING).matchAll(/^#{1,6}\s+(.+?)\s*$/gm)].map((m) => m[1]);
-  assert.deepEqual(SECTIONS.filter((re) => !hs.some((h) => re.test(h))).map(String), []);
+  assert.deepEqual(CORE_SECTIONS.filter((re) => !hs.some((h) => re.test(h))).map(String), []);
+});
+
+test('Rework Protocol lives in coordinating-apply (REQ-012 A1)', () => {
+  const hs = [...read(APPLY_DETAIL).matchAll(/^#{1,6}\s+(.+?)\s*$/gm)].map((m) => m[1]);
+  assert.ok(hs.some((h) => /Rework/.test(h)));
 });
 
 /** Problems with how using-ai-flow assigns the coordinator role. */
@@ -68,7 +75,7 @@ export function applySection(text) {
 }
 
 test('apply launch carries subagent_type ai-flow:implementer, model and effort', () => {
-  const s = applySection(read(USING));
+  const s = applySection(read(APPLY_DETAIL));
   assert.match(s, /subagent_type[^\n]*ai-flow:implementer/);
   assert.match(s, /model[^\n]*sonnet/i);
   assert.match(s, /effort[^\n]*medium/i);
@@ -97,23 +104,24 @@ export function applyPackProblems(text) {
 }
 
 test('apply task pack, evidence check and tracer gate are present (REQ-009 S2/S3)', () => {
-  assert.deepEqual(applyPackProblems(read(USING)), []);
+  assert.deepEqual(applyPackProblems(read(APPLY_DETAIL)), []);
 });
 
 test('negative: a pack that runs tests "at the end" is flagged', () => {
-  const bad = read(USING).replace(/(### Coordinating apply\n)/, '$1\nRun `npm test` at the end.\n');
+  const bad = read(APPLY_DETAIL).replace(/(## Coordinating apply\n)/, '$1\nRun `npm test` at the end.\n');
   assert.ok(applyPackProblems(bad).includes('batch-style wording /at the end/i'));
 });
 
-test('apply is per-task: no batch-launch wording remains in using-ai-flow (Task 0.5 leftovers)', () => {
-  const t = read(USING);
-  assert.doesNotMatch(t, /launch implementer agents in batches/i);
-  assert.doesNotMatch(t, /TDD implementation in batches/i);
-  assert.doesNotMatch(t, /execute the remaining batches/i);
+test('apply is per-task: no batch-launch wording remains in using-ai-flow or coordinating-apply (Task 0.5 leftovers)', () => {
+  for (const t of [read(USING), read(APPLY_DETAIL)]) {
+    assert.doesNotMatch(t, /launch implementer agents in batches/i);
+    assert.doesNotMatch(t, /TDD implementation in batches/i);
+    assert.doesNotMatch(t, /execute the remaining batches/i);
+  }
 });
 
 test('apply records evidence under a per-task key, not the shared apply-progress key', () => {
-  const s = applySection(read(USING));
+  const s = applySection(read(APPLY_DETAIL));
   assert.match(s, /flow\/\{change(-name)?\}\/apply-evidence-\{task_id\}/);
   assert.match(s, /handback/i);
   assert.match(s, /backup/i);
@@ -138,6 +146,7 @@ export function thinSkillProblems(text, agentText, phase = 'apply') {
   if (lines.length > 8) p.push(`body has ${lines.length} non-empty lines, over 8`);
   if (!body.includes('ai-flow:using-ai-flow')) p.push('does not name ai-flow:using-ai-flow');
   if (phase === 'apply') {
+    if (!/ai-flow:coordinating-apply/.test(body)) p.push('does not name ai-flow:coordinating-apply');
     if (!/Coordinating apply/.test(body)) p.push('does not name the Coordinating apply section');
   } else if (!new RegExp(`\\\`${phase}\\\` row`).test(body)) p.push(`does not name its \`${phase}\` row`);
   if (/AskUserQuestion/.test(body)) p.push('AskUserQuestion wording');
@@ -182,12 +191,12 @@ test('flow-apply is a thin entry point (REQ-018 S1, REQ-008 S1)', () => {
 test('negative: a fat flow-apply with OpenSpace and orchestrator MUST is flagged', () => {
   const bad = `---\nname: x\n---\n${Array.from({ length: 9 }, (_, i) => `line ${i}`).join('\n')}\nThe orchestrator MUST auto-launch verify.\n## OpenSpace Integration\nRead and follow the agent.\n`;
   const p = thinSkillProblems(bad, '');
-  for (const re of [/over 8/, /using-ai-flow/, /Coordinating apply/, /orchestrator MUST/, /OpenSpace/, /Read and follow/]) assert.ok(p.some((x) => re.test(x)), String(re));
+  for (const re of [/over 8/, /using-ai-flow/, /ai-flow:coordinating-apply/, /Coordinating apply/, /orchestrator MUST/, /OpenSpace/, /Read and follow/]) assert.ok(p.some((x) => re.test(x)), String(re));
 });
 
 test('negative: a skill that copies four implementer lines is flagged', () => {
   const agent = ['Read plan, spec and design from engram first', 'Execute each task test-first following the guide', 'Track progress in engram under the apply key', 'Return the evidence block with the envelope'].join('\n');
-  const bad = `---\nname: x\n---\nai-flow:using-ai-flow Coordinating apply\n${agent.split('\n').map((l, i) => `${i + 1}. ${l}`).join('\n')}\n`;
+  const bad = `---\nname: x\n---\nai-flow:using-ai-flow ai-flow:coordinating-apply Coordinating apply\n${agent.split('\n').map((l, i) => `${i + 1}. ${l}`).join('\n')}\n`;
   assert.ok(thinSkillProblems(bad, agent).some((x) => /shares 4 lines/.test(x)));
 });
 
@@ -359,7 +368,7 @@ test('using-ai-flow handles needs_input and blocked statuses', () => {
   assert.match(s, /blocked/);
 });
 
-/** Problems with the question round, blocked routing and the no-nesting rule (REQ-004 S3, REQ-005 S3). */
+/** Problems with the question round, the blocked pointer and the no-nesting rule in the core (REQ-004 S3, REQ-005 S3). */
 export function returnHandlingProblems(text) {
   const s = sectionOf(text, 'Handling returns');
   const p = [];
@@ -369,20 +378,37 @@ export function returnHandlingProblems(text) {
   if (!/relaunch[^\n]*same agent type[^\n]*fresh[^\n]*Answers:/i.test(s)) p.push('no fresh relaunch of the same agent type with an "Answers:" block');
   if (!/non-blocking[^\n]*next gate/i.test(s)) p.push('non-blocking questions are not shown at the next gate');
   if (!/unattended[^\n]*recommended[^\n]*ASSUMED ANSWER:/i.test(s)) p.push('no ASSUMED ANSWER line under the unattended policy');
-  if (!/blocked[^\n]*ai-flow:debugger[^\n]*opus[^\n]*high/i.test(s) || !/task id/i.test(s) || !/evidence/i.test(s) || !/apply-progress/i.test(s)) p.push('blocked does not launch ai-flow:debugger (opus/high) with task id, evidence and apply-progress key');
-  if (!/debugger[^\n]*ok[^\n]*fresh implementer[^\n]*one routing step up/i.test(s)) p.push('no fresh implementer one routing step up after debugger ok');
-  if (!/debugger[^\n]*blocked[^\n]*question to the user/i.test(s)) p.push('debugger blocked does not go to the user as a question');
+  if (!/blocked[^\n]*load ai-flow:coordinating-apply[^\n]*blocked routing/i.test(s)) p.push('blocked does not point to the blocked routing in ai-flow:coordinating-apply');
   if (!/no (sub-?agent|agent)[^\n]*launch[^\n]*(another )?phase agent|(sub-?agents?|agents?) (do not|never|must not) launch[^\n]*agent/i.test(text)) p.push('no rule that a subagent never launches another phase agent');
   return p;
 }
 
-test('Handling returns: question round, blocked -> debugger, no nested launches (REQ-004 S3, REQ-005 S3)', () => {
+/** Problems with the blocked -> debugger routing in coordinating-apply (REQ-005 S3). */
+export function blockedRoutingProblems(text) {
+  const s = sectionOf(text, 'Blocked routing');
+  if (!s) return ['no Blocked routing section'];
+  const p = [];
+  if (!/blocked[^\n]*ai-flow:debugger[^\n]*opus[^\n]*high/i.test(s) || !/task id/i.test(s) || !/evidence/i.test(s) || !/apply-progress/i.test(s)) p.push('blocked does not launch ai-flow:debugger (opus/high) with task id, evidence and apply-progress key');
+  if (!/debugger[^\n]*ok[^\n]*fresh implementer[^\n]*one routing step up/i.test(s)) p.push('no fresh implementer one routing step up after debugger ok');
+  if (!/debugger[^\n]*blocked[^\n]*question to the user/i.test(s)) p.push('debugger blocked does not go to the user as a question');
+  return p;
+}
+
+test('Handling returns: question round, blocked pointer, no nested launches (REQ-004 S3, REQ-005 S3)', () => {
   assert.deepEqual(returnHandlingProblems(read(USING)), []);
 });
 
-test('negative: Handling returns without the question round or the debugger route is flagged', () => {
+test('coordinating-apply holds the blocked -> debugger routing (REQ-005 S3)', () => {
+  assert.deepEqual(blockedRoutingProblems(read(APPLY_DETAIL)), []);
+});
+
+test('negative: Handling returns without the question round or the blocked pointer is flagged', () => {
   const bad = read(USING).replace(/### Handling returns[\s\S]*?(?=### DAG State Updates)/, '### Handling returns\n\nneeds_input and blocked: decide.\n\n');
-  assert.ok(returnHandlingProblems(bad).length >= 8);
+  assert.ok(returnHandlingProblems(bad).length >= 7);
+});
+
+test('negative: a blocked routing section without the debugger launch is flagged', () => {
+  assert.equal(blockedRoutingProblems('## Blocked routing\n\nAsk the user.\n').length, 3);
 });
 
 // Task 2.5: commands load the coordinator first (REQ-006 S1, REQ-021 S1, REQ-004 S1, design D-2).
@@ -416,8 +442,6 @@ test('negative: a command that launches the orchestrator, skips the coordinator 
 });
 
 // Task 2.16: phase detail loads on demand from sibling skills (REQ-012 amendment A1, resolved decision R16).
-const APPLY_DETAIL = 'skills/coordinating-apply/SKILL.md';
-const COMMANDS_DETAIL = 'skills/coordinating-commands/SKILL.md';
 
 /** Problems with a coordinator detail skill: its name, model-invocable, and a SUBAGENT-STOP block (R16). */
 export function detailSkillProblems(text, name) {
@@ -440,4 +464,85 @@ test('core points to ai-flow:coordinating-apply, which resolves to a model-invoc
 test('negative: a coordinating-apply copy with disable-model-invocation: true is flagged', () => {
   const bad = read(APPLY_DETAIL).replace(/^---\n/, '---\ndisable-model-invocation: true\n');
   assert.ok(detailSkillProblems(bad, 'coordinating-apply').some((x) => /disable-model-invocation/.test(x)));
+});
+
+// Task 2.16, sub-step B: core budget, no phase detail in the core, pointers, detail homes (REQ-012 A1).
+const CORE_CHAR_CAP = 10000;
+const DETAIL_CHAR_CAP = 8000;
+
+/** Problems with the size of a skill: whole file, text.length (REQ-012 A1). */
+export function coreBudgetProblems(text, cap = CORE_CHAR_CAP) {
+  return text.length > cap ? [`${text.length} chars, over the cap of ${cap}`] : [];
+}
+
+const LEAK_HEADINGS = [/Coordinating apply/, /Rework Protocol/, /Command procedures/, /Artifact Tracking/, /Ecosystem Enhancement/];
+const LEAK_MARKERS = ['Task pack', 're-establish RED', 'apply-evidence-{task_id}', 'git worktree add', 'launch ai-flow:debugger'];
+
+/** Phase detail that must stay out of the core: its headings and marker strings. */
+export function coreLeakProblems(text) {
+  const hs = [...text.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)].map((m) => m[1]);
+  return [
+    ...LEAK_HEADINGS.filter((re) => hs.some((h) => re.test(h))).map((re) => `heading ${re}`),
+    ...LEAK_MARKERS.filter((m) => text.includes(m)).map((m) => `marker "${m}"`),
+  ];
+}
+
+/** Problems with the Phase detail pointers: both skills named with their triggers, load once. */
+export function pointerProblems(text) {
+  const s = sectionOf(text, 'Phase detail');
+  if (!s) return ['no Phase detail section'];
+  const lines = s.split('\n');
+  const apply = lines.find((l) => l.includes('ai-flow:coordinating-apply')) ?? '';
+  const commands = lines.find((l) => l.includes('ai-flow:coordinating-commands')) ?? '';
+  const p = [];
+  if (!apply) p.push('does not name ai-flow:coordinating-apply');
+  else for (const re of [/implementer/, /debugger/, /rework/i, /apply/]) if (!re.test(apply)) p.push(`apply pointer lacks trigger ${re}`);
+  if (!commands) p.push('does not name ai-flow:coordinating-commands');
+  else for (const re of [/flow-new/, /flow-ff/, /flow-continue/, /recover/i]) if (!re.test(commands)) p.push(`commands pointer lacks trigger ${re}`);
+  if (!/once per conversation/i.test(s)) p.push('does not say to load each once');
+  return p;
+}
+
+const headingsOf = (text) => [...text.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)].map((m) => m[1]);
+
+describe('core budget and phase detail (REQ-012 A1)', () => {
+  test('the core is at most 10,000 chars', () => {
+    assert.deepEqual(coreBudgetProblems(read(USING)), []);
+  });
+
+  test('each detail skill is at most 8,000 chars', () => {
+    for (const f of [APPLY_DETAIL, COMMANDS_DETAIL]) assert.deepEqual(coreBudgetProblems(read(f), DETAIL_CHAR_CAP), [], f);
+  });
+
+  test('no phase detail in the core', () => {
+    assert.deepEqual(coreLeakProblems(read(USING)), []);
+  });
+
+  test('the Phase detail section names both detail skills with their triggers', () => {
+    assert.deepEqual(pointerProblems(read(USING)), []);
+  });
+
+  test('detail homes: coordinating-apply and coordinating-commands hold the moved sections', () => {
+    const a = headingsOf(read(APPLY_DETAIL));
+    for (const re of [/Coordinating apply/, /Rework Protocol/, /Ecosystem Enhancement/, /Blocked routing/]) assert.ok(a.some((h) => re.test(h)), `apply detail lacks ${re}`);
+    const c = headingsOf(read(COMMANDS_DETAIL));
+    for (const re of [/Command procedures/, /Artifact Tracking/]) assert.ok(c.some((h) => re.test(h)), `commands detail lacks ${re}`);
+    assert.deepEqual(detailSkillProblems(read(COMMANDS_DETAIL), 'coordinating-commands'), []);
+  });
+
+  test('negative (n1): gluing the apply detail back into the core breaks the cap', () => {
+    assert.ok(coreBudgetProblems(read(USING) + read(APPLY_DETAIL)).length > 0);
+  });
+
+  test('negative (n2): a core with a Coordinating apply heading and a Task pack is flagged exactly twice', () => {
+    const bad = `${read(USING)}\n### Coordinating apply\nTask pack...\n`;
+    assert.deepEqual(coreLeakProblems(bad), ['heading /Coordinating apply/', 'marker "Task pack"']);
+  });
+
+  test('negative (n3): a core without the coordinating-apply pointer line fails the pointer check', () => {
+    const text = read(USING);
+    const at = text.indexOf('### Phase detail');
+    const bad = text.slice(0, at) + text.slice(at).split('\n').filter((l) => !l.includes('ai-flow:coordinating-apply')).join('\n');
+    assert.ok(pointerProblems(bad).some((x) => /coordinating-apply/.test(x)));
+  });
 });

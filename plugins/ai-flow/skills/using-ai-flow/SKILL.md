@@ -18,218 +18,61 @@ If you were dispatched as a sub-agent to execute a specific task, skip this skil
 
 ## Instruction Priority
 
-AI-Flow skills override default system prompt behavior, but **user instructions always take precedence**:
-
-1. **User's explicit instructions** (CLAUDE.md, AGENTS.md, direct requests) -- highest priority
-2. **AI-Flow skills** -- override default system behavior where they conflict
-3. **Default system prompt** -- lowest priority
-
-If CLAUDE.md says "don't use TDD" and a skill says "always use TDD," follow the user's instructions. The user is in control.
-
-## How to Access Skills
-
-**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you -- follow it directly. Never use the Read tool on skill files.
-
-**In other environments:** Check your platform's documentation for how skills are loaded.
+User instructions (CLAUDE.md, AGENTS.md, direct requests) come first, then AI-Flow skills, then the default system prompt. If CLAUDE.md says "don't use TDD", follow it.
 
 ## AI-Flow Development Workflow
 
-AI-Flow is an 8-phase workflow for planning and implementing changes with rigor. Each phase is handled by a specialized sub-agent. The **main thread is the coordinator**: it keeps the conversation with the user, launches the phase agents, runs the human gates and tracks state. Phase work itself never runs inline on the main thread.
-
-### The 8 Phases
-
-| Phase | What | Skill |
-|-------|------|-------|
-| 1. Explore | Codebase exploration + iterative discovery | `flow-explore` |
-| 2. Propose | Change proposal with intent, scope, approach | `flow-propose` |
-| 3. Spec | Requirements and scenarios (parallel with Design) | `flow-spec` |
-| 4. Design | Technical design and architecture decisions | `flow-design` |
-| 5. Plan | Task breakdown with tracer bullet emphasis | `flow-plan` |
-| 6. Apply | TDD implementation, one task per implementer | `flow-apply` |
-| 7. Verify | Prove implementation matches specs | `flow-verify` |
-| 8. Archive | Archive artifacts and complete the change | `flow-archive` |
+AI-Flow is an 8-phase workflow (explore, propose, spec, design, plan, apply, verify, archive). Each phase is handled by a specialized sub-agent. The **main thread is the coordinator**.
 
 ### Flow Commands
 
-| Command | Action |
-|---------|--------|
-| `/ai-flow:flow-init` | Initialize AI-Flow context in current project |
-| `/ai-flow:flow-explore <topic>` | Explore an idea (no files created) |
-| `/ai-flow:flow-new <change-name>` | Start a new change (explore -> propose) |
-| `/ai-flow:flow-ff <change-name>` | Fast-forward through planning phases |
-| `/ai-flow:flow-continue [change-name]` | Resume from the next pending phase |
-| `/ai-flow:flow-spec` | Write delta specifications |
-| `/ai-flow:flow-design` | Create technical design |
-| `/ai-flow:flow-plan` | Break design into implementation tasks |
-| `/ai-flow:flow-apply` | Implement planned tasks with TDD |
-| `/ai-flow:flow-verify` | Verify implementation against spec |
-| `/ai-flow:flow-archive` | Archive a completed change |
-| `/ai-flow:flow-debug` | Investigate and fix unexpected failures |
+Commands are `/ai-flow:<command>`. Implementer and debugger have full tool access, verifier also runs tests, the rest are read-only.
 
 ### Command -> Agent Mapping
 
-| Command | Agent | Entry point |
-|---------|-------|-------------|
-| `flow-init` | `ai-flow:initializer` | skill `ai-flow:flow-init` |
-| `flow-explore` | `ai-flow:explorer` | skill `ai-flow:flow-explore` |
-| `flow-new` | `ai-flow:explorer`, then `ai-flow:proposer` | command `/ai-flow:flow-new` (meta, run on the main thread) |
-| `flow-ff` | `ai-flow:proposer`, `ai-flow:specifier`, `ai-flow:designer`, `ai-flow:planner` | command `/ai-flow:flow-ff` (meta, run on the main thread) |
-| `flow-continue` | the next pending phase's agent (for example `ai-flow:specifier`) | command `/ai-flow:flow-continue` (meta, run on the main thread) |
-| `flow-propose` | `ai-flow:proposer` | skill `ai-flow:flow-propose` |
-| `flow-spec` | `ai-flow:specifier` | skill `ai-flow:flow-spec` |
-| `flow-design` | `ai-flow:designer` | skill `ai-flow:flow-design` |
-| `flow-plan` | `ai-flow:planner` | skill `ai-flow:flow-plan` |
-| `flow-apply` | `ai-flow:implementer` | skill `ai-flow:flow-apply` |
-| `flow-verify` | `ai-flow:verifier` | skill `ai-flow:flow-verify` |
-| `flow-archive` | `ai-flow:archivist` | skill `ai-flow:flow-archive` |
-| `flow-debug` | `ai-flow:debugger` | skill `ai-flow:flow-debug` |
+| Command | Action | Agent | Entry point |
+|---------|--------|-------|-------------|
+| `flow-init` | Writes `.ai-flow.json` only (`initializer`) | `ai-flow:initializer` | skill |
+| `flow-explore <topic>` | Explore an idea, no files | `ai-flow:explorer` | skill |
+| `flow-new <change>` | Explore, then propose | `ai-flow:explorer`, `ai-flow:proposer` | meta, main thread |
+| `flow-ff <change>` | Fast-forward the planning phases | `ai-flow:proposer`, `ai-flow:specifier`, `ai-flow:designer`, `ai-flow:planner` | meta, main thread |
+| `flow-continue [change]` | Resume at the next pending phase | the next phase's agent, e.g. `ai-flow:specifier` | meta, main thread |
+| `flow-propose` | Change proposal | `ai-flow:proposer` | skill |
+| `flow-spec` | Delta specifications | `ai-flow:specifier` | skill |
+| `flow-design` | Technical design | `ai-flow:designer` | skill |
+| `flow-plan` | Task breakdown | `ai-flow:planner` | skill |
+| `flow-apply` | TDD, one task per implementer | `ai-flow:implementer` | skill |
+| `flow-verify` | Verify against the spec | `ai-flow:verifier` | skill |
+| `flow-archive` | Archive a completed change | `ai-flow:archivist` | skill |
+| `flow-debug` | Fix unexpected failures | `ai-flow:debugger` | skill |
 
 ### Dependency Graph
 
-```
-                proposal
-               (Phase 2)
-                   |
-       +-----------+-----------+
-       |                       |
-       v                       v
-     spec                   design
-   (Phase 3)              (Phase 4)
-       |                       |
-       +-----------+-----------+
-                   |
-                   v
-                 plan
-               (Phase 5)
-                   |
-                   v
-                apply
-               (Phase 6)
-                   |
-                   v
-                verify
-               (Phase 7)
-                   |
-                   v
-               archive
-               (Phase 8)
-```
+`proposal -> spec || design -> plan -> apply -> verify -> archive`. Spec and design run in parallel; the rest is sequential.
 
 ### Auto-invoke Rules
 
-When performing these actions, ALWAYS invoke the corresponding skill FIRST:
-
-| Action | Skill |
-|--------|-------|
-| Starting AI-Flow workflow or planning a feature | Follow the coordinator protocol below, starting with `/ai-flow:flow-new` |
-| Exploring ideas before a change | `flow-explore` |
-| Creating a change proposal | `flow-propose` |
-| Writing specifications | `flow-spec` |
-| Creating technical design | `flow-design` |
-| Breaking down tasks | `flow-plan` |
-| Implementing tasks | `flow-apply` |
-| Verifying implementation | `flow-verify` |
-| Archiving a change | `flow-archive` |
-| Investigating failures | `flow-debug` |
-| Initializing AI-Flow in a project | `flow-init` |
+For ai-flow work, start from the coordinator protocol below. The phase `flow-*` skills are user entry points.
 
 ## Coordinator protocol
 
-The main thread is the coordinator. Your job here is to keep a thin conversation with the user, delegate all phase work to the `ai-flow:*` agents, present summaries, run the human gates and track DAG state. Every token you keep persists for the whole conversation, so keep your context lean.
+The main thread is the coordinator: keep a thin conversation, delegate all phase work to the `ai-flow:*` agents, present summaries, run the human gates and track DAG state. Every token you keep persists, so stay lean.
 
-Do not read source code to understand the codebase, write specs, designs or plans, run tests or builds, or do quick analysis inline. Do not write or edit project source or test files, and do not author phase artifacts: the phase agents write them. Delegate each of these to the matching agent. To start a phase, launch the phase agent with the Agent tool; the phase skills are user entry points, so do not load them yourself.
+Do not read source code to understand the codebase, write specs, designs or plans, run tests or builds, or do quick analysis inline. Do not write or edit project source or test files, and do not author phase artifacts: the phase agents write them. To start a phase, launch the phase agent with the Agent tool; do not load the phase skills yourself.
 
-`/ai-flow:flow-ff`, `/ai-flow:flow-continue` and `/ai-flow:flow-new` are meta-commands handled here, not skills, so do not invoke them with the Skill tool. When an agent suggests a next command, show it to the user and do not run it automatically. A deprecated stub agent named orchestrator still ships for old configs; it does no work, so ignore it.
+`flow-ff`, `flow-continue` and `flow-new` are meta-commands handled here, not skills. When an agent suggests a next command, show it to the user and do not run it.
 
 ### Identity Inheritance
 
-If the project has an `AGENTS.md` file, read it and inherit the identity, tone, and conventions defined there. Apply the inherited identity as an overlay on top of your coordinator role: it shapes your voice and style but does not replace the flow rules in this file. If no `AGENTS.md` exists, use your default voice. Pass the inherited identity context to every agent launch so the tone stays consistent.
+If an `AGENTS.md` exists, inherit its identity and tone as an overlay on your coordinator role; it does not replace the flow rules. Pass it to every agent launch.
 
 ### Persistence
 
-AI-Flow uses **engram** as its artifact store. All artifacts use deterministic topic keys: `flow/{change-name}/{artifact-type}`. The naming convention is in `_shared/engram-convention.md` and the sub-agent context protocol in `_shared/persistence-contract.md`, both in the ai-flow plugin's skills directory. If engram is unavailable, follow `_shared/engram-fallback.md` in the same place.
-
-Dependencies between phases: spec and design can run in parallel (both depend only on the proposal), the plan depends on both, and apply, verify and archive are strictly sequential.
-
-### Specialized Agents
-
-| Phase | Agent | Tool Access | Purpose |
-|-------|-------|-------------|---------|
-| 0 | `initializer` | Writes `.ai-flow.json` only | Bootstrap project context |
-| 1 | `explorer` | Read-only | Brainstorm and investigate |
-| 2 | `proposer` | Read-only | Formal change proposals |
-| 3 | `specifier` | Read-only | Delta specs with Given/When/Then |
-| 4 | `designer` | Read-only | Technical design and architecture |
-| 5 | `planner` | Read-only | Task breakdown with TDD steps |
-| 6 | `implementer` | **Full access** | TDD execution (RED-GREEN-REFACTOR) |
-| 7 | `verifier` | Read + run tests | Spec compliance and quality gate |
-| 8 | `archivist` | Read-only + engram | Archive and close out |
-| Any | `debugger` | **Full access** | Root-cause-first debugging |
-
-### Command procedures
-
-**`/ai-flow:flow-init`**: launch the initializer agent.
-
-**`/ai-flow:flow-explore <topic>`**: launch the explorer agent with the topic and project name.
-
-**`/ai-flow:flow-new <change-name>`** (meta-command):
-1. Launch the explorer agent with the change description.
-2. Wait for the result and present a summary to the user.
-3. Launch the proposer agent with the exploration results. Pass both topic keys: `flow/{change-name}/explore` (required) and `flow/{change-name}/brainstorm` (optional, the explorer produces it from the iterative discovery loop).
-4. Wait for the result and present the proposal summary.
-5. **Human gate:** ask the user to approve the proposal.
-
-**`/ai-flow:flow-spec`** and **`/ai-flow:flow-design`**: launch the specifier or designer agent with the change name and project name. The agent reads the proposal from engram. You can launch both in parallel.
-
-**`/ai-flow:flow-plan`**: launch the planner agent with the change name and project name; it reads spec and design from engram. **Human gate:** present the plan summary and ask the user to approve before apply.
-
-**`/ai-flow:flow-apply`**: follow "Coordinating apply" below. Launch one implementer per task, not per batch.
-
-Workspace isolation: before launching the first apply batch, consider suggesting a git worktree to keep the main workspace clean during implementation. If `superpowers:using-git-worktrees` is available, reference that skill. Otherwise, suggest `git worktree add ../worktree-{change-name} -b apply/{change-name}` as a one-liner. This is optional. If the user declines or does not respond, proceed normally.
-
-**`/ai-flow:flow-verify`**: launch the verifier agent; it reads all artifacts from engram. **Human gate:** present the verification report and ask the user to approve or send back for rework.
-
-**`/ai-flow:flow-archive`**: launch the archivist agent; it reads all artifacts from engram.
-
-**`/ai-flow:flow-ff <change-name>`** (meta-command, fast-forward through planning):
-1. Launch the proposer agent, wait, present a summary, then the **human gate**.
-2. Launch the specifier and designer agents in parallel and wait for both.
-3. Launch the planner agent, wait, present a summary, then the **human gate**.
-
-**`/ai-flow:flow-continue [change-name]`** (meta-command):
-1. Recover state from engram: `flow/{change-name}/state`.
-2. Identify the next missing artifact in the dependency chain.
-3. Launch the corresponding agent.
-
-**`/ai-flow:flow-debug`**: launch the debugger agent. It can run at any time and is not tied to the DAG.
-
-### Coordinating apply
-
-Apply runs one implementer instance per task, each launched fresh from the plan. A fresh instance keeps its context small and its test-first evidence checkable.
-
-Launch with the Agent tool: `subagent_type` `ai-flow:implementer`, `model` sonnet, `effort` medium. Raise to opus with effort high after a blocked return or an evidence miss, and never go below sonnet. A user instruction about model or effort overrides these defaults.
-
-Task pack. Each launch prompt covers exactly one task and carries:
-- Project: the engram `project` name.
-- Change: the change name.
-- Repo: the repository path and branch.
-- Task id: for example 0.6, with the plan key (`flow/{change}/plan`, plus its part keys when the plan is split).
-- Cited scenarios and decisions: the spec scenarios and design decisions listed in that task.
-- Test command: the unit command named in the task, and the full-suite command to run before the commit.
-- Completed tasks: the ids already done, so the instance does not redo them.
-- TDD mode: `tdd`, or `n/a` for a task the plan marks as not testable first.
-- The commit message from the task.
-- "Return the tdd_evidence block" together with the return envelope.
-
-Evidence storage. The engram `topic_key` upserts, so a single apply-progress key is overwritten by each per-task implementer. Each task's implementer therefore saves its tdd_evidence to `flow/{change}/apply-evidence-{task_id}`. Read the evidence from the handback first, and use that key as the backup when the handback lacks it.
-
-Evidence check after each task. Mode `tdd` needs test_files, red.failing, red.after_test_write, red_before_impl and green.summary. Mode `n/a` needs na_reason and verify_command. On a miss, relaunch the task once with the instruction "re-establish RED", one routing step up (sonnet to opus, medium to high). A second miss is recorded as a warning and shown at the next gate.
-
-The batch 0 tracer gate follows the last tracer task: present what was built and the test results, and wait for the user's answer before launching tasks from later batches.
+Artifacts live in engram under `flow/{change-name}/{artifact-type}` (see `_shared/engram-convention.md` and `_shared/persistence-contract.md` in the plugin's skills directory). Without engram, follow `_shared/engram-fallback.md`.
 
 ### Routing
 
-Choose the model and effort for each launch from this table. The values are aliases and are set per launch, never in an agent's frontmatter, so the user keeps control of models.
+Choose model and effort per launch from this table. They are set per launch, never in agent frontmatter.
 
 | Phase | Default | Raise to | When |
 |-------|---------|----------|------|
@@ -244,38 +87,24 @@ Choose the model and effort for each launch from this table. The values are alia
 | archive | haiku/low | sonnet/low | archive report incomplete on the first try |
 | debug | opus/high | opus/max | second debug round |
 
-Start at the default and raise one step when the trigger applies. Apply is raised after a blocked return or an evidence miss, and is never lowered below sonnet, because weaker models skipped the test-first loop. A user instruction about model or effort overrides this table.
+Start at the default and raise one step when the trigger applies. Apply is raised after a blocked return or an evidence miss, and never lowered below sonnet. A user instruction about model or effort overrides this table.
 
 ### Sub-Agent Launch Template
 
-Launch each phase agent with the Agent tool, using the same fields for every phase:
+Launch each phase agent with the Agent tool:
 
-1. **Agent:** `subagent_type` `ai-flow:{agent}` (for example `ai-flow:designer`). The agent definition is its protocol, so do not tell it to load a skill file.
-2. **Model and effort:** `model` and `effort` from Routing.
-3. **Description:** a short label such as "{phase}: {change-name}".
-4. **Project and change:** the engram `project` name and the change name, for topic keys.
-5. **Artifacts to read:** the engram topic keys for the phase (below). The agent does two-step recovery.
-6. **Shared protocols:** `_shared/tdd-protocol.md` in the ai-flow plugin's skills directory, for apply and debug.
-7. **Save and return:** "Save your output to engram with topic key `flow/{change-name}/{artifact-type}`" and "Return the envelope from persistence-contract.md".
+1. **Agent:** `subagent_type` `ai-flow:{agent}`. The agent definition is its protocol, so do not tell it to load a skill file.
+2. **Model and effort** from Routing, and a short **description** such as "{phase}: {change-name}".
+3. **Project and change:** the engram `project` name and the change name.
+4. **Artifacts to read** (agent does two-step recovery): propose: explore; spec, design: proposal; plan: spec, design; apply: plan, spec, design; verify: all but archive-report; archive: all; debug: failure evidence, apply-progress.
+5. **Shared protocols:** `_shared/tdd-protocol.md` in the ai-flow plugin's skills directory, for apply and debug.
+6. **Save and return:** "Save your output to engram with topic key `flow/{change-name}/{artifact-type}`" and "Return the envelope from persistence-contract.md".
 
-After each launch, append `{phase, task?, model, effort, reason}` to state `routing_log`. The reason is "default" or the trigger that raised it.
-
-| Phase | Agent | Artifacts to read |
-|-------|-------|-------------------|
-| init | initializer | none (reads the repo) |
-| explore | explorer | none (change description from the user) |
-| propose | proposer | explore |
-| spec | specifier | proposal |
-| design | designer | proposal |
-| plan | planner | spec, design |
-| apply | implementer | plan, spec, design (task pack, see Coordinating apply) |
-| verify | verifier | proposal, spec, design, plan, apply-progress |
-| archive | archivist | all artifacts, state |
-| debug | debugger | failure evidence, apply-progress |
+After each launch, append `{phase, task?, model, effort, reason}` to state `routing_log`; reason is "default" or the trigger.
 
 ### Human Gates
 
-Each gate stops the flow until the user answers. Present the summary, then either ask through AskUserQuestion with the options below or end your turn, and wait for the user's answer before launching an agent of a later phase. A gate that was never shown to the user has not passed.
+Each gate stops the flow until the user answers. Present the summary, then either ask through AskUserQuestion with the options below or end your turn, and wait for the user's answer before launching an agent of a later phase. A gate never shown to the user has not passed.
 
 | Gate | After Phase | What to Present | Options |
 |------|-------------|-----------------|---------|
@@ -291,103 +120,42 @@ If the user rejects, ask what to change and re-launch the phase with the feedbac
 Subagents never launch another phase agent and cannot ask the user, so they return `needs_input` or `blocked` and you route it.
 
 - `needs_input`: merge the blocking `open_questions` of the phase into one AskUserQuestion round (4 questions per call, recommended option first). Then relaunch the same agent type fresh with an "Answers:" block and the same artifact refs. Show non-blocking questions at the next gate. Unattended: take the recommended option and print `ASSUMED ANSWER: <id>`.
-- `blocked` from an implementer: launch `ai-flow:debugger` (opus/high) with the task id, the evidence and the apply-progress key. On debugger ok, launch a fresh implementer for that task one routing step up. If the debugger returns blocked, send a question to the user.
+- `blocked`: load ai-flow:coordinating-apply and follow its blocked routing.
 
 ### DAG State Updates
 
-After every phase completes (whether by sub-agent return or human gate approval), save the DAG state to engram:
-
-Topic key: `flow/{change-name}/state`
-
-Content:
-- change: {change-name}
-- current_phase: {just-completed-phase}
-- completed_phases: [list all completed phases with status]
-- artifacts: [list all artifact topic keys that exist]
-- pending_gates: [list any pending human gates]
-
-As the coordinator you own the DAG state and save it after every phase transition. Two agents also write `flow/{change-name}/state`: the proposer (a pending-approval state after it saves the proposal) and the archivist (the archived state). Every writer reads the current state first and upserts the full document. Without consistent state updates, `/ai-flow:flow-continue` cannot recover correctly.
-
-### Rework Protocol
-
-When the user selects "Rework" at the verification gate:
-
-1. Read the verify-report from engram to identify CRITICAL and WARNING issues.
-2. For each CRITICAL issue, determine if it maps to an existing plan task or requires a new task.
-3. Create a rework batch: launch the implementer agent with:
-   - The original plan, spec, and design
-   - A "rework" directive listing the specific issues to fix from the verify-report
-   - The verify-report topic key for context
-4. After rework completes, re-launch the verifier.
-5. Present the new verdict at the human gate.
-
-### Task Escalation
-
-When the user describes a task:
-
-1. **Simple question**: answer briefly if you already know. If not, delegate.
-2. **Small task** (single file, quick fix): delegate to a general sub-agent. Suggest TDD.
-3. **Bug fix**: suggest `/ai-flow:flow-debug` for systematic investigation.
-4. **Medium feature** (3-10 files): suggest the full flow, `/ai-flow:flow-new <change-name>`.
-5. **Large feature** (10+ files): suggest the full flow with tracer bullet emphasis.
-
-### Skill Creation Detection
-
-After any phase completes, check the sub-agent's return payload for indications of reusable patterns. Look for language such as "reusable pattern found", "could be extracted as a skill", "recurring pattern", or similar.
-
-If a reusable pattern is detected:
-1. Present a suggestion to the user: "A reusable pattern was detected: {description}. Consider running `/skill-creator` to extract it as a reusable skill."
-2. If the user declines, continue the current flow without interruption.
-3. If the user accepts, note the pattern for post-flow action. Do not interrupt the current flow to create the skill immediately.
-4. If no reusable pattern is detected, make no suggestion.
-
-This is advisory only -- do not block the flow for skill creation.
-
-### Artifact Tracking
-
-The following artifacts are tracked per change. All are stored in engram with deterministic topic keys:
-
-| Artifact | Topic Key | Producer | Required |
-|----------|-----------|----------|----------|
-| Exploration | `flow/{change-name}/explore` | explorer | Yes |
-| Brainstorm | `flow/{change-name}/brainstorm` | explorer | No (optional, from iterative discovery loop) |
-| Proposal | `flow/{change-name}/proposal` | proposer | Yes |
-| Spec | `flow/{change-name}/spec` | specifier | Yes |
-| Design | `flow/{change-name}/design` | designer | Yes |
-| Plan | `flow/{change-name}/plan` | planner | Yes |
-| Apply progress | `flow/{change-name}/apply-progress` | implementer | Yes |
-| Verify report | `flow/{change-name}/verify-report` | verifier | Yes |
-| Archive report | `flow/{change-name}/archive-report` | archivist | Yes |
-| DAG state | `flow/{change-name}/state` | coordinator (also proposer, archivist) | Yes |
-
-When the brainstorm artifact exists, pass its topic key to the proposer alongside the exploration topic key.
+After every phase completes, save state to engram under `flow/{change-name}/state`: change, current_phase, completed_phases, artifacts, pending_gates. The coordinator owns it; the proposer (pending-approval state) and the archivist (archived state) also write it. Each writer reads the current state first and upserts the full document. `flow-continue` recovers from it.
 
 ### State Recovery
 
-If you lose context (e.g., after compaction):
+After compaction, search engram for `flow/{change-name}/state` (two-step recovery), review the completed phases and artifacts, and resume at the next pending phase.
 
-1. Search engram for `flow/{change-name}/state`
-2. Two-step recover the state artifact
-3. Review which phases are complete and which artifacts exist (including optional brainstorm)
-4. Resume from the next pending phase
+### Task Escalation
 
-### Ecosystem Enhancement
+1. **Simple question**: answer briefly if you know, else delegate.
+2. **Small task** (single file): delegate to a general sub-agent; suggest TDD.
+3. **Bug fix**: suggest `/ai-flow:flow-debug`.
+4. **Medium feature** (3-10 files) or **large** (10+): suggest `/ai-flow:flow-new <change-name>`, with tracer bullet emphasis for large.
 
-If `superpowers:dispatching-parallel-agents` is available in the session context, also follow its parallel dispatch pattern for spec+design and batch execution. If `superpowers:using-git-worktrees` is available, consider using it for workspace isolation during apply phases. If `superpowers:finishing-a-development-branch` is available, follow its branch completion checklist when wrapping up a change. These complement (do not replace) the existing orchestration instructions defined above. If superpowers is not installed, the protocols in this file are the complete and self-sufficient reference.
+### Skill Creation Detection
+
+After a phase, check the agent's return for a reusable pattern ("could be extracted as a skill"). If found, suggest `/skill-creator` once; if declined, carry on. Advisory only.
 
 ### Phase detail
 
 Before the first `ai-flow:implementer` or `ai-flow:debugger` launch in this conversation (apply, rework after the verify gate, blocked routing), load skill `ai-flow:coordinating-apply`.
 
+When running `/ai-flow:flow-new`, `/ai-flow:flow-ff` or `/ai-flow:flow-continue`, or when recovering state to find the next phase, load skill `ai-flow:coordinating-commands`.
+
+Load each once per conversation.
+
 ### Tracer Bullets
 
-When building features, the sub agents should build a tiny, end-to-end slice of the feature first, seek feedback, then expand out from there.
+Build a tiny end-to-end slice first, seek feedback, then expand.
 
 ## Peer Dependencies
 
-This plugin works best with:
+- **superpowers** -- systematic-debugging, brainstorming, verification-before-completion and other discipline skills used by the phases. Install: `claude plugin add superpowers`
+- **engram** -- persistent artifact storage (without it, artifacts stay inline). Install from: https://github.com/gentleman-programming/engram
 
-- **superpowers** -- Provides systematic-debugging, brainstorming, verification-before-completion, using-git-worktrees, dispatching-parallel-agents, and other discipline skills referenced by AI-Flow phases. Install via: `claude plugin add superpowers`
-- **engram** -- Provides persistent artifact storage across sessions. Without it, AI-Flow artifacts are inline-only (degraded mode). Install from: https://github.com/gentleman-programming/engram
-
-Both are recommended but not required. AI-Flow degrades gracefully without them.
+Both are optional; AI-Flow degrades gracefully without them.

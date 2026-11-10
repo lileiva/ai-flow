@@ -127,7 +127,9 @@ function section(text, re) {
 // ---- required sections (REQ-003 S2) ----
 
 const REQUIRED_SECTIONS = {
-  'skills/using-ai-flow/SKILL.md': [/Skill Creation Detection/, /Identity Inheritance/, /Artifact Tracking/, /^Instruction Priority$/, /^Flow Commands$/, /Agent Mapping/, /^Dependency Graph$/, /^Auto-invoke/, /^Coordinator protocol$/, /^Peer Dependencies$/],
+  'skills/using-ai-flow/SKILL.md': [/Skill Creation Detection/, /Identity Inheritance/, /^Instruction Priority$/, /^Flow Commands$/, /Agent Mapping/, /^Dependency Graph$/, /^Auto-invoke/, /^Coordinator protocol$/, /^Peer Dependencies$/],
+  'skills/coordinating-commands/SKILL.md': [/Command procedures/, /Artifact Tracking/],
+  'skills/coordinating-apply/SKILL.md': [/Coordinating apply/, /Rework Protocol/, /Ecosystem Enhancement/],
   'skills/_shared/persistence-contract.md': [/Artifact Store Mode/, /Fallback Mode: `none`/],
   'agents/explorer.md': [/Interactive Requirements Gathering/, /Readiness Gate/, /Refinement Round/],
   'agents/debugger.md': [/Root Cause Investigation/],
@@ -266,7 +268,7 @@ test('orchestrator identity inheritance is a conditional AGENTS.md overlay', () 
 });
 
 test('orchestrator suggests worktrees as optional, with a git worktree add fallback', () => {
-  const o = read('skills/using-ai-flow/SKILL.md');
+  const o = read('skills/coordinating-apply/SKILL.md');
   assert.deepEqual(missingMentions(o, [/superpowers:using-git-worktrees/, /git worktree add/, /worktree[\s\S]{0,400}(optional|suggest|never required|if available|consider)/i]), []);
 });
 
@@ -284,8 +286,8 @@ for (const [agent, skillRe] of Object.entries(ECOSYSTEM)) {
   });
 }
 
-test('ecosystem enhancement: using-ai-flow (the coordinator) names its superpowers skill and stays self-sufficient without it', () => {
-  const s = section(read('skills/using-ai-flow/SKILL.md'), /Ecosystem Enhancement/);
+test('ecosystem enhancement: coordinating-apply (coordinator detail) names its superpowers skill and stays self-sufficient without it', () => {
+  const s = section(read('skills/coordinating-apply/SKILL.md'), /Ecosystem Enhancement/);
   assert.ok(s, 'has an Ecosystem Enhancement section');
   assert.deepEqual(missingMentions(s, [/superpowers:dispatching-parallel-agents/, /otherwise|not installed|not available|self-sufficient/i]), []);
 });
@@ -363,7 +365,7 @@ test('persistence-contract.md names the same state writers and drops the convers
 });
 
 test('Artifact Tracking: the DAG state row lists the proposer and archivist too', () => {
-  const row = topicKeyRows(section(read('skills/using-ai-flow/SKILL.md'), /Artifact Tracking/)).find((r) => r.type === 'state');
+  const row = topicKeyRows(section(read('skills/coordinating-commands/SKILL.md'), /Artifact Tracking/)).find((r) => r.type === 'state');
   assert.match(row.rest, /(orchestrator|coordinator)[^|]*proposer[^|]*archivist/);
 });
 
@@ -412,9 +414,9 @@ function topicKeyProblems(orchestratorText, conventionText, readAgent) {
 const readAgentOrNull = (name) => (fs.existsSync(path.join(PLUGIN_ROOT, 'agents', `${name}.md`)) ? read(`agents/${name}.md`) : null);
 
 test('topic keys: every tracked artifact is in the engram convention and its producer mentions its key', () => {
-  const tracked = topicKeyRows(section(read('skills/using-ai-flow/SKILL.md'), /Artifact Tracking/));
+  const tracked = topicKeyRows(section(read('skills/coordinating-commands/SKILL.md'), /Artifact Tracking/));
   assert.ok(tracked.length >= 10, `orchestrator tracks ${tracked.length} artifacts`);
-  assert.deepEqual(topicKeyProblems(read('skills/using-ai-flow/SKILL.md'), read('skills/_shared/engram-convention.md'), readAgentOrNull), []);
+  assert.deepEqual(topicKeyProblems(read('skills/coordinating-commands/SKILL.md'), read('skills/_shared/engram-convention.md'), readAgentOrNull), []);
 });
 
 test('negative: topic-key check flags a type missing from the convention and a silent producer', () => {
@@ -648,7 +650,7 @@ const NON_TDD_SUPERPOWERS = {
   'agents/explorer.md': ['superpowers:brainstorming'],
   'agents/implementer.md': ['superpowers:dispatching-parallel-agents'],
   'agents/verifier.md': ['superpowers:verification-before-completion'],
-  'skills/using-ai-flow/SKILL.md': ['superpowers:dispatching-parallel-agents', 'superpowers:finishing-a-development-branch', 'superpowers:using-git-worktrees'],
+  'skills/coordinating-apply/SKILL.md': ['superpowers:dispatching-parallel-agents', 'superpowers:finishing-a-development-branch', 'superpowers:using-git-worktrees'],
 };
 
 test('non-TDD superpowers references are unchanged', () => {

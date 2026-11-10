@@ -11,4 +11,4 @@ metadata:
 
 This is the user-only entry point for the apply phase. Coordination runs on the main thread.
 
-Load `ai-flow:using-ai-flow` and follow its "Coordinating apply" section. It launches one `ai-flow:implementer` agent per task and runs the tracer gate.
+Load `ai-flow:using-ai-flow`, then `ai-flow:coordinating-apply`, and follow its "Coordinating apply" section. It launches one `ai-flow:implementer` agent per task and runs the tracer gate.

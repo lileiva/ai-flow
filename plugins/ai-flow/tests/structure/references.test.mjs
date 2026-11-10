@@ -139,9 +139,12 @@ for (const rel of listRuntimeMd().filter(RELATIVE_PATH_SCOPE)) {
 const USING = 'skills/using-ai-flow/SKILL.md';
 const usingText = () => fs.readFileSync(path.join(PLUGIN_ROOT, USING), 'utf8');
 
-test('using-ai-flow has no ${...} tokens (the hook does not substitute them)', () => {
-  assert.deepEqual(usingText().split('\n').flatMap((l, i) => (l.includes('${') ? [i + 1] : [])), []);
-});
+for (const rel of [USING, 'skills/coordinating-apply/SKILL.md', 'skills/coordinating-commands/SKILL.md']) {
+  test(`${rel} has no \${...} tokens (the hook does not substitute them)`, () => {
+    const text = fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8');
+    assert.deepEqual(text.split('\n').flatMap((l, i) => (l.includes('${') ? [i + 1] : [])), []);
+  });
+}
 
 test('using-ai-flow names the main thread as coordinator', () => {
   assert.match(usingText(), /main thread[^.\n]*coordinator|coordinator[^.\n]*main thread/i);
