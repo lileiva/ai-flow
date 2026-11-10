@@ -314,7 +314,7 @@ export function checkEnvelopeAgent(text) {
   return p;
 }
 
-for (const [name, text] of [['archivist', ARCHIVIST], ['initializer', INITIALIZER]]) {
+for (const [name, text] of [['archivist', ARCHIVIST], ['initializer', INITIALIZER], ['implementer', IMPLEMENTER]]) {
   test(`return contract: agents/${name}.md mentions open_questions and the shared envelope (REQ-004 S2, REQ-017 S1)`, () => {
     assert.deepEqual(checkEnvelopeAgent(text), []);
   });
@@ -369,4 +369,14 @@ test('negative: a debugger copy that returns status escalated is flagged (REQ-00
 });
 test('negative: a debugger copy that tells it to launch another agent is flagged (REQ-005)', () => {
   assert.ok(checkDebugger(`${DEBUGGER}\nLaunch the implementer agent when the fix is done.\n`).some((m) => /launch other agents/.test(m)));
+});
+
+// Implementer de-coercion pass (REQ-010, REQ-011): the description must match the tools allowlist it now has.
+test('implementer description does not claim full tool access; it has a tools allowlist (REQ-001, REQ-011)', () => {
+  const desc = /^description:\s*(.*)$/m.exec(IMPLEMENTER)?.[1] ?? '';
+  assert.doesNotMatch(desc, /full tool access/i);
+  assert.match(IMPLEMENTER, /^tools:\s*\S+/m);
+});
+test('implementer body does not claim full tool access (REQ-011)', () => {
+  assert.doesNotMatch(IMPLEMENTER, /full tool access/i);
 });

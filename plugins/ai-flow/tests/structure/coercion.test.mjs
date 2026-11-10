@@ -57,7 +57,7 @@ test('allowlist: an unused entry fails', () => {
 });
 
 // Rollout is scoped (R15). Each de-coercion task adds its files here; Task 4.1 replaces this with the full tree.
-const SCOPE = [HOOK_TARGET, 'skills/flow-apply/SKILL.md', 'agents/explorer.md', 'agents/proposer.md', 'agents/specifier.md', 'agents/designer.md', 'agents/planner.md', 'agents/verifier.md', 'agents/archivist.md', 'agents/initializer.md', 'agents/debugger.md'];
+const SCOPE = [HOOK_TARGET, 'skills/flow-apply/SKILL.md', 'agents/explorer.md', 'agents/proposer.md', 'agents/specifier.md', 'agents/designer.md', 'agents/planner.md', 'agents/verifier.md', 'agents/archivist.md', 'agents/initializer.md', 'agents/implementer.md', 'agents/debugger.md'];
 // Entries need {file, linePattern, reason}; an unused entry fails.
 const ALLOWLIST = [
   {
@@ -98,6 +98,7 @@ const RULES = {
   implementer: {
     'failing test before code, per task': /failing test before (writing )?(any )?(the )?(production )?code/i,
     'return blocked instead of guessing': /return (status )?blocked instead of guessing/i,
+    'implement only the launched task': /only the (one )?task (in|named in) the launch prompt/i,
   },
   debugger: {
     'root cause before fix': /root cause before (a |any )?fix/i,
