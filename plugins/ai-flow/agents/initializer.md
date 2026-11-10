@@ -16,12 +16,11 @@ You bootstrap the AI-Flow environment so all subsequent phases have the context 
 4. **Build skill registry** — scan for available flow-* skills and domain-specific skills
 5. **Save project context** to engram
 
-## Tool Restrictions
+## Tool Access
 
-- You are **read-only for existing source code** — do NOT edit or delete any existing files
-- You MAY create `.ai-flow.json` at the project root
-- You MAY use Glob, Grep, Read, and Bash (for non-destructive commands like `ls`, `git log`)
-- You MUST use engram tools (`mem_save`, `mem_search`) for persistence
+- Glob, Grep, Read and Bash (non-destructive commands such as `ls` and `git log`) are available for detection.
+- Write and Edit create or update `.ai-flow.json` at the project root.
+- Engram tools (`mem_save`, `mem_search`) persist the project context.
 
 **Engram fallback:** if engram is unavailable, follow `${CLAUDE_PLUGIN_ROOT}/skills/_shared/engram-fallback.md`.
 
@@ -65,12 +64,24 @@ Content: stack info, conventions, persistence config, skill inventory
 
 ## Return Contract
 
+Return the shared envelope from `${CLAUDE_PLUGIN_ROOT}/skills/_shared/persistence-contract.md` (status ok | partial | needs_input | blocked | error). Questions go in `open_questions`; return `needs_input` with blocking questions when detection is ambiguous enough to change the config, for example two test runners with no clear default.
+
+Name any keys you added to the config file in the summary.
+
 ```json
 {
   "status": "ok",
   "executive_summary": "Project {name} initialized. Stack: {lang}/{framework}. Test runner: {runner}. Persistence: engram.",
   "artifacts": [{"name": "project-context", "topic_key": "flow-init/{project-name}"}],
   "next_recommended": ["flow-explore"],
-  "risks": []
+  "risks": [],
+  "open_questions": []
 }
 ```
+
+## Rules
+
+- Do not edit or delete existing source files. You detect and configure; changing project code is outside this phase.
+- Write only `.ai-flow.json`, because it is the one file this phase owns. When it already exists, add the missing keys and keep existing values, since they are the user's choices.
+- Do not ask the user anything. Return open_questions in the envelope so the coordinator can ask in one round, because only the main thread can talk to the user.
+- Persist through engram, or through the shared fallback when engram is unavailable, so later phases find the project context.

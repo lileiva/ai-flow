@@ -57,7 +57,7 @@ test('allowlist: an unused entry fails', () => {
 });
 
 // Rollout is scoped (R15). Each de-coercion task adds its files here; Task 4.1 replaces this with the full tree.
-const SCOPE = [HOOK_TARGET, 'skills/flow-apply/SKILL.md', 'agents/explorer.md', 'agents/proposer.md', 'agents/specifier.md', 'agents/designer.md', 'agents/planner.md', 'agents/verifier.md'];
+const SCOPE = [HOOK_TARGET, 'skills/flow-apply/SKILL.md', 'agents/explorer.md', 'agents/proposer.md', 'agents/specifier.md', 'agents/designer.md', 'agents/planner.md', 'agents/verifier.md', 'agents/archivist.md', 'agents/initializer.md'];
 // Entries need {file, linePattern, reason}; an unused entry fails.
 const ALLOWLIST = [
   {
@@ -69,6 +69,11 @@ const ALLOWLIST = [
     file: 'agents/verifier.md',
     linePattern: /CRITICAL/,
     reason: 'severity label: CRITICAL / WARNING / SUGGESTION is the issue vocabulary of the verify report that the coordinator and archivist read, not pressure on the agent',
+  },
+  {
+    file: 'agents/archivist.md',
+    linePattern: /CRITICAL/,
+    reason: 'severity label: CRITICAL names the verify-report issue class that blocks archiving; it is data from the report, not pressure on the agent',
   },
 ];
 
@@ -103,11 +108,19 @@ const RULES = {
     'verdict from evidence': /verdict[^.\n]*from evidence/i,
     'fresh run for every check': /run every check fresh/i,
   },
+  archivist: {
+    'no archive with CRITICAL issues': /do not archive[^.\n]*critical[^\n]*return blocked/i,
+    'artifacts are never deleted': /artifacts in engram are never deleted/i,
+  },
+  initializer: {
+    'do not edit or delete existing source files': /do not edit or delete (any )?existing (source )?(code|files)/i,
+    'keep existing .ai-flow.json values': /keep existing values/i,
+  },
 };
 const NO_WRITE_RULE = { 'do not create, edit or delete project files': /do not create, edit or delete project files/i };
 const READ_ONLY_RULE = { 'persist via engram or the shared fallback': /persist[^.\n]*engram[^.\n]*fallback/i };
 const NO_WRITE_AGENTS = ['explorer', 'designer', 'proposer', 'specifier', 'planner', 'archivist', 'verifier'];
-const RULES_SCOPE = ['implementer', 'explorer', 'proposer', 'specifier', 'designer', 'planner', 'verifier'];
+const RULES_SCOPE = ['implementer', 'explorer', 'proposer', 'specifier', 'designer', 'planner', 'verifier', 'archivist', 'initializer'];
 
 const rulesSection = (text) => /^## Rules\s*$([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(text)?.[1] ?? '';
 const rulesFor = (agent) => ({

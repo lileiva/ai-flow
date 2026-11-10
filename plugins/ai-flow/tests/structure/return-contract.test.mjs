@@ -300,3 +300,37 @@ test('negative: a verifier copy that does not read tdd_evidence is flagged (REQ-
 test('negative: a verifier copy without tdd_evidence_checked in Return is flagged (REQ-009 S3)', () => {
   assert.ok(checkVerifier(VERIFIER.replace(/tdd_evidence_checked/g, 'checked')).some((m) => /tdd_evidence_checked/.test(m)));
 });
+
+// Archivist and initializer: envelope v2, no questions to the user (REQ-004 S2, REQ-010, REQ-011, REQ-017 S1).
+const ARCHIVIST = fs.readFileSync(path.join(PLUGIN_ROOT, 'agents/archivist.md'), 'utf8');
+const INITIALIZER = fs.readFileSync(path.join(PLUGIN_ROOT, 'agents/initializer.md'), 'utf8');
+
+export function checkEnvelopeAgent(text) {
+  const p = [];
+  const ret = section(text, 'Return Contract');
+  if (/AskUserQuestion/.test(text)) p.push('mentions AskUserQuestion (subagents never ask the user)');
+  if (!/open_questions/.test(ret) || !/persistence-contract\.md/.test(ret)) p.push('Return section lacks open_questions or the shared envelope');
+  if (!/needs_input/.test(text) || !/blocking/.test(text)) p.push('no needs_input return with blocking questions');
+  return p;
+}
+
+for (const [name, text] of [['archivist', ARCHIVIST], ['initializer', INITIALIZER]]) {
+  test(`return contract: agents/${name}.md mentions open_questions and the shared envelope (REQ-004 S2, REQ-017 S1)`, () => {
+    assert.deepEqual(checkEnvelopeAgent(text), []);
+  });
+  test(`negative: a ${name} copy that says "use AskUserQuestion" is flagged (REQ-004 S1)`, () => {
+    assert.ok(checkEnvelopeAgent(`${text}\nUse AskUserQuestion to ask the user.\n`).some((m) => /AskUserQuestion/.test(m)));
+  });
+  test(`negative: a ${name} copy whose Return ignores the shared envelope is flagged (REQ-017 S1)`, () => {
+    assert.ok(checkEnvelopeAgent(text.replace(/persistence-contract\.md/g, 'x.md')).some((m) => /Return section/.test(m)));
+  });
+}
+
+test('archivist returns blocked with blocked_reason when the change has CRITICAL issues (REQ-011)', () => {
+  assert.match(ARCHIVIST, /blocked_reason/);
+});
+
+test('initializer does not claim a no-write rule: it writes .ai-flow.json (REQ-011)', () => {
+  assert.doesNotMatch(section(INITIALIZER, 'Rules'), /do not create, edit or delete project files/i);
+  assert.match(section(INITIALIZER, 'Rules'), /\.ai-flow\.json/);
+});
