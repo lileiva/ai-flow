@@ -72,35 +72,35 @@ Artifacts live in engram under `flow/{change-name}/{artifact-type}` (see `_share
 
 ### Routing
 
-Choose model and effort per launch from this table. They are set per launch, never in agent frontmatter.
+Choose model and effort per launch to fit the task's difficulty. They are set per launch, never in agent frontmatter. Omitting `model` inherits the session model, which suits most launches.
 
-| Phase | Default | Raise to | When |
-|-------|---------|----------|------|
-| init | haiku/low | sonnet/medium | monorepo or unknown stack |
-| explore | sonnet/medium | opus/high | unfamiliar large codebase, cross-cutting change |
-| propose | sonnet/medium | sonnet/high | many open questions |
-| spec | sonnet/medium | sonnet/high | more than 8 requirements |
-| design | sonnet/high | opus/high | more than 10 files, concurrency, security, data migration |
-| plan | sonnet/medium | sonnet/high | more than 12 tasks |
-| apply (per task) | sonnet/medium | opus/high | after a blocked return or a failed evidence check on that task |
-| verify | sonnet/medium | sonnet/high | large change or a rework round |
-| archive | haiku/low | sonnet/low | archive report incomplete on the first try |
-| debug | opus/high | opus/max | second debug round |
+| Phase | Go higher when |
+|-------|----------------|
+| init | monorepo or unknown stack |
+| explore | unfamiliar large codebase, cross-cutting change |
+| propose | many open questions |
+| spec | more than 8 requirements |
+| design | more than 10 files, concurrency, security, data migration |
+| plan | more than 12 tasks |
+| apply (per task) | after a blocked return or a failed evidence check on that task |
+| verify | large change or a rework round |
+| archive | archive report incomplete on the first try |
+| debug | a second debug round |
 
-Start at the default and raise one step when the trigger applies. Apply is raised after a blocked return or an evidence miss, and never lowered below sonnet. A user instruction about model or effort overrides this table.
+Mechanical work such as init or archive needs little effort; design and debug usually need more. Raise effort on an apply task after a blocked return or a missed evidence check, because a second attempt at the same effort tends to repeat the first. A user instruction about model or effort overrides this guidance.
 
 ### Sub-Agent Launch Template
 
 Launch each phase agent with the Agent tool:
 
 1. **Agent:** `subagent_type` `ai-flow:{agent}`. The agent definition is its protocol, so do not tell it to load a skill file.
-2. **Model and effort** from Routing, and a short **description** such as "{phase}: {change-name}".
+2. **Model and effort** chosen per Routing (omit `model` to inherit the session model), and a short **description** such as "{phase}: {change-name}".
 3. **Project and change:** the engram `project` name and the change name.
 4. **Artifacts to read** (agent does two-step recovery): propose: explore; spec, design: proposal; plan: spec, design; apply: plan, spec, design; verify: all but archive-report; archive: all; debug: failure evidence, apply-progress.
 5. **Shared protocols:** `_shared/tdd-protocol.md` in the ai-flow plugin's skills directory, for apply and debug.
 6. **Save and return:** "Save your output to engram with topic key `flow/{change-name}/{artifact-type}`" and "Return the envelope from persistence-contract.md".
 
-After each launch, append `{phase, task?, model, effort, reason}` to state `routing_log`; reason is "default" or the trigger.
+After each launch, append `{phase, task?, model, effort, reason}` to state `routing_log`; model is "inherit" when omitted, and reason is "default" or the trigger.
 
 ### Human Gates
 

@@ -74,13 +74,13 @@ export function applySection(text) {
   return next === -1 ? rest : rest.slice(0, next);
 }
 
-test('apply launch carries subagent_type ai-flow:implementer, model and effort', () => {
+test('apply launch carries subagent_type ai-flow:implementer and task-based model and effort', () => {
   const s = applySection(read(APPLY_DETAIL));
   assert.match(s, /subagent_type[^\n]*ai-flow:implementer/);
-  assert.match(s, /model[^\n]*sonnet/i);
-  assert.match(s, /effort[^\n]*medium/i);
-  assert.match(s, /opus/);
-  assert.match(s, /never[^\n]*below sonnet/i);
+  assert.match(s, /model and effort[^\n]*difficulty/i);
+  assert.match(s, /omitting `?model`? inherits the session model/i);
+  assert.match(s, /raise effort[^\n]*(blocked|evidence miss)/i);
+  assert.doesNotMatch(s, PINNED_MODEL_RE);
   assert.match(s, /one (implementer )?instance per task/i);
 });
 
@@ -200,12 +200,9 @@ test('negative: a skill that copies four implementer lines is flagged', () => {
   assert.ok(thinSkillProblems(bad, agent).some((x) => /shares 4 lines/.test(x)));
 });
 
-// Task 2.1: routing table, escalation rule and launch template (REQ-003 S1/S2, REQ-002 S1, design D-4).
+// Task 2.1: routing guidance, escalation rule and launch template (REQ-003 S1/S2, REQ-002 S1).
+// 4.0.0: no pinned models. The coordinator picks model and effort per task; omitting model inherits the session model.
 const PHASES = ['init', 'explore', 'propose', 'spec', 'design', 'plan', 'apply', 'verify', 'archive', 'debug'];
-const MODELS = ['haiku', 'sonnet', 'opus'];
-const EFFORTS = ['low', 'medium', 'high', 'max'];
-/** D-4 defaults: phase -> [model, effort]. */
-const D4_DEFAULTS = { init: ['haiku', 'low'], explore: ['sonnet', 'medium'], propose: ['sonnet', 'medium'], spec: ['sonnet', 'medium'], design: ['sonnet', 'high'], plan: ['sonnet', 'medium'], apply: ['sonnet', 'medium'], verify: ['sonnet', 'medium'], archive: ['haiku', 'low'], debug: ['opus', 'high'] };
 
 /** Text of the section with the given heading, up to the next heading of the same or higher level. */
 export function sectionOf(text, title) {
@@ -216,7 +213,7 @@ export function sectionOf(text, title) {
   return next === -1 ? rest : rest.slice(0, next);
 }
 
-/** Problems with the Routing table: a row per phase, model and effort from the allowed sets, D-4 defaults. */
+/** Problems with the Routing table: a row per phase saying when to go higher, and no pinned model. */
 export function routingTableProblems(text) {
   const s = sectionOf(text, 'Routing');
   if (!s) return ['no Routing section'];
@@ -225,15 +222,12 @@ export function routingTableProblems(text) {
   for (const ph of PHASES) {
     const row = rows.find((l) => new RegExp(`^\\|\\s*${ph}\\b`, 'i').test(l));
     if (!row) { p.push(`no routing row for ${ph}`); continue; }
-    const m = row.match(/\b(haiku|sonnet|opus)\/(low|medium|high|max)\b/);
-    if (!m) { p.push(`row ${ph} lacks a model/effort default`); continue; }
-    if (!MODELS.includes(m[1]) || !EFFORTS.includes(m[2])) p.push(`row ${ph} has a model or effort outside the allowed sets`);
-    if (m[1] !== D4_DEFAULTS[ph][0] || m[2] !== D4_DEFAULTS[ph][1]) p.push(`row ${ph} default ${m[0]} differs from D-4`);
+    if (PINNED_MODEL_RE.test(row)) p.push(`row ${ph} pins a model`);
   }
   return p;
 }
 
-test('Routing table has a row per phase agent with D-4 defaults (REQ-003 S1)', () => {
+test('Routing table has a row per phase agent and pins no model (REQ-003 S1)', () => {
   assert.deepEqual(routingTableProblems(read(USING)), []);
 });
 
@@ -247,18 +241,23 @@ export function escalationProblems(text) {
   const s = sectionOf(text, 'Routing');
   const p = [];
   if (!/apply[^\n]*(blocked|evidence)/i.test(s) && !/(blocked|evidence)[^\n]*apply/i.test(s)) p.push('escalation does not name apply raised after blocked or an evidence miss');
-  if (!/never[^\n]*below sonnet/i.test(s)) p.push('no "never lower apply below sonnet"');
+  if (!/model and effort[^\n]*difficulty/i.test(s)) p.push('model and effort are not chosen by task difficulty');
+  if (!/omitting `?model`? inherits the session model/i.test(s)) p.push('no "omitting model inherits the session model"');
+  if (!/raise effort[^\n]*(blocked|evidence)/i.test(s)) p.push('no "raise effort after a blocked return or a missed evidence check"');
+  if (PINNED_MODEL_RE.test(s)) p.push('Routing names a pinned model');
   if (!/user[^\n]*(instruction|override)[^\n]*(overrid|wins|takes)|overrid[^\n]*user|user instruction/i.test(s)) p.push('no user-instruction override');
   return p;
 }
 
-test('escalation rule: raise apply after blocked or evidence miss, never below sonnet, user overrides (REQ-003 S2)', () => {
+test('escalation rule: task-based choice, inherit by default, raise effort after blocked or evidence miss, user overrides (REQ-003 S2)', () => {
   assert.deepEqual(escalationProblems(read(USING)), []);
 });
 
-test('negative: a Routing section without the below-sonnet rule is flagged', () => {
-  const bad = read(USING).replace(/never[^\n]*below sonnet[^\n]*/gi, 'lower it freely.');
-  assert.ok(escalationProblems(bad).some((x) => /below sonnet/.test(x)));
+test('negative: a Routing section with a pinned default model and no inherit rule is flagged', () => {
+  const bad = read(USING).replace(/Omitting `model` inherits the session model[^.]*\./, 'Default to sonnet/medium.');
+  const p = escalationProblems(bad);
+  assert.ok(p.some((x) => /inherits/.test(x)) && p.some((x) => /pinned model/.test(x)));
+  assert.ok(routingTableProblems(read(USING).replace(/^\| init \|/m, '| init | haiku/low |')).some((x) => /init pins a model/.test(x)));
 });
 
 /** Problems with the launch template: subagent_type, model, effort, description, routing_log. */
@@ -285,6 +284,34 @@ test('negative: a template without effort and routing_log is flagged', () => {
   const bad = `${t.slice(0, m.index)}### Sub-Agent Launch Template\n\nLaunch with subagent_type \`ai-flow:{agent}\` and a model.\n`;
   const p = launchTemplateProblems(bad);
   assert.ok(p.some((x) => /effort/.test(x)) && p.some((x) => /routing_log/.test(x)));
+});
+
+/** A specific model named as a default or rule: a model family name or a Claude model id. */
+export const PINNED_MODEL_RE = /\b(haiku|sonnet|opus|fable)\b|\bclaude-[a-z]+-\d/i;
+const RUNTIME_DIRS = ['agents', 'skills', 'commands', 'hooks'];
+
+/** Runtime files (agents, skills, commands, hooks) whose text names a specific model, as `file:line`. */
+export function pinnedModelMentions(root = PLUGIN_ROOT) {
+  const hits = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const f = path.join(dir, e.name);
+      if (e.isDirectory()) walk(f);
+      else fs.readFileSync(f, 'utf8').split('\n').forEach((l, i) => { if (PINNED_MODEL_RE.test(l)) hits.push(`${path.relative(root, f)}:${i + 1}`); });
+    }
+  };
+  for (const d of RUNTIME_DIRS) if (fs.existsSync(path.join(root, d))) walk(path.join(root, d));
+  return hits;
+}
+
+test('no runtime file names a pinned default model (4.0.0: the coordinator picks per task)', () => {
+  assert.deepEqual(pinnedModelMentions(), []);
+});
+
+test('negative: a runtime copy that pins sonnet for apply is flagged', () => {
+  assert.ok(PINNED_MODEL_RE.test('Launch with `model` sonnet, `effort` medium.'));
+  assert.ok(PINNED_MODEL_RE.test('model: claude-opus-4-1'));
+  assert.ok(!PINNED_MODEL_RE.test('Omitting `model` inherits the session model.'));
 });
 
 test('no agent frontmatter pins model or effort (REQ-002 S1)', () => {
@@ -388,7 +415,7 @@ export function blockedRoutingProblems(text) {
   const s = sectionOf(text, 'Blocked routing');
   if (!s) return ['no Blocked routing section'];
   const p = [];
-  if (!/blocked[^\n]*ai-flow:debugger[^\n]*opus[^\n]*high/i.test(s) || !/task id/i.test(s) || !/evidence/i.test(s) || !/apply-progress/i.test(s)) p.push('blocked does not launch ai-flow:debugger (opus/high) with task id, evidence and apply-progress key');
+  if (!/blocked[^\n]*ai-flow:debugger[^\n]*high effort/i.test(s) || !/task id/i.test(s) || !/evidence/i.test(s) || !/apply-progress/i.test(s)) p.push('blocked does not launch ai-flow:debugger at high effort with task id, evidence and apply-progress key');
   if (!/debugger[^\n]*ok[^\n]*fresh implementer[^\n]*one routing step up/i.test(s)) p.push('no fresh implementer one routing step up after debugger ok');
   if (!/debugger[^\n]*blocked[^\n]*question to the user/i.test(s)) p.push('debugger blocked does not go to the user as a question');
   return p;

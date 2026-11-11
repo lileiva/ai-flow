@@ -1,5 +1,24 @@
 # Changelog
 
+## [4.0.0] - 2026-11-10
+
+The 4.0 line ships: the main thread coordinates, instructions are written for current Claude models, and nothing pins a model or caps spending.
+
+### Highlights
+- **SessionStart hook fixed and slimmed.** In 3.4 it never ran because `run-hook.cmd` lacked its exec bit. It now injects a short pointer of about 134 tokens instead of about 2.9k.
+- **The main thread is the coordinator,** so approval gates reach the user. Phase skills are thin and user-invoked.
+- **Instructions written for newer models.** No shouting or threat language; hard rules are plain sentences with their reasons. A coercion lint and rule markers keep it that way.
+- **No pinned models.** The coordinator chooses model and effort per task. Omitting `model` inherits the session model, and effort goes up after a blocked return or a missed evidence check.
+- **Tools allowlists.** Each agent declares `tools`; read-only agents cannot Write or Edit.
+- **Questions go through the main thread.** Subagents return `open_questions` and `needs_input`/`blocked`; only the main thread asks the user. A blocked implementer is routed to the debugger.
+- **TDD holds across tasks:** a fresh implementer per task, a fixed task pack, red-before-green evidence per task (`apply-evidence-{task}`), and a rewritten TDD guide.
+- **Slim coordinator core** (`using-ai-flow`, about 9.7k chars). Apply and command detail load on demand from `coordinating-apply` and `coordinating-commands`.
+- **Eval suite and tooling for maintainers:** `claude plugin eval` cases a-e plus grading, comparison and analysis tooling under `plugins/ai-flow/evals/`.
+
+### Migration
+- `ai-flow:orchestrator` is a deprecated stub. Coordination runs on the main thread through `ai-flow:using-ai-flow`; do not launch the orchestrator agent.
+- If your personal `~/.claude/CLAUDE.md` holds a copy of the old orchestrator instructions, remove it or slim it to a one-line pointer. A full copy competes with `using-ai-flow` and tells the main thread to delegate coordination.
+
 ## [4.0.0-alpha.2] - unreleased
 
 Second pre-release of the 4.0.0 line: hygiene. References resolve, the SessionStart hook runs, TDD and engram-fallback guidance each live in one file, and the docs match the shipped plugin.

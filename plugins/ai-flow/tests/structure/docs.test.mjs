@@ -203,9 +203,9 @@ test('README Hooks section describes the SessionStart hook', () => {
   assert.match(mdSection(readRepo('README.md'), 'Hooks'), /SessionStart[\s\S]*using-ai-flow/);
 });
 
-// ---- Release 4.0.0-alpha.2: versions agree, dependencies decision (REQ-007 S1-S2, REQ-012 S2-S3, REQ-016 S3) ----
+// ---- Release 4.0.0: versions agree, dependencies decision (REQ-007 S1-S2, REQ-012 S2-S3, REQ-016 S3) ----
 
-const RELEASE = '4.0.0-alpha.2';
+const RELEASE = '4.0.0';
 const readJsonRepo = (rel) => JSON.parse(readRepo(rel));
 const topChangelogHeading = (text) => /^## \[([^\]]+)\][^\n]*$/m.exec(text)?.[0] ?? '';
 
@@ -221,7 +221,7 @@ function releaseVersionProblems(plugin, market, changelog, expected) {
   return problems;
 }
 
-test('plugin.json, marketplace and the CHANGELOG top heading are all 4.0.0-alpha.2 (not a draft)', () => {
+test('plugin.json, marketplace and the CHANGELOG top heading are all 4.0.0 (not a draft)', () => {
   const plugin = readJsonRepo('plugins/ai-flow/.claude-plugin/plugin.json');
   const market = readJsonRepo('.claude-plugin/marketplace.json');
   assert.deepEqual(releaseVersionProblems(plugin, market, readRepo('CHANGELOG.md'), RELEASE), []);
@@ -231,7 +231,7 @@ test('negative: a marketplace still on 4.0.0-alpha.1 is flagged naming both valu
   const problems = releaseVersionProblems({ version: RELEASE }, { metadata: { version: '4.0.0-alpha.1' }, plugins: [{ name: 'ai-flow', version: RELEASE }] }, `## [${RELEASE}] - x\n`, RELEASE);
   assert.equal(problems.length, 1);
   assert.match(problems[0], /4\.0\.0-alpha\.1/);
-  assert.match(problems[0], /4\.0\.0-alpha\.2/);
+  assert.ok(problems[0].includes(`'${RELEASE}'`));
 });
 
 test('negative: a draft CHANGELOG top heading is flagged', () => {

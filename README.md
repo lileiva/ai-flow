@@ -4,6 +4,13 @@ A unified AI-assisted development workflow plugin for [Claude Code](https://clau
 
 AI-Flow orchestrates structured development through DAG-based phases: exploration, proposal, specification, design, planning, implementation (with TDD), verification, and archival — with human review gates at critical points.
 
+How 4.0 works:
+
+- **Your main conversation is the coordinator.** It loads the `ai-flow:using-ai-flow` skill, launches one phase agent at a time, and asks you at each approval gate. Only the main thread asks you questions; agents return open questions to it.
+- **No pinned models.** The coordinator picks the model and effort that fit each task. Leaving the model out inherits your session model, and effort goes up after a blocked return or a missed TDD evidence check.
+- **Scoped agents.** Each agent declares a `tools` allowlist, so read-only agents cannot write or edit files.
+- **A slim SessionStart hook** injects a short pointer (about 134 tokens); the coordinator protocol loads only when you use AI-Flow.
+
 For the historical v3 design document (archived, not maintained), see [docs/archive/unified-ai-dev-flow.md](docs/archive/unified-ai-dev-flow.md). For version history, see [CHANGELOG.md](CHANGELOG.md).
 
 ## Installation
@@ -44,6 +51,8 @@ Run `/help` and confirm the `/ai-flow:flow-*` commands and skills appear.
 ```
 /plugin update ai-flow@ai-flow
 ```
+
+Upgrading from 3.x: the `ai-flow:orchestrator` agent is now a deprecated stub, and the main thread coordinates through `ai-flow:using-ai-flow`. If your personal `~/.claude/CLAUDE.md` holds a copy of the old orchestrator instructions, remove it or slim it to a one-line pointer to AI-Flow.
 
 ## Quick Start
 
@@ -101,7 +110,7 @@ User-invokable commands (type directly):
 
 ## Skills
 
-Model-invoked skills (Claude uses these automatically):
+Phase skills are user-invoked (`/ai-flow:flow-<phase>`); each one launches its phase agent. The coordinator skills `using-ai-flow`, `coordinating-apply` and `coordinating-commands` load on demand in the main thread.
 
 | Skill | Phase | Description |
 |-------|-------|-------------|
@@ -118,7 +127,7 @@ Model-invoked skills (Claude uses these automatically):
 
 ## Agents
 
-Each phase is executed by a specialized agent with domain expertise and scoped tool access:
+Each phase is executed by a specialized agent. Every agent declares a `tools` allowlist in its frontmatter, so read-only agents have no Write or Edit tool. No agent pins a model: the coordinator chooses model and effort per launch.
 
 | Agent | Phase | Tool Access | Role |
 |-------|-------|-------------|------|
@@ -132,7 +141,7 @@ Each phase is executed by a specialized agent with domain expertise and scoped t
 | `verifier` | 7 | Read + tests | Spec compliance matrix, quality gate |
 | `archivist` | 8 | Read + engram | Consolidates artifacts, closes change |
 | `debugger` | Any | Full | Root-cause-first investigation with TDD fix |
-| `orchestrator` | — | Delegates | Coordinates all agents, manages human gates |
+| `orchestrator` | — | Read | Deprecated stub; coordination runs on the main thread |
 
 ## DAG
 
@@ -156,7 +165,7 @@ Each phase is executed by a specialized agent with domain expertise and scoped t
 
 ## Hooks
 
-Defined in `plugins/ai-flow/hooks/hooks.json`. One hook runs on `SessionStart`: `hooks/run-hook.cmd session-start` injects the `using-ai-flow` skill (commands, agent mapping, auto-invoke rules) into the main thread and warns when engram or superpowers is not installed. The injection costs about 2.8k tokens per session start. Before 4.0.0-alpha.2 the hook never ran on Unix (`run-hook.cmd` was not executable).
+Defined in `plugins/ai-flow/hooks/hooks.json`. One hook runs on `SessionStart`: `hooks/run-hook.cmd session-start` injects a short pointer (about 134 tokens) telling the main thread to load the `using-ai-flow` skill for AI-Flow requests, and warns when engram or superpowers is not installed. The full coordinator protocol loads on demand. In 3.x the hook never ran on Unix (`run-hook.cmd` was not executable); 4.0.0-alpha.2 injected the whole skill (about 2.9k tokens) before 4.0.0 slimmed it.
 
 ## MCP Servers
 
@@ -206,7 +215,7 @@ plugins/ai-flow/
       persistence-contract.md # Sub-agent context protocol
       tdd-protocol.md        # TDD guide (single TDD source)
   agents/
-    orchestrator.md          # Coordinator agent
+    orchestrator.md          # Deprecated stub (coordination runs on the main thread)
     initializer.md           # Phase 0 agent
     explorer.md              # Phase 1 agent
     proposer.md              # Phase 2 agent
@@ -260,7 +269,7 @@ bash plugins/ai-flow/evals/run.sh --gate
 bash plugins/ai-flow/evals/run.sh --plugin-ref v3.4.0 --promote v3.4.0
 ```
 
-There is no cost cap by default: evals run on a Claude Code subscription, so cost, tokens and duration are recorded as metrics, never used as gates. Pass `--max-cost-usd X` to forward the native CLI ceiling (the run is then marked incomplete if the ceiling is reached). The real constraint is the subscription rate limit: a rate-limited run is a harness error that stops the runner (exit 5, not retried); after the window resets, `--resume <results-dir>` re-runs only the missing slots. Preflight warns when recent utilization is high. Use `--model opus` (or `AIFLOW_EVAL_MODEL`) to switch models and `--dry-run` to print the plan without spawning anything.
+There is no cost cap by default: evals run on a Claude Code subscription, so cost, tokens and duration are recorded as metrics, never used as gates. (For maintainers, the runner still accepts an opt-in `--max-cost-usd X` that forwards the native CLI ceiling; nothing sets it by default.) The real constraint is the subscription rate limit: a rate-limited run is a harness error that stops the runner (exit 5, not retried); after the window resets, `--resume <results-dir>` re-runs only the missing slots. Preflight warns when recent utilization is high. Use `--model opus` (or `AIFLOW_EVAL_MODEL`) to switch models and `--dry-run` to print the plan without spawning anything.
 
 ### Comparing with a baseline
 
