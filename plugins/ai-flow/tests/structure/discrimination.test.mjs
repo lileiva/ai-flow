@@ -83,10 +83,16 @@ const git = (...args) => spawnSync('git', args, { cwd: REPO_ROOT, encoding: 'utf
 const B2_BASE = 'da103ba'; // v4/b2-hygiene was cut from v4/b1-evals here
 const noMain = git('rev-parse', '--verify', '-q', 'main').status !== 0 ? 'no local main ref' : false;
 
-test('main still ships 3.4.0 and contains no B2 commit', { skip: noMain }, () => {
+test('main ships 3.4.0 with no B2 commit, or the 4.0.0 release (never an alpha)', { skip: noMain }, () => {
   const market = JSON.parse(git('show', 'main:.claude-plugin/marketplace.json').stdout);
-  assert.equal(market.metadata.version, '3.4.0');
-  assert.equal(market.plugins.find((p) => p.name === 'ai-flow').version, '3.4.0');
+  const v = market.metadata.version;
+  assert.equal(market.plugins.find((p) => p.name === 'ai-flow').version, v);
+  if (v === '4.0.0') {
+    // 4.0.0 is merged: main carries the release, never a pre-release.
+    assert.equal(JSON.parse(git('show', 'main:plugins/ai-flow/.claude-plugin/plugin.json').stdout).version, '4.0.0');
+    return;
+  }
+  assert.equal(v, '3.4.0');
   const b2 = Number(git('rev-list', '--count', `${B2_BASE}..HEAD`).stdout.trim());
   const notOnMain = Number(git('rev-list', '--count', `${B2_BASE}..HEAD`, '^main').stdout.trim());
   assert.ok(b2 > 0, 'B2 has commits');
