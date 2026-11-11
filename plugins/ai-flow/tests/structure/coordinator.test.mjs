@@ -17,7 +17,7 @@ export function stubProblems(text) {
   const { data, body } = parseFrontmatter(text);
   const p = [];
   if (data.name !== 'orchestrator') p.push('stub name is not orchestrator');
-  if (!/^Deprecated \(removed at 4\.0\.0\)/.test(String(data.description ?? ''))) p.push('description does not start "Deprecated (removed at 4.0.0)"');
+  if (!/^Deprecated \(will be removed in a future release\)/.test(String(data.description ?? ''))) p.push('description does not start "Deprecated (will be removed in a future release)"');
   const tools = String(data.tools ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   if (tools.join(',') !== 'Read') p.push(`stub tools are not exactly Read: ${tools.join(',')}`);
   if (body.trim().length > 600) p.push(`stub body is ${body.trim().length} chars, over 600`);

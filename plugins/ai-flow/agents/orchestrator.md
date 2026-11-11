@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Deprecated (removed at 4.0.0). The coordinator now runs on the main thread, so this agent does no work.
+description: Deprecated (will be removed in a future release). The coordinator now runs on the main thread, so this agent does no work.
 tools: Read
 ---
 
