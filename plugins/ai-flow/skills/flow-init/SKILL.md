@@ -1,6 +1,7 @@
 ---
 name: flow-init
 description: Bootstrap AI-Flow in a new project — detects tech stack, conventions, test runners, persistence, and creates .ai-flow.json config. Use when starting AI-Flow for the first time or when project context is missing.
+disable-model-invocation: true
 metadata:
   author: ai-workflow
   version: "1.0"
@@ -8,12 +9,6 @@ metadata:
   auto_invoke: "Initializing AI-Flow in a project"
 ---
 
-This phase is handled by the **initializer** agent.
+This is the user-only entry point for the init phase. Coordination runs on the main thread.
 
-Delegate to the `initializer` agent with the project name. The agent will:
-1. Detect technology stack, frameworks, test runners, and conventions
-2. Verify engram persistence is available
-3. Create `.ai-flow.json` at the project root with the configuration
-4. Save project context to engram under `flow-init/{project-name}`
-
-See `agents/initializer.md` for the full protocol.
+Load `ai-flow:using-ai-flow` and follow the `init` row of its Routing table. It launches the `ai-flow:initializer` agent with the Agent tool; the agent definition holds the protocol.

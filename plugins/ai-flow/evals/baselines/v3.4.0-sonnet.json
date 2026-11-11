@@ -1,0 +1,456 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "plugin_version": "3.4.0",
+    "plugin_ref": "v3.4.0",
+    "plugin_sha": "ff28e711ff4429e5e0f2b160e1090fcc3a389b9c",
+    "evals_sha": "cb5c0a72e3c1d4bc064cdb861cff996ba629137a",
+    "behavior_hash": "0e88b68cf135124a4263d1793025aef6abd62852229e54d9381a56b2a03ff6cf",
+    "claude_version": "2.1.302",
+    "model": "sonnet",
+    "judge_model": "haiku",
+    "date": "2026-10-18T18:52:00.284Z",
+    "runs_per_case": 3,
+    "cap_usd": null,
+    "cases_run": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+    ],
+    "complete": true,
+    "incomplete_reason": null,
+    "total_cost_usd": 15.605106,
+    "subset": false,
+    "rate_limit": {
+      "seven_day": {
+        "utilization": 0.93,
+        "status": "allowed_warning",
+        "resets_at": 1792357200
+      }
+    },
+    "regraded_at": "2026-10-18T18:59:43.432Z",
+    "regrade_note": "graders D1 (Bash writes), D2 (delegated orchestrator), D3 (nested subagents not observable) applied to the kept traces at $0"
+  },
+  "session_start": {
+    "as_shipped": {
+      "hook_outcome": "error",
+      "exit_code": 126,
+      "injected_tokens": 0
+    },
+    "intended": {
+      "hook_tokens": 2865,
+      "hook_chars": 7227,
+      "always_on_tokens": 1926,
+      "method": "first-turn input delta on temp plugin copies (full+x minus no-hooks; no-hooks minus empty)"
+    }
+  },
+  "cases": {
+    "a": {
+      "n": 3,
+      "harness_errors": 0,
+      "harness_errors_retried": 0,
+      "outcome_pass_rate": {
+        "mean": 1,
+        "stdev": 0
+      },
+      "tokens_total": {
+        "mean": 1962497.333,
+        "stdev": 265143.041
+      },
+      "cost_usd": {
+        "mean": 1.352,
+        "stdev": 0.121
+      },
+      "wall_time_s": {
+        "mean": 478.333,
+        "stdev": 40.821
+      },
+      "tdd_score": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 2
+      },
+      "tdd_ratio": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 2
+      },
+      "phase_order": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "artifact_completeness": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 2
+      },
+      "subagent_ask": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 2
+      },
+      "readonly_writes": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 2
+      },
+      "per_phase_tokens": {
+        "ai-flow:archivist": {
+          "mean": 34240,
+          "stdev": 1231.823
+        },
+        "ai-flow:designer": {
+          "mean": 29454,
+          "stdev": 292
+        },
+        "ai-flow:explorer": {
+          "mean": 26670,
+          "stdev": 460.938
+        },
+        "ai-flow:implementer": {
+          "mean": 51334.667,
+          "stdev": 19388.016
+        },
+        "ai-flow:orchestrator": {
+          "mean": 13618,
+          "stdev": 23587.068
+        },
+        "ai-flow:planner": {
+          "mean": 35041.667,
+          "stdev": 4379.899
+        },
+        "ai-flow:proposer": {
+          "mean": 27405,
+          "stdev": 1223.649
+        },
+        "ai-flow:specifier": {
+          "mean": 34753.333,
+          "stdev": 14890.159
+        },
+        "ai-flow:verifier": {
+          "mean": 38305,
+          "stdev": 1323.107
+        },
+        "main": {
+          "mean": 373154.667,
+          "stdev": 392634.876
+        }
+      }
+    },
+    "b": {
+      "n": 3,
+      "harness_errors": 0,
+      "harness_errors_retried": 0,
+      "outcome_pass_rate": {
+        "mean": 1,
+        "stdev": 0
+      },
+      "tokens_total": {
+        "mean": 2031076,
+        "stdev": 363381.569
+      },
+      "cost_usd": {
+        "mean": 1.392,
+        "stdev": 0.227
+      },
+      "wall_time_s": {
+        "mean": 466.667,
+        "stdev": 55.949
+      },
+      "tdd_score": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 1
+      },
+      "tdd_ratio": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 1
+      },
+      "phase_order": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "artifact_completeness": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 1
+      },
+      "subagent_ask": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 1
+      },
+      "readonly_writes": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 1
+      },
+      "per_phase_tokens": {
+        "ai-flow:archivist": {
+          "mean": 34088.667,
+          "stdev": 1991.992
+        },
+        "ai-flow:designer": {
+          "mean": 37609,
+          "stdev": 16045.734
+        },
+        "ai-flow:explorer": {
+          "mean": 17779.333,
+          "stdev": 15405.438
+        },
+        "ai-flow:implementer": {
+          "mean": 62968.333,
+          "stdev": 21356.722
+        },
+        "ai-flow:orchestrator": {
+          "mean": 33290,
+          "stdev": 31631.603
+        },
+        "ai-flow:planner": {
+          "mean": 35196,
+          "stdev": 505.617
+        },
+        "ai-flow:proposer": {
+          "mean": 27793.333,
+          "stdev": 1178.85
+        },
+        "ai-flow:specifier": {
+          "mean": 36535.667,
+          "stdev": 15075.509
+        },
+        "ai-flow:verifier": {
+          "mean": 37472.333,
+          "stdev": 2515.69
+        },
+        "general-purpose": {
+          "mean": 7740,
+          "stdev": 13406.073
+        },
+        "main": {
+          "mean": 217699.667,
+          "stdev": 178309.067
+        }
+      }
+    },
+    "c": {
+      "n": 3,
+      "harness_errors": 0,
+      "harness_errors_retried": 0,
+      "outcome_pass_rate": {
+        "mean": 1,
+        "stdev": 0
+      },
+      "tokens_total": {
+        "mean": 2264210.333,
+        "stdev": 387449.147
+      },
+      "cost_usd": {
+        "mean": 1.707,
+        "stdev": 0.249
+      },
+      "wall_time_s": {
+        "mean": 686,
+        "stdev": 84.018
+      },
+      "tdd_score": {
+        "mean": 0.5,
+        "stdev": 0.707,
+        "n_applicable": 2
+      },
+      "tdd_ratio": {
+        "mean": 0.875,
+        "stdev": 0.177,
+        "n_applicable": 2
+      },
+      "phase_order": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "artifact_completeness": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 2
+      },
+      "subagent_ask": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 2
+      },
+      "readonly_writes": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 2
+      },
+      "per_phase_tokens": {
+        "ai-flow:archivist": {
+          "mean": 39338.333,
+          "stdev": 3542.232
+        },
+        "ai-flow:designer": {
+          "mean": 31015.667,
+          "stdev": 964.934
+        },
+        "ai-flow:explorer": {
+          "mean": 30284.667,
+          "stdev": 2856.257
+        },
+        "ai-flow:implementer": {
+          "mean": 67722.667,
+          "stdev": 25058.713
+        },
+        "ai-flow:orchestrator": {
+          "mean": 13754.333,
+          "stdev": 23823.204
+        },
+        "ai-flow:planner": {
+          "mean": 40981.667,
+          "stdev": 1060.62
+        },
+        "ai-flow:proposer": {
+          "mean": 29828.333,
+          "stdev": 928.261
+        },
+        "ai-flow:specifier": {
+          "mean": 29411,
+          "stdev": 2438.226
+        },
+        "ai-flow:verifier": {
+          "mean": 43258.667,
+          "stdev": 7421.833
+        },
+        "main": {
+          "mean": 335836.333,
+          "stdev": 216216.814
+        }
+      }
+    },
+    "d": {
+      "n": 3,
+      "harness_errors": 0,
+      "harness_errors_retried": 0,
+      "outcome_pass_rate": {
+        "mean": 1,
+        "stdev": 0
+      },
+      "tokens_total": {
+        "mean": 307332.667,
+        "stdev": 39673.043
+      },
+      "cost_usd": {
+        "mean": 0.174,
+        "stdev": 0.007
+      },
+      "wall_time_s": {
+        "mean": 40.333,
+        "stdev": 2.517
+      },
+      "tdd_score": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "tdd_ratio": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "phase_order": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "artifact_completeness": "n/a",
+      "subagent_ask": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "readonly_writes": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_phase_tokens": {
+        "ai-flow:implementer": {
+          "mean": 30663,
+          "stdev": 408.016
+        },
+        "main": {
+          "mean": 61650,
+          "stdev": 50.269
+        }
+      }
+    },
+    "e": {
+      "n": 3,
+      "harness_errors": 0,
+      "harness_errors_retried": 0,
+      "outcome_pass_rate": {
+        "mean": 1,
+        "stdev": 0
+      },
+      "tokens_total": {
+        "mean": 693664.667,
+        "stdev": 62272.471
+      },
+      "cost_usd": {
+        "mean": 0.577,
+        "stdev": 0.018
+      },
+      "wall_time_s": {
+        "mean": 186,
+        "stdev": 14.177
+      },
+      "tdd_score": "n/a",
+      "tdd_ratio": "n/a",
+      "phase_order": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "artifact_completeness": {
+        "mean": 1,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "subagent_ask": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "readonly_writes": {
+        "mean": 0,
+        "stdev": 0,
+        "n_applicable": 3
+      },
+      "per_phase_tokens": {
+        "ai-flow:designer": {
+          "mean": 30179,
+          "stdev": 231.162
+        },
+        "ai-flow:planner": {
+          "mean": 36810.333,
+          "stdev": 327.732
+        },
+        "ai-flow:proposer": {
+          "mean": 26583.667,
+          "stdev": 1148.798
+        },
+        "ai-flow:specifier": {
+          "mean": 26241.667,
+          "stdev": 473.102
+        },
+        "main": {
+          "mean": 146610,
+          "stdev": 28158.03
+        }
+      }
+    }
+  }
+}

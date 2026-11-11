@@ -1,0 +1,1610 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.309",
+  "startedAt": "2026-10-23T22:38:20.639Z",
+  "durationSeconds": 5845,
+  "costUsd": 16.272986099999997,
+  "partial": false,
+  "suite": {
+    "root": "/tmp/aiflow-eval-8029d9b5ea6a-K9agsS/plugins/ai-flow",
+    "ablation": "none",
+    "modelOverride": "sonnet",
+    "judgeModel": "haiku",
+    "threshold": 0,
+    "concurrency": 1,
+    "plugins": [
+      {
+        "name": "ai-flow",
+        "version": "4.0.0-alpha.2",
+        "path": "/tmp/aiflow-eval-8029d9b5ea6a-K9agsS/plugins/ai-flow"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "a-e2e-bugfix-slugify",
+      "dir": "evals/cases/a-e2e-bugfix-slugify",
+      "source": "mixed",
+      "promptMarkdown": "Using the AI-Flow workflow, take change `fix-slugify-diacritics` from exploration through archive.\n\nThe repository in the current directory is `textkit`, a small Node library tested with vitest (`npm test`). Bug report: `slugify` keeps accented letters instead of transliterating them to plain ASCII. For example `slugify('Crème Brûlée')` returns `crème-brûlée`, but it should return `creme-brulee`. Fix the bug without changing the existing behaviour for plain ASCII input.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 1800,
+      "maxTurns": 200,
+      "graders": [
+        {
+          "name": "completed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "EVAL-RUN-COMPLETE|STOPPED AT GATE",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "delegated",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "min": 1
+          }
+        },
+        {
+          "name": "no-subagent-ask",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "name\\W{1,4}AskUserQuestion",
+            "flags": "",
+            "match": "count:0"
+          }
+        },
+        {
+          "name": "order-plan-before-apply",
+          "type": "tool_order",
+          "weight": 1,
+          "config": {
+            "before": {
+              "tool": "Agent",
+              "input_match": "ai-flow:planner"
+            },
+            "after": {
+              "tool": "Agent",
+              "input_match": "ai-flow:implementer"
+            }
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 1.4484982999999998,
+            "judgeCostUsd": 0,
+            "durationSeconds": 617,
+            "startedAt": "2026-10-23T22:38:20.762Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 48 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-eVAqLF/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 0,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.14379460000000002,
+                "replay": {
+                  "hits": 0,
+                  "misses": 48
+                }
+              }
+            },
+            "graders": []
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 1.520429200000001,
+            "judgeCostUsd": 0,
+            "durationSeconds": 540,
+            "startedAt": "2026-10-23T22:48:37.600Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 51 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-9q1zQ8/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 0,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.18750769999999992,
+                "replay": {
+                  "hits": 0,
+                  "misses": 51
+                }
+              }
+            },
+            "graders": []
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 1.5971373999999994,
+            "judgeCostUsd": 0,
+            "durationSeconds": 587,
+            "startedAt": "2026-10-23T22:57:37.337Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 57 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-8RTtrh/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 1,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.18391970000000002,
+                "replay": {
+                  "hits": 0,
+                  "misses": 58
+                }
+              }
+            },
+            "graders": []
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0
+      }
+    },
+    {
+      "name": "b-e2e-feature-truncate-words",
+      "dir": "evals/cases/b-e2e-feature-truncate-words",
+      "source": "mixed",
+      "promptMarkdown": "Using the AI-Flow workflow, take change `add-truncate-words` from exploration through archive.\n\nThe repository in the current directory is `textkit`, a small Node library tested with vitest (`npm test`). Feature request: add a `truncateWords(str, n, options)` function, exported from `src/index.js` next to the existing `truncate`.\n\n- It keeps at most the first `n` words of `str`. Words are separated by runs of whitespace; leading and trailing whitespace is ignored.\n- If `str` has `n` words or fewer, it returns `str` unchanged.\n- Otherwise it returns the first `n` words joined by single spaces, followed by the ellipsis. The ellipsis defaults to `…` and can be changed with `options.ellipsis` (for example `{ ellipsis: '...' }`).\n- `truncateWords('the quick brown fox', 2)` returns `'the quick…'`.\n\nKeep the existing functions and their tests unchanged.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 2700,
+      "maxTurns": 200,
+      "graders": [
+        {
+          "name": "completed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "EVAL-RUN-COMPLETE|STOPPED AT GATE",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "delegated",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "min": 1
+          }
+        },
+        {
+          "name": "no-subagent-ask",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "name\\W{1,4}AskUserQuestion",
+            "flags": "",
+            "match": "count:0"
+          }
+        },
+        {
+          "name": "order-plan-before-apply",
+          "type": "tool_order",
+          "weight": 1,
+          "config": {
+            "before": {
+              "tool": "Agent",
+              "input_match": "ai-flow:planner"
+            },
+            "after": {
+              "tool": "Agent",
+              "input_match": "ai-flow:implementer"
+            }
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 1.3083146999999995,
+            "judgeCostUsd": 0,
+            "durationSeconds": 437,
+            "startedAt": "2026-10-23T23:07:23.891Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 42 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-mUVrRp/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 1,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.12660250000000006,
+                "replay": {
+                  "hits": 0,
+                  "misses": 43
+                }
+              }
+            },
+            "graders": []
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 1.3717433999999993,
+            "judgeCostUsd": 0,
+            "durationSeconds": 476,
+            "startedAt": "2026-10-23T23:14:40.469Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 40 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-PEEa5o/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 0,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.13686979999999982,
+                "replay": {
+                  "hits": 0,
+                  "misses": 40
+                }
+              }
+            },
+            "graders": []
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 1.4721583999999996,
+            "judgeCostUsd": 0,
+            "durationSeconds": 498,
+            "startedAt": "2026-10-23T23:22:36.029Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 43 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-xtFztW/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 0,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.17270629999999987,
+                "replay": {
+                  "hits": 0,
+                  "misses": 43
+                }
+              }
+            },
+            "graders": []
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0
+      }
+    },
+    {
+      "name": "c-e2e-feature-csv",
+      "dir": "evals/cases/c-e2e-feature-csv",
+      "source": "mixed",
+      "promptMarkdown": "Using the AI-Flow workflow, take change `add-csv` from exploration through archive.\n\nThe repository in the current directory is `textkit`, a small Node library tested with vitest (`npm test`). Feature request: add CSV support in a new `src/csv/` module (`src/csv/format.js` and `src/csv/parse.js`), with `toCSV` and `parseCSV` exported from `src/index.js`.\n\n`toCSV(rows, options)`:\n- `rows` is an array of plain objects. The first line is a header row. `options.columns` (array of keys) sets which columns appear and in what order; by default the keys of the first row, in order.\n- Lines are joined with `\\n`, with no trailing newline. `options.delimiter` defaults to `,`.\n- Fields follow RFC 4180: a field containing the delimiter, a double quote, `\\r` or `\\n` is wrapped in double quotes, and each double quote inside it is doubled. `null` and `undefined` become empty fields; other values are converted with `String()`.\n\n`parseCSV(text, options)`:\n- Uses the first record as the header and returns an array of objects whose values are strings.\n- Handles quoted fields, including doubled quotes, embedded delimiters and embedded newlines. Accepts `\\n` and `\\r\\n` line endings and ignores one trailing line ending. `options.delimiter` defaults to `,`.\n- Round trip: `parseCSV(toCSV(rows))` deep-equals `rows` whenever every value is a string.\n\nKeep the existing functions and their tests unchanged.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 3600,
+      "maxTurns": 200,
+      "graders": [
+        {
+          "name": "completed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "EVAL-RUN-COMPLETE|STOPPED AT GATE",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "delegated",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "min": 1
+          }
+        },
+        {
+          "name": "no-subagent-ask",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "name\\W{1,4}AskUserQuestion",
+            "flags": "",
+            "match": "count:0"
+          }
+        },
+        {
+          "name": "order-plan-before-apply",
+          "type": "tool_order",
+          "weight": 1,
+          "config": {
+            "before": {
+              "tool": "Agent",
+              "input_match": "ai-flow:planner"
+            },
+            "after": {
+              "tool": "Agent",
+              "input_match": "ai-flow:implementer"
+            }
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 1.7419021,
+            "judgeCostUsd": 0,
+            "durationSeconds": 611,
+            "startedAt": "2026-10-23T23:30:53.864Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 36 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-ugulg5/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 0,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.14479440000000032,
+                "replay": {
+                  "hits": 0,
+                  "misses": 36
+                }
+              }
+            },
+            "graders": []
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 1.6219394999999999,
+            "judgeCostUsd": 0,
+            "durationSeconds": 545,
+            "startedAt": "2026-10-23T23:41:04.526Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 42 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-3IwLps/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 0,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.17179750000000005,
+                "replay": {
+                  "hits": 0,
+                  "misses": 42
+                }
+              }
+            },
+            "graders": []
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 1.5965105999999998,
+            "judgeCostUsd": 0,
+            "durationSeconds": 614,
+            "startedAt": "2026-10-23T23:50:09.774Z",
+            "error": "mocks: plugin_engram_engram: the harness answered 44 agent mock calls the trace does not show (the responder was reached other than through the mocked tools)",
+            "tracePath": "/private/tmp/e-NgmIB8/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 1,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.1939175999999998,
+                "replay": {
+                  "hits": 0,
+                  "misses": 45
+                }
+              }
+            },
+            "graders": []
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0
+      }
+    },
+    {
+      "name": "d-phase-apply-seeded",
+      "dir": "evals/cases/d-phase-apply-seeded",
+      "source": "mixed",
+      "promptMarkdown": "Run only the AI-Flow apply phase (all batches) for change `add-reading-time` in engram project `textkit`.\n\nThe proposal, spec, design and plan for this change are already saved in engram (topic keys `flow/add-reading-time/proposal`, `flow/add-reading-time/spec`, `flow/add-reading-time/design` and `flow/add-reading-time/plan`), and the user has already approved the plan. Do not explore, propose, spec, design or plan again.\n\nThe repository in the current directory is `textkit`, a small Node library tested with vitest (`npm test`). Execute every batch of the plan, then stop after apply. Do not run verify or archive.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 1800,
+      "maxTurns": 200,
+      "graders": [
+        {
+          "name": "completed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "EVAL-RUN-COMPLETE|STOPPED AT GATE",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "delegated-implementer",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "input_match": "ai-flow:implementer",
+            "min": 1
+          }
+        },
+        {
+          "name": "no-planner",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "input_match": "ai-flow:planner",
+            "min": 0,
+            "max": 0
+          }
+        },
+        {
+          "name": "no-subagent-ask",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "name\\W{1,4}AskUserQuestion",
+            "flags": "",
+            "match": "count:0"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.1964896,
+            "judgeCostUsd": 0,
+            "durationSeconds": 41,
+            "startedAt": "2026-10-24T00:00:23.626Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-1elC90/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [
+                "mocks: plugin_engram_engram/_server.md will not see mem_search — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_search.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_get_observation — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_get_observation.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_save — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_save.md, so its abort_when does not cover that tool"
+              ],
+              "calls": {
+                "total": 8,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0,
+                "replay": {
+                  "hits": 0,
+                  "misses": 0
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "delegated-implementer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 1x (expected 1..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-planner",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.24027149999999997,
+            "judgeCostUsd": 0,
+            "durationSeconds": 47,
+            "startedAt": "2026-10-24T00:01:04.634Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-96iQU4/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [
+                "mocks: plugin_engram_engram/_server.md will not see mem_search — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_search.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_get_observation — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_get_observation.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_save — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_save.md, so its abort_when does not cover that tool"
+              ],
+              "calls": {
+                "total": 8,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0,
+                "replay": {
+                  "hits": 0,
+                  "misses": 0
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "delegated-implementer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 1x (expected 1..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-planner",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.22915190000000002,
+            "judgeCostUsd": 0,
+            "durationSeconds": 46,
+            "startedAt": "2026-10-24T00:01:51.223Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-cpVE5g/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "fixed"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [
+                "mocks: plugin_engram_engram/_server.md will not see mem_search — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_search.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_get_observation — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_get_observation.md, so its abort_when does not cover that tool",
+                "mocks: plugin_engram_engram/_server.md will not see mem_save — answered by d-phase-apply-seeded/mocks/plugin_engram_engram/mem_save.md, so its abort_when does not cover that tool"
+              ],
+              "calls": {
+                "total": 7,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0,
+                "replay": {
+                  "hits": 0,
+                  "misses": 0
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "delegated-implementer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 1x (expected 1..∞)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-planner",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1
+      }
+    },
+    {
+      "name": "e-phase-propose-plan-seeded",
+      "dir": "evals/cases/e-phase-propose-plan-seeded",
+      "source": "mixed",
+      "promptMarkdown": "Using the AI-Flow workflow, continue change `capitalize-options` in engram project `textkit` from its existing exploration (engram topic key `flow/capitalize-options/explore`; do not explore again).\n\nRun propose, then spec and design, then plan. The proposal gate is approved. STOP at the plan gate: print `STOPPED AT GATE: plan` and end the run without implementing anything.\n\nThe repository in the current directory is `textkit`, a small Node library tested with vitest (`npm test`).",
+      "runsPerCase": 3,
+      "timeoutSeconds": 1800,
+      "maxTurns": 200,
+      "graders": [
+        {
+          "name": "completed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "EVAL-RUN-COMPLETE|STOPPED AT GATE",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "no-subagent-ask",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "trace",
+            "pattern": "name\\W{1,4}AskUserQuestion",
+            "flags": "",
+            "match": "count:0"
+          }
+        },
+        {
+          "name": "no-writes",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Write",
+            "min": 0,
+            "max": 0
+          }
+        },
+        {
+          "name": "stops-before-apply",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Agent",
+            "input_match": "ai-flow:implementer",
+            "min": 0,
+            "max": 0
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.7789611000000001,
+            "judgeCostUsd": 0,
+            "durationSeconds": 245,
+            "startedAt": "2026-10-24T00:02:37.295Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-SSyPIk/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 27,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.044903099999999974,
+                "replay": {
+                  "hits": 0,
+                  "misses": 27
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-writes",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "stops-before-apply",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.5482218,
+            "judgeCostUsd": 0,
+            "durationSeconds": 351,
+            "startedAt": "2026-10-24T00:06:42.338Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-oeHj6n/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 16,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.019411899999999926,
+                "replay": {
+                  "hits": 0,
+                  "misses": 16
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-writes",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "stops-before-apply",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.6012566,
+            "judgeCostUsd": 0,
+            "durationSeconds": 192,
+            "startedAt": "2026-10-24T00:12:33.680Z",
+            "error": null,
+            "tracePath": "/private/tmp/e-qkUA3s/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "mocks": {
+              "servers": [
+                {
+                  "server": "plugin_engram_engram",
+                  "kind": "standalone",
+                  "tools": [
+                    {
+                      "tool": "mem_search",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_get_observation",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_save",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_update",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_context",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_suggest_topic_key",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_summary",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_start",
+                      "responder": "agent"
+                    },
+                    {
+                      "tool": "mem_session_end",
+                      "responder": "agent"
+                    }
+                  ]
+                }
+              ],
+              "warnings": [],
+              "calls": {
+                "total": 15,
+                "errors": 0,
+                "unmocked": [],
+                "costUsd": 0.021560000000000024,
+                "replay": {
+                  "hits": 0,
+                  "misses": 15
+                }
+              }
+            },
+            "graders": [
+              {
+                "name": "completed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched EVAL-RUN-COMPLETE|STOPPED AT GATE",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-subagent-ask",
+                "passed": true,
+                "weight": 1,
+                "explanation": "found 0 matches (expected 0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-writes",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "stops-before-apply",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Agent called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 5,
+    "casesPassed": 5,
+    "overallScore": 0.4,
+    "overallPassRate": 0.4
+  }
+}

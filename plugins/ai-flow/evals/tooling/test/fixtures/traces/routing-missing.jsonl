@@ -1,0 +1,4 @@
+{"type":"system","subtype":"init","cwd":"/w"}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"m1","role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Agent","input":{"subagent_type":"ai-flow:proposer","model":"sonnet","effort":"medium","description":"Propose","prompt":"p"}}],"usage":{"input_tokens":1,"output_tokens":1}}}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"m2","role":"assistant","content":[{"type":"tool_use","id":"t2","name":"Agent","input":{"subagent_type":"ai-flow:implementer","model":"sonnet","description":"Apply","prompt":"p"}}],"usage":{"input_tokens":1,"output_tokens":1}}}
+{"type":"result","subtype":"success","total_cost_usd":1}

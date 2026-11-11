@@ -1,0 +1,4 @@
+{"type":"user","parent_tool_use_id":null,"isSidechain":true,"message":{"role":"user","content":"go"}}
+{"type":"assistant","parent_tool_use_id":null,"isSidechain":true,"message":{"id":"aver-m1","role":"assistant","content":[{"type":"tool_use","id":"toolu_VB1","name":"Bash","input":{"command":"npx vitest run"}}],"usage":{"input_tokens":10,"output_tokens":5}}}
+{"type":"user","parent_tool_use_id":null,"isSidechain":true,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_VB1","content":" Test Files  1 passed (1)\n      Tests  1 passed (1)"}]}}
+{"type":"assistant","parent_tool_use_id":null,"isSidechain":true,"message":{"id":"aver-m2","role":"assistant","content":[{"type":"text","text":"PASS"}],"usage":{"input_tokens":10,"output_tokens":5}}}

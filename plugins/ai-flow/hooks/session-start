@@ -3,13 +3,6 @@
 
 set -euo pipefail
 
-# Determine plugin root directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-
-# Read using-ai-flow bootstrapper skill
-using_aiflow_content=$(cat "${PLUGIN_ROOT}/skills/using-ai-flow/SKILL.md" 2>&1 || echo "Error reading using-ai-flow skill")
-
 # Check peer dependencies
 warnings=""
 
@@ -23,12 +16,12 @@ if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -d "$(dirname "${CLAUDE_PLUGIN_ROOT}")/
   superpowers_found=true
 fi
 if [ "$superpowers_found" = false ]; then
-  warnings="${warnings}\n-- **superpowers plugin not found** -- TDD, systematic-debugging, brainstorming, and verification skills will be unavailable. Install with: \`claude plugin add superpowers\`"
+  warnings+=$'\n'"- **superpowers plugin not found** -- systematic-debugging, brainstorming, and verification skills will be unavailable. Install with: \`claude plugin add superpowers\`"
 fi
 
 # Check engram
 if ! command -v engram &>/dev/null 2>&1; then
-  warnings="${warnings}\n-- **engram not found** -- AI-Flow artifact persistence will use inline-only mode. Install from: https://github.com/gentleman-programming/engram"
+  warnings+=$'\n'"- **engram not found** -- AI-Flow artifact persistence will use inline-only mode. Install from: https://github.com/gentleman-programming/engram"
 fi
 
 # Escape string for JSON embedding using bash parameter substitution
@@ -42,10 +35,9 @@ escape_for_json() {
     printf '%s' "$s"
 }
 
-using_aiflow_escaped=$(escape_for_json "$using_aiflow_content")
-warnings_escaped=$(escape_for_json "$warnings")
-
-session_context="<EXTREMELY_IMPORTANT>\nYou have ai-flow installed.\n\n**Below is the full content of your 'ai-flow:using-ai-flow' skill - your introduction to AI-Flow. For all other skills, use the 'Skill' tool:**\n\n${using_aiflow_escaped}\n\n${warnings_escaped}\n</EXTREMELY_IMPORTANT>"
+# Fixed pointer; the protocol itself is loaded on demand via the Skill tool.
+pointer="AI-Flow is installed. For AI-Flow requests or any /ai-flow:* command, load skill ai-flow:using-ai-flow first. This conversation is the coordinator: gates and user questions happen here, and phase work runs in ai-flow:* agents. Do not hand coordination to another agent."
+session_context="$(escape_for_json "${pointer}${warnings}")"
 
 # Output context injection as JSON.
 # Claude Code sets CLAUDE_PLUGIN_ROOT -- emit only hookSpecificOutput

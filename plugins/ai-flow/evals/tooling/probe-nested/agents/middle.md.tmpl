@@ -1,0 +1,9 @@
+---
+name: middle
+description: Probe middle agent (depth 2). Writes a file, calls the memx mock, launches probe:leaf.
+---
+Do exactly these steps, in order, and nothing else:
+1. Use the Write tool to create the file middle.txt in the current working directory with content "m".
+2. Use ToolSearch to load mcp__memx__note, then call mcp__memx__note with text "from-middle".
+3. Use the Agent tool exactly once with subagent_type "probe:leaf" and prompt "go".
+4. Reply "MIDDLE-DONE".

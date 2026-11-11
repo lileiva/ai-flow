@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "meta": { "plugin_version": "3.4.0", "plugin_ref": "v3.4.0", "plugin_sha": "abc", "claude_version": "2.1.301", "model": "sonnet", "judge_model": "haiku", "date": "2026-10-18T00:00:00Z", "runs_per_case": 3, "cap_usd": null, "cases_run": ["a", "d"], "complete": true, "incomplete_reason": null, "total_cost_usd": 6 },
+  "session_start": { "as_shipped": { "hook_outcome": "error", "exit_code": 126, "injected_tokens": 0 }, "intended": { "hook_tokens": 1839, "hook_chars": 6800, "always_on_tokens": 1832, "method": "first-turn input delta" } },
+  "cases": {
+    "a": { "n": 3, "harness_errors": 0, "outcome_pass_rate": { "mean": 1, "stdev": 0 }, "tokens_total": { "mean": 1000, "stdev": 100 }, "cost_usd": { "mean": 1, "stdev": 0.1 }, "wall_time_s": { "mean": 400, "stdev": 40 }, "tdd_score": { "mean": 1, "stdev": 0 }, "tdd_ratio": { "mean": 1, "stdev": 0 }, "phase_order": { "mean": 1, "stdev": 0 }, "artifact_completeness": { "mean": 1, "stdev": 0 }, "subagent_ask": { "mean": 0, "stdev": 0 }, "readonly_writes": { "mean": 0, "stdev": 0 }, "per_phase_tokens": { "ai-flow:implementer": { "mean": 40000, "stdev": 2000 } } },
+    "d": { "n": 3, "harness_errors": 0, "outcome_pass_rate": { "mean": 1, "stdev": 0 }, "tokens_total": { "mean": 500, "stdev": 50 }, "cost_usd": { "mean": 0.5, "stdev": 0.05 }, "wall_time_s": { "mean": 200, "stdev": 20 }, "tdd_score": { "mean": 1, "stdev": 0 }, "tdd_ratio": { "mean": 1, "stdev": 0 }, "phase_order": { "mean": 1, "stdev": 0 }, "artifact_completeness": "n/a", "subagent_ask": { "mean": 0, "stdev": 0 }, "readonly_writes": { "mean": 0, "stdev": 0 }, "per_phase_tokens": null }
+  }
+}

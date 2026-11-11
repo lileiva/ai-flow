@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Probe workspace: 3 passing vitest tests plus node_modules cloned from the eval cache.
+set -euo pipefail
+CACHE="__CACHE_DIR__"
+printf '{"name":"probe","private":true,"type":"module","scripts":{"test":"vitest run"}}\n' > package.json
+mkdir -p test
+printf "import {test,expect} from 'vitest';\ntest('one',()=>expect(1).toBe(1));\ntest('two',()=>expect(2).toBe(2));\ntest('three',()=>expect(3).toBe(3));\n" > test/probe.test.js
+cp -cR "$CACHE/textkit/node_modules" . 2>/dev/null || cp -R "$CACHE/textkit/node_modules" .
+__STRATEGY_HOOK__
+git init -q . && printf 'node_modules\n' > .gitignore && git add . && git -c user.email=probe@example.invalid -c user.name=probe commit -qm init

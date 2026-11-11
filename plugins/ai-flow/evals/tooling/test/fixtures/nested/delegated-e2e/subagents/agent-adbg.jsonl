@@ -1,0 +1,4 @@
+{"type":"user","parent_tool_use_id":null,"isSidechain":true,"message":{"role":"user","content":"go"}}
+{"type":"assistant","parent_tool_use_id":null,"isSidechain":true,"message":{"id":"adbg-m1","role":"assistant","content":[{"type":"tool_use","id":"toolu_DR1","name":"Read","input":{"file_path":"/w/src/slug.js"}}],"usage":{"input_tokens":10,"output_tokens":5}}}
+{"type":"user","parent_tool_use_id":null,"isSidechain":true,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_DR1","content":"impl"}]}}
+{"type":"assistant","parent_tool_use_id":null,"isSidechain":true,"message":{"id":"adbg-m2","role":"assistant","content":[{"type":"text","text":"no issue found"}],"usage":{"input_tokens":10,"output_tokens":5}}}

@@ -1,6 +1,7 @@
 ---
 name: flow-apply
 description: Execute plan tasks through strict TDD (RED-GREEN-REFACTOR). Writes tests first, then minimal implementation. Tracer bullet executes first. Two-stage review per task.
+disable-model-invocation: true
 metadata:
   author: ai-workflow
   version: "1.0"
@@ -8,27 +9,6 @@ metadata:
   auto_invoke: "Implementing planned tasks with TDD"
 ---
 
-This phase is handled by the **implementer** agent.
+This is the user-only entry point for the apply phase. Coordination runs on the main thread.
 
-Delegate to the `implementer` agent with the change name, project name, and batch to execute. The agent will:
-1. Read plan, spec, and design from engram
-2. Execute each task following the TDD cycle: RED → verify RED → GREEN → verify GREEN → REFACTOR → COMMIT
-3. Track progress in engram under `flow/{change-name}/apply-progress`
-4. Escalate to debugger agent if 3+ fix attempts fail
-
-**Iron law:** No production code without a failing test first. Verify steps are MANDATORY.
-
-**Auto-verify:** After the final batch completes, the orchestrator MUST auto-launch `/flow-verify` without waiting for the user. Verification is not optional — it is the mandatory next step after apply.
-
-Also read `skills/_shared/tdd-protocol.md` for the full TDD protocol.
-
-## OpenSpace Integration (optional)
-
-If the OpenSpace MCP server is connected, call `search_skills` before starting each task:
-- `query`: keywords from the task description
-- `source`: `"local"`
-- `limit`: `5`
-
-If a relevant pattern or recipe exists, use it as a starting point for the TDD cycle rather than reasoning from scratch. If OpenSpace is not connected or returns empty results, proceed normally — this step is additive, not blocking.
-
-See `agents/implementer.md` for the full protocol.
+Load `ai-flow:using-ai-flow`, then `ai-flow:coordinating-apply`, and follow its "Coordinating apply" section. It launches one `ai-flow:implementer` agent per task and runs the tracer gate.

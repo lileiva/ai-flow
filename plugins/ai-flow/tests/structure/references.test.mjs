@@ -1,0 +1,176 @@
+// Reference integrity for plugin runtime markdown (REQ-004, REQ-010).
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {
+  PLUGIN_ROOT, listRuntimeMd, extractReadRefs, checkReadRefs,
+  findRelativePaths, findBarePrefixes, extractQualifiedRefs, resolveQualifiedRef, applyAllowlist, scan,
+} from '../lib/plugin-files.mjs';
+
+test('listRuntimeMd finds agents, skills, shared docs and commands', () => {
+  const files = listRuntimeMd();
+  assert.ok(files.length > 0);
+  for (const f of ['agents/implementer.md', 'skills/flow-apply/SKILL.md', 'skills/_shared/tdd-protocol.md', 'commands/flow-new.md']) {
+    assert.ok(files.includes(f), `${f} listed`);
+  }
+});
+
+// ---- Every ${CLAUDE_PLUGIN_ROOT}/<path> READ_REF resolves (REQ-004 S1-S2, REQ-010 S2) ----
+
+for (const rel of listRuntimeMd()) {
+  test(`READ_REFs resolve: ${rel}`, () => {
+    assert.deepEqual(checkReadRefs(path.join(PLUGIN_ROOT, rel)), []);
+  });
+}
+
+test('implementer.md reads the TDD guide via ${CLAUDE_PLUGIN_ROOT}', () => {
+  const text = fs.readFileSync(path.join(PLUGIN_ROOT, 'agents/implementer.md'), 'utf8');
+  const targets = extractReadRefs(text).map((r) => r.path);
+  assert.ok(targets.includes('skills/_shared/tdd-protocol.md'), 'implementer.md has no READ_REF to tdd-protocol.md');
+});
+
+test('negative: a dangling READ_REF is reported with file, line and missing target', () => {
+  const file = path.join(PLUGIN_ROOT, 'tests/fixtures/refs/dangling.md');
+  const v = checkReadRefs(file);
+  assert.equal(v.length, 1);
+  assert.equal(v[0].file, file);
+  assert.equal(v[0].line, 4);
+  assert.equal(v[0].target, 'skills/_shared/does-not-exist.md');
+});
+
+// ---- skill-sync is retired (REQ-027 S1, S2) ----
+
+const SKILL_SYNC_RE = /skill-sync|scripts\/sync\.sh|\.claude\/rules/;
+
+/** Lines of `text` that mention skill-sync, scripts/sync.sh or .claude/rules, as `file:line`. */
+function skillSyncMentions(file, text) {
+  return text.split('\n').flatMap((l, i) => (SKILL_SYNC_RE.test(l) ? [`${file}:${i + 1}`] : []));
+}
+
+/** Every file under the plugin root, relative, excluding tests/ (which names the retired paths) and raw eval traces. */
+function pluginFiles(rel = '') {
+  return fs.readdirSync(path.join(PLUGIN_ROOT, rel)).flatMap((n) => {
+    const child = rel ? `${rel}/${n}` : n;
+    if (child === 'tests' || child === 'evals/baselines/raw' || child === 'evals/results' || n === '.DS_Store') return [];
+    return fs.statSync(path.join(PLUGIN_ROOT, child)).isDirectory() ? pluginFiles(child) : [child];
+  });
+}
+
+test('no plugin file references skill-sync, scripts/sync.sh or .claude/rules', () => {
+  const hits = pluginFiles().flatMap((f) => skillSyncMentions(f, fs.readFileSync(path.join(PLUGIN_ROOT, f), 'utf8')));
+  assert.deepEqual(hits, []);
+});
+
+test('skill-sync paths are gone', () => {
+  const left = ['skills/skill-sync', 'scripts', 'tests/test_batch3_skill_sync.sh', '.claude'].filter((p) => fs.existsSync(path.join(PLUGIN_ROOT, p)));
+  assert.deepEqual(left, []);
+});
+
+test('negative: the skill-sync checker flags a line that runs scripts/sync.sh', () => {
+  assert.deepEqual(skillSyncMentions('README.md', 'Setup\nrun scripts/sync.sh\n'), ['README.md:2']);
+});
+
+// ---- path and command-prefix lints (REQ-005 S2/S3, REQ-006 S2/S3) ----
+
+const fixture = (n) => fs.readFileSync(path.join(PLUGIN_ROOT, 'tests/fixtures/refs', n), 'utf8');
+
+test('relative agents/ or skills/ path is flagged with its line; ${CLAUDE_PLUGIN_ROOT}/ paths are not', () => {
+  assert.deepEqual(findRelativePaths(fixture('relative.md')), [{ line: 3, match: 'agents/foo.md' }]);
+});
+
+test('bare /flow-<x> command is flagged with its line; a plain word flow-apply is not', () => {
+  assert.deepEqual(findBarePrefixes(fixture('bare.md')), [{ line: 3, match: '/flow-verify' }]);
+});
+
+test('canonical references produce no violations', () => {
+  const t = fixture('canonical.md');
+  assert.deepEqual(findRelativePaths(t), []);
+  assert.deepEqual(findBarePrefixes(t), []);
+});
+
+test('qualified refs ai-flow:<agent>, ai-flow:<skill> and /ai-flow:<cmd> resolve; unknown names do not', () => {
+  assert.deepEqual(extractQualifiedRefs(fixture('canonical.md')).map((r) => r.name), ['flow-verify', 'designer']);
+  for (const n of ['designer', 'flow-apply', 'flow-verify', 'flow-new', 'using-ai-flow']) assert.ok(resolveQualifiedRef(n), n);
+  assert.equal(resolveQualifiedRef('nope'), null);
+});
+
+test('allowlist entry {file, linePattern, reason} skips its line; other lines are still reported', () => {
+  const v = findRelativePaths(fixture('allowlisted.md')).map((x) => ({ file: 'allowlisted.md', ...x }));
+  const kept = applyAllowlist(v, [{ file: 'allowlisted.md', linePattern: /Legacy example/, reason: 'fixture: documents the old layout' }], fixture('allowlisted.md'));
+  assert.deepEqual(kept.map((x) => x.match), ['agents/bar.md']);
+});
+
+test('negative: an allowlist entry without a reason throws', () => {
+  assert.throws(() => applyAllowlist([], [{ file: 'x.md', linePattern: /x/ }], ''), /reason/);
+});
+
+test('scan() applies relative-path and bare-prefix rules together', () => {
+  assert.deepEqual(scan('bare.md', fixture('bare.md')).map((v) => v.rule), ['bare-prefix']);
+  assert.deepEqual(scan('relative.md', fixture('relative.md')).map((v) => v.rule), ['relative-path']);
+});
+
+// ---- runtime tree: canonical /ai-flow:flow-* commands, qualified refs resolve (REQ-006 S1, REQ-018 S1) ----
+
+for (const rel of listRuntimeMd()) {
+  test(`no bare /flow- command: ${rel}`, () => {
+    assert.deepEqual(findBarePrefixes(fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8')), []);
+  });
+  test(`ai-flow:<name> refs resolve: ${rel}`, () => {
+    const refs = extractQualifiedRefs(fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8'));
+    assert.deepEqual(refs.filter((r) => !resolveQualifiedRef(r.name)), []);
+  });
+}
+
+// ---- runtime tree: no relative agents/ or skills/ paths (REQ-005 S1). Scope widens per task: 2.3 skills, 2.4 agents, 2.5 all. ----
+
+const RELATIVE_PATH_SCOPE = () => true; // whole runtime tree since Task 2.5
+const RELATIVE_PATH_ALLOWLIST = []; // {file, linePattern, reason}; intentionally empty for runtime markdown.
+
+for (const rel of listRuntimeMd().filter(RELATIVE_PATH_SCOPE)) {
+  test(`no relative agents/ or skills/ path: ${rel}`, () => {
+    const text = fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8');
+    assert.deepEqual(scan(rel, text, RELATIVE_PATH_ALLOWLIST), []);
+  });
+}
+
+// ---- using-ai-flow: injected raw by the SessionStart hook, so names only (D1(3), REQ-005 S1) ----
+
+const USING = 'skills/using-ai-flow/SKILL.md';
+const usingText = () => fs.readFileSync(path.join(PLUGIN_ROOT, USING), 'utf8');
+
+for (const rel of [USING, 'skills/coordinating-apply/SKILL.md', 'skills/coordinating-commands/SKILL.md']) {
+  test(`${rel} has no \${...} tokens (the hook does not substitute them)`, () => {
+    const text = fs.readFileSync(path.join(PLUGIN_ROOT, rel), 'utf8');
+    assert.deepEqual(text.split('\n').flatMap((l, i) => (l.includes('${') ? [i + 1] : [])), []);
+  });
+}
+
+test('using-ai-flow names the main thread as coordinator', () => {
+  assert.match(usingText(), /main thread[^.\n]*coordinator|coordinator[^.\n]*main thread/i);
+});
+
+/** Table rows of the "Command -> Agent Mapping" section, each with the ai-flow:<x> refs it names. */
+function mappingRows(text) {
+  const start = text.indexOf('### Command -> Agent Mapping');
+  const end = text.indexOf('\n### ', start + 1);
+  return text.slice(start, end).split('\n').filter((l) => /^\| `/.test(l)).map((l) => ({ row: l, refs: extractQualifiedRefs(l).map((r) => r.name) }));
+}
+
+test('using-ai-flow command mapping: every row names an ai-flow agent that resolves', () => {
+  const rows = mappingRows(usingText());
+  assert.ok(rows.length >= 13, `${rows.length} rows`);
+  assert.deepEqual(rows.filter((r) => !r.refs.some((n) => resolveQualifiedRef(n) === 'agent')).map((r) => r.row), []);
+});
+
+test('negative: a mapping row with a file path and no agent name is flagged', () => {
+  const rows = mappingRows('### Command -> Agent Mapping\n| `flow-spec` | specifier | `skills/flow-spec/SKILL.md` |\n### Next\n');
+  assert.deepEqual(rows.filter((r) => !r.refs.some((n) => resolveQualifiedRef(n) === 'agent')).length, 1);
+});
+
+test('using-ai-flow does not claim TDD comes from superpowers', () => {
+  const line = usingText().split('\n').find((l) => l.startsWith('- **superpowers**')) ?? '';
+  assert.ok(line, 'has a superpowers peer-dependency line');
+  assert.doesNotMatch(line, /TDD|test-driven/i);
+  assert.match(line, /systematic-debugging/);
+});

@@ -4,14 +4,21 @@ A unified AI-assisted development workflow plugin for [Claude Code](https://clau
 
 AI-Flow orchestrates structured development through DAG-based phases: exploration, proposal, specification, design, planning, implementation (with TDD), verification, and archival — with human review gates at critical points.
 
-For the full reference document, see [unified-ai-dev-flow.md](unified-ai-dev-flow.md). For version history, see [CHANGELOG.md](CHANGELOG.md).
+How 4.0 works:
+
+- **Your main conversation is the coordinator.** It loads the `ai-flow:using-ai-flow` skill, launches one phase agent at a time, and asks you at each approval gate. Only the main thread asks you questions; agents return open questions to it.
+- **No pinned models.** The coordinator picks the model and effort that fit each task. Leaving the model out inherits your session model, and effort goes up after a blocked return or a missed TDD evidence check.
+- **Scoped agents.** Each agent declares a `tools` allowlist, so read-only agents cannot write or edit files.
+- **A slim SessionStart hook** injects a short pointer (about 134 tokens); the coordinator protocol loads only when you use AI-Flow.
+
+For the historical v3 design document (archived, not maintained), see [docs/archive/unified-ai-dev-flow.md](docs/archive/unified-ai-dev-flow.md). For version history, see [CHANGELOG.md](CHANGELOG.md).
 
 ## Installation
 
 ### Prerequisites
 
-- [Claude Code](https://claude.ai/claude-code) v1.0.33+
-- [Engram MCP server](https://github.com/anthropics/engram) for artifact persistence (bundled via `.mcp.json`)
+- [Claude Code](https://claude.ai/claude-code) (tested on 2.1.304)
+- Optional: [engram](https://github.com/gentleman-programming/engram) for artifact persistence across sessions. It is a separate plugin (`engram@engram`), not part of AI-Flow. Without it, AI-Flow passes artifacts inline within one session (see `plugins/ai-flow/skills/_shared/engram-fallback.md`).
 
 ### Step 1: Add the marketplace
 
@@ -30,14 +37,14 @@ Open Claude Code and run:
 ### Step 3: Initialize your project
 
 ```
-/flow-init
+/ai-flow:flow-init
 ```
 
 This detects your tech stack, bootstraps persistence, and creates `.ai-flow.json` with your preferences.
 
 ### Step 4: Verify
 
-Run `/help` and confirm the `flow-` commands and skills appear.
+Run `/help` and confirm the `/ai-flow:flow-*` commands and skills appear.
 
 ### Updating
 
@@ -45,43 +52,51 @@ Run `/help` and confirm the `flow-` commands and skills appear.
 /plugin update ai-flow@ai-flow
 ```
 
+Upgrading from 3.x: the `ai-flow:orchestrator` agent is now a deprecated stub, and the main thread coordinates through `ai-flow:using-ai-flow`. If your personal `~/.claude/CLAUDE.md` holds a copy of the old orchestrator instructions, remove it or slim it to a one-line pointer to AI-Flow.
+
 ## Quick Start
 
 A typical workflow looks like this:
 
 ```
-/flow-new add-user-auth      # Explore the problem space, then create a proposal
-                              # → You approve or revise the proposal
+/ai-flow:flow-new add-user-auth        # Explore the problem space, then create a proposal
+                                       # → You approve or revise the proposal
 
-/flow-spec                    # Write Given/When/Then scenarios
-/flow-design                  # Create technical design (can run in parallel with spec)
+/ai-flow:flow-spec                     # Write Given/When/Then scenarios
+/ai-flow:flow-design                   # Create technical design (can run in parallel with spec)
 
-/flow-plan                    # Break work into batched tasks with TDD steps
-                              # → You approve or revise the plan
+/ai-flow:flow-plan                     # Break work into batched tasks with TDD steps
+                                       # → You approve or revise the plan
 
-/flow-apply                   # Execute tasks: tracer bullet first, then batches
-                              # → You review after tracer bullet
+/ai-flow:flow-apply                    # Execute tasks: tracer bullet first, then batches
+                                       # → You review after tracer bullet
 
-/flow-verify                  # Run compliance checks and test suite
-                              # → You approve or send back for rework
+/ai-flow:flow-verify                   # Run compliance checks and test suite
+                                       # → You approve or send back for rework
 
-/flow-archive                 # Archive artifacts and close the change
+/ai-flow:flow-archive                  # Archive artifacts and close the change
 ```
 
 Or use the shortcuts:
 
 ```
-/flow-ff add-user-auth       # Fast-forward: propose → spec + design → plan
-/flow-continue add-user-auth  # Resume from the last completed phase
+/ai-flow:flow-ff add-user-auth         # Fast-forward: propose → spec + design → plan
+/ai-flow:flow-continue add-user-auth   # Resume from the last completed phase
 ```
 
 ## Configuration
 
-AI-Flow uses `.ai-flow.json` at the project root for per-project settings. Created automatically by `/flow-init`.
+AI-Flow uses `.ai-flow.json` at the project root for per-project settings. Created automatically by `/ai-flow:flow-init`.
 
 ```json
-{}
+{
+  "testRunner": "npm test"
+}
 ```
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `testRunner` | string, optional | The command that runs the full test suite. The initializer writes the detected command and omits the key when it detects none. The TDD guide uses it when the plan names no test command. |
 
 ## Commands
 
@@ -89,13 +104,13 @@ User-invokable commands (type directly):
 
 | Command | Description |
 |---------|-------------|
-| `/flow-new <name>` | Start a new change — explore → propose → human gate |
-| `/flow-ff <name>` | Fast-forward — propose → spec + design (parallel) → plan |
-| `/flow-continue <name>` | Resume from last completed phase |
+| `/ai-flow:flow-new <name>` | Start a new change — explore → propose → human gate |
+| `/ai-flow:flow-ff <name>` | Fast-forward — propose → spec + design (parallel) → plan |
+| `/ai-flow:flow-continue <name>` | Resume from last completed phase |
 
 ## Skills
 
-Model-invoked skills (Claude uses these automatically):
+Phase skills are user-invoked (`/ai-flow:flow-<phase>`); each one launches its phase agent. The coordinator skills `using-ai-flow`, `coordinating-apply` and `coordinating-commands` load on demand in the main thread.
 
 | Skill | Phase | Description |
 |-------|-------|-------------|
@@ -112,11 +127,11 @@ Model-invoked skills (Claude uses these automatically):
 
 ## Agents
 
-Each phase is executed by a specialized agent with domain expertise and scoped tool access:
+Each phase is executed by a specialized agent. Every agent declares a `tools` allowlist in its frontmatter, so read-only agents have no Write or Edit tool. No agent pins a model: the coordinator chooses model and effort per launch.
 
 | Agent | Phase | Tool Access | Role |
 |-------|-------|-------------|------|
-| `initializer` | 0 | Read-only | Detects stack, conventions, creates `.ai-flow.json` |
+| `initializer` | 0 | Writes `.ai-flow.json` only | Detects stack, conventions, test runner |
 | `explorer` | 1 | Read-only | Brainstorms approaches, investigates codebase |
 | `proposer` | 2 | Read-only | Writes formal proposals with risks and rollback |
 | `specifier` | 3 | Read-only | Writes Given/When/Then scenarios from requirements |
@@ -126,7 +141,7 @@ Each phase is executed by a specialized agent with domain expertise and scoped t
 | `verifier` | 7 | Read + tests | Spec compliance matrix, quality gate |
 | `archivist` | 8 | Read + engram | Consolidates artifacts, closes change |
 | `debugger` | Any | Full | Root-cause-first investigation with TDD fix |
-| `orchestrator` | — | Delegates | Coordinates all agents, manages human gates |
+| `orchestrator` | — | Read | Deprecated stub; coordination runs on the main thread |
 
 ## DAG
 
@@ -150,11 +165,11 @@ Each phase is executed by a specialized agent with domain expertise and scoped t
 
 ## Hooks
 
-Defined in `plugins/ai-flow/hooks/hooks.json`.
+Defined in `plugins/ai-flow/hooks/hooks.json`. One hook runs on `SessionStart`: `hooks/run-hook.cmd session-start` injects a short pointer (about 134 tokens) telling the main thread to load the `using-ai-flow` skill for AI-Flow requests, and warns when engram or superpowers is not installed. The full coordinator protocol loads on demand. In 3.x the hook never ran on Unix (`run-hook.cmd` was not executable); 4.0.0-alpha.2 injected the whole skill (about 2.9k tokens) before 4.0.0 slimmed it.
 
 ## MCP Servers
 
-The plugin bundles an engram MCP server configuration in `.mcp.json`. This ensures artifact persistence is available without manual setup. The server uses `npx engram-mcp` and scopes the project to the plugin root.
+`plugins/ai-flow/.mcp.json` is intentionally empty: AI-Flow ships no MCP server. Persistence comes from the separate engram plugin (`engram@engram`, https://github.com/gentleman-programming/engram). The SessionStart hook warns when engram is not installed, and AI-Flow then runs in inline-only mode.
 
 ## Human Review Gates
 
@@ -171,14 +186,19 @@ The plugin bundles an engram MCP server configuration in `.mcp.json`. This ensur
 plugins/ai-flow/
   .claude-plugin/
     plugin.json              # Plugin metadata (name, version, author)
-  .mcp.json                  # Bundled engram MCP server config
+  .mcp.json                  # Intentionally empty (no MCP servers)
   hooks/
-    hooks.json               # Session hooks
+    hooks.json               # SessionStart hook registration
+    run-hook.cmd             # Cross-platform hook launcher
+    session-start            # Injects using-ai-flow, warns about missing plugins
   commands/
-    flow-new.md              # /flow-new command
-    flow-ff.md               # /flow-ff command
-    flow-continue.md         # /flow-continue command
+    flow-new.md              # /ai-flow:flow-new command
+    flow-ff.md               # /ai-flow:flow-ff command
+    flow-continue.md         # /ai-flow:flow-continue command
   skills/
+    using-ai-flow/SKILL.md   # Session entry point (injected by the hook)
+    coordinating-apply/SKILL.md   # Coordinator detail for apply, loaded on demand
+    coordinating-commands/SKILL.md   # Coordinator detail for flow-new/ff/continue, loaded on demand
     flow-init/SKILL.md       # Phase 0: Project bootstrap
     flow-explore/SKILL.md    # Phase 1: Problem exploration
     flow-propose/SKILL.md    # Phase 2: Change proposal
@@ -191,10 +211,11 @@ plugins/ai-flow/
     flow-debug/SKILL.md      # Ad-hoc debugging
     _shared/
       engram-convention.md   # Engram topic key naming convention
+      engram-fallback.md     # What to do when engram is unavailable
       persistence-contract.md # Sub-agent context protocol
-      tdd-protocol.md        # RED-GREEN-REFACTOR protocol
+      tdd-protocol.md        # TDD guide (single TDD source)
   agents/
-    orchestrator.md          # Coordinator agent
+    orchestrator.md          # Deprecated stub (coordination runs on the main thread)
     initializer.md           # Phase 0 agent
     explorer.md              # Phase 1 agent
     proposer.md              # Phase 2 agent
@@ -205,7 +226,65 @@ plugins/ai-flow/
     verifier.md              # Phase 7 agent
     archivist.md             # Phase 8 agent
     debugger.md              # Debug agent
+  tests/
+    run.sh                   # Single test entrypoint (validate + structure + evals tooling)
+    structure/               # node:test structural and behavioural checks
+  evals/                     # Offline-graded eval suite (see Evals)
 ```
+
+### Tests
+
+```bash
+node plugins/ai-flow/evals/tooling/prepare.mjs   # once (network): builds .eval-cache/ at the repo root
+bash plugins/ai-flow/tests/run.sh                # validate + structure + evals tooling, offline
+```
+
+Run `prepare.mjs` first. Without `.eval-cache/`, about 47 evals tooling tests skip and a few fail. `run.sh` then prints a note naming `prepare.mjs`, and the run can miss its executed-test floor (`MIN_EXECUTED`). The last line is always `executed: N passed: P failed: F`.
+
+## Evals
+
+AI-Flow ships an offline-graded eval suite under `plugins/ai-flow/evals/` (since 4.0.0-alpha.1). It runs 5 cases through `claude plugin eval`, grades every run from its trace and workspace, and compares the result with a recorded baseline. The suite measures outcomes (hidden acceptance tests), TDD adherence, phase order, artifact completeness, tokens per phase, cost and wall time. Full details are in [`plugins/ai-flow/evals/README.md`](plugins/ai-flow/evals/README.md).
+
+### Prerequisites
+
+- Claude Code >= 2.1.301 and git >= 2.31.
+- Node 26 from nvm: `nvm install 26 && nvm use 26`. The runner puts the nvm Node 26 `bin/` dir and its npm package dir on the eval child's `PATH` (strategy R1), so agents can run `npm test` inside the eval sandbox. No other Node install is used.
+- A one-time cache build (needs network): `node plugins/ai-flow/evals/tooling/prepare.mjs`.
+- Check everything with `node plugins/ai-flow/evals/tooling/preflight.mjs` (exit 3 with guidance when something is missing).
+
+### Running
+
+```bash
+# Full suite: 5 cases x 3 runs on sonnet
+bash plugins/ai-flow/evals/run.sh
+
+# Subsets while iterating (1 run each by default)
+bash plugins/ai-flow/evals/run.sh --case a --case d
+bash plugins/ai-flow/evals/run.sh --tag smoke
+
+# Alpha gate: full suite, 3 runs, compared with baselines/v3.4.0-<model>.json
+bash plugins/ai-flow/evals/run.sh --gate
+
+# Record a baseline at the v3.4.0 tag (also measures the SessionStart cost)
+bash plugins/ai-flow/evals/run.sh --plugin-ref v3.4.0 --promote v3.4.0
+```
+
+There is no cost cap by default: evals run on a Claude Code subscription, so cost, tokens and duration are recorded as metrics, never used as gates. (For maintainers, the runner still accepts an opt-in `--max-cost-usd X` that forwards the native CLI ceiling; nothing sets it by default.) The real constraint is the subscription rate limit: a rate-limited run is a harness error that stops the runner (exit 5, not retried); after the window resets, `--resume <results-dir>` re-runs only the missing slots. Preflight warns when recent utilization is high. Use `--model opus` (or `AIFLOW_EVAL_MODEL`) to switch models and `--dry-run` to print the plan without spawning anything.
+
+### Comparing with a baseline
+
+```bash
+node plugins/ai-flow/evals/tooling/compare.mjs --baseline plugins/ai-flow/evals/baselines/v3.4.0-sonnet.json --candidate plugins/ai-flow/evals/baselines/v3.4.0-sonnet.json
+```
+
+Replace `--candidate` with a run's `summary.json`. A metric regresses when it is worse than the baseline mean by more than 1 baseline stdev; for rate metrics (pass rates, TDD score, phase order, artifact completeness) the threshold is at least 0.34, so a single flipped run out of 3 is not flagged. Any regression exits 1. Baselines are per model: `baselines/v3.4.0-sonnet.json` is the reference for iteration and alpha gates, and `baselines/v3.4.0-opus.json` is the reference for the final 4.0.0 gate. Comparing across models or Claude Code major versions is refused (exit 6) unless `--allow-env-mismatch` is passed.
+
+### Known gaps
+
+- Human gates are auto-approved by an unattended policy appended to the system prompt, which is not how gates behave in real use.
+- Engram is mocked (`plugin_engram_engram`), so artifacts are graded from `mem_save` payloads, not from a real store.
+- Subagents launched by another subagent (for example when the flow is delegated to the `ai-flow:orchestrator` agent) are not in the trace, so their TDD, artifact and tool-use grades are recorded as n/a.
+- As shipped, v3.4.0's SessionStart hook never runs on Unix (`run-hook.cmd` is not executable, exit 126), so its injection is 0 tokens. The baseline records both this as-shipped value and the intended cost measured on temp plugin copies (about 2.8k hook tokens on sonnet). This is fixed in 4.0.0-alpha.2 (the hook now runs), so candidate runs carry the injection and the baseline does not.
 
 ## License
 
